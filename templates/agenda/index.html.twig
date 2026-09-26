@@ -1,0 +1,139 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <p class="text-muted small">
+        <i class="fas fa-info-circle"></i>
+        Cliquez sur une date pour créer une action à cette date.
+        Cliquez sur un événement pour modifier l'action correspondante.
+    </p>
+
+    <div id="agenda-calendar"></div>
+{% endblock %}
+
+{% block localscript %}
+    {{ parent() }}
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script>
+        (function () {
+            function ready(fn) {
+                if (document.readyState !== 'loading') fn();
+                else document.addEventListener('DOMContentLoaded', fn);
+            }
+            // FullCalendar : si l'URL porte ?date=YYYY-MM-DD, on ouvre le
+            // calendrier directement sur cette date (utile pour le retour
+            // après modification d'une action : on cible la date mise à jour).
+            const url = new URL(window.location.href);
+            const dateParam = url.searchParams.get('date');
+            const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(dateParam || '') ? dateParam : undefined;
+
+            ready(function () {
+                const el = document.getElementById('agenda-calendar');
+                if (!el || typeof FullCalendar === 'undefined') return;
+
+                const calendar = new FullCalendar.Calendar(el, {
+                    locale: 'fr',
+                    initialView: 'dayGridMonth',
+                    initialDate: initialDate,
+                    selectable: true,
+                    editable: true,
+                    height: 'auto',
+                    firstDay: 1,
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek,listWeek',
+                    },
+                    buttonText: {
+                        today: "Aujourd'hui",
+                        month: 'Mois',
+                        week: 'Semaine',
+                        list: 'Liste',
+                    },
+                    // Clic sur une date → pré-remplit le formulaire de
+                    // création d'action avec cette date.
+                    dateClick: function (info) {
+                        const d = info.dateStr.slice(0, 10);
+                        const target = '{{ path('app_user_actions_submit') }}?date=' + d
+                            + '&redirect=' + encodeURIComponent('{{ path('app_user_agenda') }}?date=' + d);
+                        window.location.href = target;
+                    },
+                    // Drag & drop d'un événement → met à jour la date de
+                    // l'action côté serveur via l'endpoint AJAX.
+                    eventDrop: function (info) {
+                        const id = info.event.id;
+                        const date = info.event.startStr.slice(0, 10);
+                        // Récupère le token CSRF via un endpoint dédié
+                        // (token lié à la session, donc non-static).
+                        const url = ('{{ path('app_user_actions_set_date', {id: 0}) }}').replace('/0', '/' + id);
+                        const csrfUrl = ('{{ path('app_user_agenda_csrf', {id: 0}) }}').replace('/0', '/' + id);
+                        fetch(csrfUrl, {
+                            method: 'GET',
+                            credentials: 'same-origin',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Origin': window.location.origin,
+                            },
+                        }).then(function (resp) {
+                            return resp.json();
+                        }).then(function (data) {
+                            if (!data || !data.token) {
+                                throw new Error('Token CSRF manquant');
+                            }
+                            return fetch(url, {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Origin': window.location.origin,
+                                },
+                                body: JSON.stringify({ date: date, csrf_token: data.token }),
+                            });
+                        }).then(function (resp) {
+                            return resp.json().then(function (data) {
+                                return { ok: resp.ok, status: resp.status, data: data };
+                            });
+                        }).then(function (r) {
+                            if (!r.ok || !r.data.ok) {
+                                info.revert();
+                                const msg = (r.data && r.data.error) ? r.data.error : ('Erreur ' + r.status);
+                                alert(msg);
+                            }
+                        }).catch(function (e) {
+                            info.revert();
+                            alert('Erreur réseau : ' + (e.message || 'Veuillez réessayer.'));
+                        });
+                    },
+                    events: {
+                        url: '{{ path('app_user_agenda_events') }}',
+                        method: 'GET',
+                        formatDates: function (info) {
+                            return {
+                                start: info.startStr.slice(0, 10),
+                                end: info.endStr.slice(0, 10),
+                            };
+                        },
+                        failure: function () {
+                            console.error('Erreur de chargement des événements agenda.');
+                        },
+                    },
+                    eventDidMount: function (info) {
+                        const p = info.event.extendedProps;
+                        const lines = [info.event.title];
+                        if (p.contact) lines.push('Contact : ' + p.contact);
+                        if (p.realisee && p.realisePar) lines.push('Réalisé par : ' + p.realisePar);
+                        else if (p.aFairePar) lines.push('À faire par : ' + p.aFairePar);
+                        if (p.resultat) lines.push('—\n' + p.resultat);
+                        info.el.setAttribute('title', lines.join('\n'));
+                    },
+                });
+                calendar.render();
+            });
+        })();
+    </script>
+{% endblock %}

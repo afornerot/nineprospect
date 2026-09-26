@@ -1,0 +1,138 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <div class="position-relative">
+        {% if routedelete is defined and routedelete %}{% include 'include/delete_button.html.twig' with {route: routedelete, id: form.vars.value.id, tokenId: 'delete-prospect' ~ form.vars.value.id, classes: 'delete-abs'} %}{% endif %}
+
+        {{ form_start(form) }}
+
+        {{ form_widget(form.submit) }}
+        {% if redirect is defined and redirect %}
+            <a href="{{ redirect }}" class="btn btn-secondary ms-1">Annuler</a>
+        {% else %}
+            <a href="{{ path(routecancel) }}" class="btn btn-secondary ms-1">Annuler</a>
+        {% endif %}
+
+        {% if routeshow is defined and routeshow and form.vars.value.id %}
+            <a href="{{ path(routeshow, {id: form.vars.value.id}) }}" class="btn btn-secondary ms-1">Voir la fiche</a>
+        {% endif %}
+
+        {% include('include/error.html.twig') %}
+
+        {% if prospect is defined and prospect and prospect.anomalie %}
+            <div class="alert alert-danger mt-3">
+                <i class="fas fa-triangle-exclamation"></i>
+                Anomalies signalées à l'import : {{ prospect.anomalieMotif }}
+            </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-4 mx-auto">
+                <div class="card mt-3">
+                    <div class="card-header">Identification</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12">{{ form_row(form.nom) }}</div>
+                            
+                            <div class="col-md-12">{{ form_row(form.email) }}</div>
+                            <div class="col-md-12">{{ form_row(form.telephone) }}</div>
+
+                            <div class="col-md-12">{{ form_row(form.siteUrl) }}</div>
+                            <div class="col-md-12">{{ form_row(form.linkedinUrl) }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">Données entreprise</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">{{ form_row(form.siren) }}</div>
+                            <div class="col-md-6">{{ form_row(form.siret) }}</div>
+                            <div class="col-md-6">{{ form_row(form.naf) }}</div>
+                            <div class="col-md-6">{{ form_row(form.rcsRm) }}</div>
+                            <div class="col-md-6">{{ form_row(form.numTva) }}</div>
+                            <div class="col-md-6">{{ form_row(form.idDolibarr) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mx-auto">
+                <div class="card mt-3">
+                    <div class="card-header">Coordonnées</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12">{{ form_row(form.adresse) }}</div>
+                            <div class="col-md-3">{{ form_row(form.codePostal) }}</div>
+                            <div class="col-md-9">{{ form_row(form.ville) }}</div>                            <div class="col-md-9">{{ form_row(form.departement) }}</div>
+                            <div class="col-md-3">{{ form_row(form.pays) }}</div>
+                            <div class="col-md-6">{{ form_row(form.latitude) }}</div>
+                            <div class="col-md-6">{{ form_row(form.longitude) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    Pipeline
+                    {% if vagueCourante is defined and vagueCourante %}
+                        — vague {{ vagueCourante.sprint.numero }}{% if vagueCourante.sprint.libelle %} ({{ vagueCourante.sprint.libelle }}){% endif %}
+                        {% if vagueCourante.sprint.pipeline %}<span class="text-muted fw-normal">{{ vagueCourante.sprint.pipeline }}</span>{% endif %}
+                    {% endif %}
+                    {% if etapes is not defined or etapes is empty %}
+                        <span class="text-muted fw-normal">sélectionnez au moins une vague ci-dessus pour enregistrer un pipeline</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if etapes is defined and etapes is not empty %}
+                        <div class="row">
+                            {% for etape in etapes %}
+                                <div class="col-md-6">{{ form_row(form['etape' ~ etape.id]) }}</div>
+                                <div class="col-md-6">{{ form_row(form['dateEtape' ~ etape.id]) }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            </div>
+
+            <div class="col-md-4 mx-auto">
+                <div class="card mt-3">
+                    <div class="card-header">Suivi commercial</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12">{{ form_row(form.contacte) }}</div>
+                            <div class="col-md-12">{{ form_row(form.datePremierContact) }}</div>
+                            <div class="col-md-12">{{ form_row(form.qualifie) }}</div>
+                            <div class="col-md-12">{{ form_row(form.quali) }}</div>
+                            <div class="col-md-6">{{ form_row(form.campagne) }}</div>
+                            <div class="col-md-6">{{ form_row(form.sprints) }}</div>
+                            <div class="col-md-12">{{ form_row(form.montantDevis) }}</div>
+                            <div class="col-md-12">{{ form_row(form.bureauEtudeInterne) }}</div>
+                            <div class="col-md-12">{{ form_row(form.users) }}</div>
+                            <div class="col-md-12">{{ form_row(form.notes) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}
+
+{% block localscript %}
+    <script>
+        $(document).ready(function() {
+            $("#prospect_nom").focus();
+        });
+    </script>
+{% endblock %}

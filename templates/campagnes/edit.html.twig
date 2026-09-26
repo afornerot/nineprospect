@@ -1,0 +1,248 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <div class="position-relative">
+        {% if routedelete is defined and routedelete %}{% include 'include/delete_button.html.twig' with {route: routedelete, id: campagne.id, tokenId: 'delete-campagne' ~ campagne.id, classes: 'delete-abs'} %}{% endif %}
+
+        {{ form_start(form) }}
+            {{ form_widget(form.submit) }}
+            <a href="{{ path(routecancel) }}" class="btn btn-secondary ms-1">Annuler</a>
+
+            {% include('include/error.html.twig') %}
+
+            <div class="row">
+                <div class="col-md-6 mx-auto">
+                    <div class="card mt-3">
+                        <div class="card-header">Campagne</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">{{ form_row(form.nom) }}</div>
+                                <div class="col-md-6">{{ form_row(form.externalId) }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">{{ form_row(form.sourceLabel) }}</div>
+                                <div class="col-md-6">{{ form_row(form.budget) }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">{{ form_row(form.dateDebut) }}</div>
+                                <div class="col-md-6">{{ form_row(form.dateFin) }}</div>
+                            </div>
+                            {{ form_row(form.notes) }}
+                        </div>
+                    </div>
+                </div>
+
+                {% if form.prospects is defined %}
+                    <div class="col-md-6 mx-auto">
+                        <div class="card mt-3">
+                            <div class="card-header">Prospects de la campagne</div>
+                            <div class="card-body">
+                                <label class="form-label small text-muted mb-1" for="js-prospect-picker">Ajouter un prospect</label>
+                                <div class="js-prospect-picker-wrapper position-relative">
+                                    <input type="text" id="js-prospect-picker" class="js-prospect-picker form-control" autocomplete="off" placeholder="Rechercher un prospect à ajouter…">
+                                    <div id="js-prospect-dropdown" class="js-prospect-dropdown list-group" hidden></div>
+                                </div>
+
+                                <p class="text-muted small mt-3 mb-2">
+                                    <strong class="js-prospect-count">{{ campagneProspects|length }}</strong>
+                                    prospect(s) rattaché(s) à cette campagne :
+                                </p>
+
+                                <ul class="list-group mb-3 js-prospect-list">
+                                    {% for prospect in campagneProspects %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center py-1 js-prospect-item" data-prospect-id="{{ prospect.id }}">
+                                            <span>{{ prospect.nom }}</span>
+                                            <button type="button" class="btn btn-sm btn-link text-danger js-prospect-remove" data-prospect-id="{{ prospect.id }}" title="Retirer de la campagne" aria-label="Retirer {{ prospect.nom }}">
+                                                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                                            </button>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                                <p class="text-muted small mb-3 js-prospect-empty"{% if campagneProspects|length > 0 %} hidden{% endif %}>
+                                    Aucun prospect rattaché pour le moment.
+                                </p>
+
+                    {# Membership (multi-select caché) : seules les options sélectionnées ici sont POSTées. #}
+                    {{ form_errors(form.prospects) }}
+                    {{ form_widget(form.prospects) }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}
+
+{% block localscript %}
+    {{ parent() }}
+    <script>
+        (function () {
+            function ready(fn) {
+                if (document.readyState !== 'loading') fn();
+                else document.addEventListener('DOMContentLoaded', fn);
+            }
+
+            ready(function () {
+                const multi = document.querySelector('.js-prospects-multi');
+                const picker = document.querySelector('.js-prospect-picker');
+                const dropdown = document.querySelector('.js-prospect-dropdown');
+                if (!multi || !picker || !dropdown) return;
+
+                const list = document.querySelector('.js-prospect-list');
+                const countEl = document.querySelector('.js-prospect-count');
+                const emptyEl = document.querySelector('.js-prospect-empty');
+
+                function updateCount() {
+                    if (countEl) countEl.textContent = multi.selectedOptions.length;
+                }
+
+                function addListItem(id, text) {
+                    if (!list) return;
+                    if (list.querySelector('[data-prospect-id="' + id + '"]')) return;
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex justify-content-between align-items-center py-1 js-prospect-item';
+                    li.setAttribute('data-prospect-id', id);
+                    const span = document.createElement('span');
+                    span.textContent = text;
+                    li.appendChild(span);
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-link text-danger js-prospect-remove';
+                    btn.setAttribute('data-prospect-id', id);
+                    btn.title = 'Retirer de la campagne';
+                    btn.setAttribute('aria-label', 'Retirer ' + text);
+                    const icon = document.createElement('i');
+                    icon.className = 'fa-solid fa-xmark';
+                    icon.setAttribute('aria-hidden', 'true');
+                    btn.appendChild(icon);
+                    li.appendChild(btn);
+                    list.appendChild(li);
+                    if (emptyEl) emptyEl.hidden = true;
+                }
+
+                function removeListItem(id) {
+                    if (!list) return;
+                    const li = list.querySelector('[data-prospect-id="' + id + '"]');
+                    if (li) li.remove();
+                    if (emptyEl && multi.selectedOptions.length === 0) emptyEl.hidden = false;
+                }
+
+                // Pickeur custom : dropdown alignée sur l'input, affichée au focus,
+                // filtrée à la frappe. Le source de données est le <select multiple>
+                // caché (mêmes options, 890 prospects).
+                function rendreOptions(terme) {
+                    const q = (terme || '').trim().toLowerCase();
+                    const frag = document.createDocumentFragment();
+                    let nb = 0;
+                    for (const opt of multi.options) {
+                        const texte = opt.textContent || '';
+                        if (q && texte.toLowerCase().indexOf(q) === -1) continue;
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'list-group-item list-group-item-action js-prospect-option';
+                        btn.setAttribute('data-prospect-id', opt.value);
+                        btn.textContent = texte;
+                        frag.appendChild(btn);
+                        nb++;
+                    }
+                    dropdown.replaceChildren(frag);
+                    if (nb === 0) {
+                        const vide = document.createElement('div');
+                        vide.className = 'list-group-item text-muted';
+                        vide.textContent = 'Aucun résultat';
+                        dropdown.appendChild(vide);
+                    }
+                    indexSurbrillance = -1;
+                }
+
+                let indexSurbrillance = -1;
+                function surligner(i) {
+                    const items = dropdown.querySelectorAll('.js-prospect-option');
+                    items.forEach((el, idx) => el.classList.toggle('is-active', idx === i));
+                    indexSurbrillance = i;
+                    if (i >= 0 && items[i]) items[i].scrollIntoView({block: 'nearest'});
+                }
+
+                function ouvrir() {
+                    rendreOptions(picker.value);
+                    dropdown.hidden = false;
+                }
+                function fermer() {
+                    dropdown.hidden = true;
+                    indexSurbrillance = -1;
+                }
+
+                picker.addEventListener('focus', ouvrir);
+                picker.addEventListener('input', function () {
+                    if (dropdown.hidden) ouvrir();
+                    rendreOptions(picker.value);
+                });
+                picker.addEventListener('blur', function () {
+                    setTimeout(fermer, 150);
+                });
+                picker.addEventListener('keydown', function (e) {
+                    const items = dropdown.querySelectorAll('.js-prospect-option');
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (dropdown.hidden) ouvrir();
+                        surligner(Math.min(indexSurbrillance + 1, items.length - 1));
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        surligner(Math.max(indexSurbrillance - 1, 0));
+                    } else if (e.key === 'Enter') {
+                        if (indexSurbrillance >= 0) {
+                            e.preventDefault();
+                            const item = items[indexSurbrillance];
+                            if (!item) return;
+                            const id = item.dataset.prospectId;
+                            const multiOpt = multi.querySelector('option[value="' + id + '"]');
+                            if (multiOpt && !multiOpt.selected) {
+                                multiOpt.selected = true;
+                                addListItem(id, item.textContent);
+                                updateCount();
+                            }
+                            picker.value = '';
+                            fermer();
+                        }
+                    } else if (e.key === 'Escape') {
+                        fermer();
+                    }
+                });
+
+                dropdown.addEventListener('mousedown', function (e) {
+                    const item = e.target.closest('.js-prospect-option');
+                    if (!item) return;
+                    e.preventDefault();
+                    const id = item.dataset.prospectId;
+                    const multiOpt = multi.querySelector('option[value="' + id + '"]');
+                    if (multiOpt && !multiOpt.selected) {
+                        multiOpt.selected = true;
+                        addListItem(id, item.textContent);
+                        updateCount();
+                    }
+                    picker.value = '';
+                    fermer();
+                });
+
+                if (list) {
+                    list.addEventListener('click', function (e) {
+                        const btn = e.target.closest('.js-prospect-remove');
+                        if (!btn) return;
+                        const id = btn.dataset.prospectId;
+                        const opt = multi.querySelector('option[value="' + id + '"]');
+                        if (opt) {
+                            opt.selected = false;
+                        }
+                        removeListItem(id);
+                        updateCount();
+                    });
+                }
+            });
+        })();
+    </script>
+{% endblock %}

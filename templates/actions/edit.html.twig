@@ -1,0 +1,99 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+<div class="position-relative">
+    {% if routedelete is defined and routedelete %}
+        {% include 'include/delete_button.html.twig' with {
+            route: routedelete,
+            id: action.id,
+            tokenId: 'delete-action' ~ action.id,
+            classes: 'delete-abs',
+            hidden: {redirect: redirect|default('')}
+        } %}
+    {% endif %}
+
+    {{ form_start(form) }}
+
+    {{ form_widget(form.submit) }}
+        {% if redirect is defined and redirect %}
+            <a href="{{ redirect }}" class="btn btn-secondary ms-1">Annuler</a>
+        {% else %}
+            <a href="{{ path('app_user_actions') }}" class="btn btn-secondary ms-1">Annuler</a>
+        {% endif %}
+        {% if mode == 'update' and action.prospect %}<a href="{{ path('app_user_prospects_show', {id: action.prospect.id}) }}" class="btn btn-secondary ms-1">Fiche prospect</a>{% endif %}
+
+        {% include('include/error.html.twig') %}
+
+        <div class="card mt-3">
+            <div class="card-header">Action</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">{{ form_row(form.prospect) }}</div>
+                    <div class="col-md-6">{{ form_row(form.contact) }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">{{ form_row(form.datePrevue) }}</div>
+                    <div class="col-md-3">{{ form_row(form.dateRealisee) }}</div>
+                    <div class="col-md-3">{{ form_row(form.aFairePar) }}</div>
+                    <div class="col-md-3">{{ form_row(form.realisePar) }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">{{ form_row(form.typeAction) }}</div>
+                </div>
+                {{ form_row(form.resultat) }}
+            </div>
+        </div>
+        {% if typesSuggestions is defined and typesSuggestions|length > 0 %}
+            <datalist id="js-action-type-suggestions">
+                {% for type in typesSuggestions %}
+                    <option value="{{ type.libelle }}"></option>
+                {% endfor %}
+            </datalist>
+        {% endif %}
+
+        {{ form_end(form) }}
+    </div>
+{% endblock %}
+
+{% block localscript %}
+    {{ parent() }}
+    <script>
+        (function () {
+            function ready(fn) {
+                if (document.readyState !== 'loading') fn();
+                else document.addEventListener('DOMContentLoaded', fn);
+            }
+
+            ready(function () {
+                if (!window.jQuery) return;
+                const $prosp = $('.js-action-prospect');
+                const $cont = $('.js-action-contact');
+                if (!$prosp.length || !$cont.length) return;
+
+                function rafraichirContacts(prospectId) {
+                    $.getJSON('/user/actions/contacts', {prospect: prospectId || 0})
+                        .done(function (data) {
+                            const selected = $cont.val();
+                            $cont.empty();
+                            $cont.append($('<option>', {value: ''}).text('—'));
+                            (data || []).forEach(function (c) {
+                                $cont.append($('<option>', {value: c.id}).text(c.text));
+                            });
+                            if (null !== selected && $cont.find('option[value="' + selected + '"]').length) {
+                                $cont.val(selected);
+                            }
+                            $cont.trigger('change.select2');
+                        });
+                }
+
+                $prosp.on('change', function () {
+                    rafraichirContacts($(this).val());
+                });
+            });
+        })();
+    </script>
+{% endblock %}

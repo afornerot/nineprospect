@@ -1,0 +1,149 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <p class="text-muted">
+        Recherchez une entreprise par raison sociale ou SIREN, sélectionnez
+        un résultat, puis créez un prospect pré-rempli avec ses données
+        (SIREN, SIRET, NAF, adresse, ville, pays, RCS/RM, TVA intracommunautaire).
+    </p>
+
+    <form method="get" action="{{ path('app_user_prospects_from_annuaire') }}" class="mb-4">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="search"
+                   name="q"
+                   value="{{ query }}"
+                   class="form-control"
+                   placeholder="Raison sociale, SIREN, dénomination…"
+                   autocomplete="off"
+                   autofocus>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-magnifying-glass me-1"></i>Rechercher
+            </button>
+        </div>
+        {% if apiError %}
+            <div class="alert alert-warning mt-3 mb-0">
+                <i class="fas fa-triangle-exclamation"></i>
+                API indisponible : {{ apiError }}. Réessayez plus tard.
+            </div>
+        {% endif %}
+    </form>
+
+    {% if query is empty %}
+        <p class="text-muted small">
+            <i class="fas fa-info-circle"></i>
+            Saisissez un critère ci-dessus pour afficher les résultats.
+        </p>
+    {% elseif rows is empty and apiError is null %}
+        <div class="alert alert-warning">
+            <i class="fas fa-info-circle"></i>
+            Aucune entreprise correspondante trouvée dans l'Annuaire des Entreprises.
+        </div>
+    {% else %}
+        <form id="js-from-annuaire-form" data-create-url="{{ createUrl }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf }}">
+
+            <div class="list-group">
+                {% for row in rows %}
+                    <label class="list-group-item" style="cursor: pointer;">
+                        <div class="d-flex align-items-start gap-3">
+                            <input type="radio"
+                                   name="siren"
+                                   value="{{ row.siren }}"
+                                   class="form-check-input flex-shrink-0 mt-1"
+                                   {% if loop.first %}checked{% endif %}>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ row.nom ?: '—' }}</strong><br>
+                                        <span class="text-muted small">
+                                            {{ row.adresse ?: '—' }}<br>
+                                            {{ row.code_postal ?: '—' }} {{ row.ville ?: '' }}
+                                        </span>
+                                    </div>
+                                    <div class="text-end small text-muted">
+                                        <span class="badge text-bg-secondary">SIREN {{ row.siren ?: '—' }}</span><br>
+                                        {% if row.siret %}<span class="d-block mt-1">SIRET {{ row.siret }}</span>{% endif %}
+                                        {% if row.naf %}<span class="d-block">NAF {{ row.naf }}</span>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                {% endfor %}
+            </div>
+        </form>
+    {% endif %}
+
+    <div class="d-flex justify-content-between mt-3">
+        <a href="{{ path(routeList) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Retour à la liste
+        </a>
+        {% if rows is not empty %}
+            <button type="button" class="btn btn-success js-from-annuaire-create">
+                <i class="fas fa-plus me-1"></i>Créer ce prospect
+            </button>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block localscript %}
+    {{ parent() }}
+    <script>
+        (function () {
+            function ready(fn) {
+                if (document.readyState !== 'loading') fn();
+                else document.addEventListener('DOMContentLoaded', fn);
+            }
+            ready(function () {
+                const $btn = document.querySelector('.js-from-annuaire-create');
+                if (!$btn) return;
+                $btn.addEventListener('click', function () {
+                    const form = document.getElementById('js-from-annuaire-form');
+                    if (!form) return;
+                    const siren = form.querySelector('input[name="siren"]:checked');
+                    if (!siren) { alert('Sélectionnez un résultat.'); return; }
+                    const csrf = form.querySelector('input[name="_csrf_token"]').value;
+                    const url = form.getAttribute('data-create-url');
+                    $btn.disabled = true;
+                    fetch(url, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Origin': window.location.origin,
+                        },
+                        body: JSON.stringify({ siren: siren.value, csrf_token: csrf }),
+                    }).then(function (resp) {
+                        return resp.json().then(function (data) {
+                            return { ok: resp.ok, status: resp.status, data: data };
+                        });
+                    }).then(function (r) {
+                        if (!r.ok || !r.data.ok) {
+                            const msg = (r.data && r.data.error) ? r.data.error : ('Erreur ' + r.status);
+                            if (r.data && r.data.existingRedirect) {
+                                if (confirm(msg + '\n\nOuvrir le prospect existant ?')) {
+                                    window.location.href = r.data.existingRedirect;
+                                    return;
+                                }
+                            } else {
+                                alert(msg);
+                            }
+                            return;
+                        }
+                        window.location.href = r.data.redirect || window.location.href;
+                    }).catch(function () {
+                        alert('Erreur réseau. Veuillez réessayer.');
+                    }).finally(function () {
+                        $btn.disabled = false;
+                    });
+                });
+            });
+        })();
+    </script>
+{% endblock %}

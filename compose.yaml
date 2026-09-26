@@ -1,0 +1,38 @@
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: nineprospect-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: changeme
+      MYSQL_DATABASE: nineprospect
+      MYSQL_USER: user
+      MYSQL_PASSWORD: changeme
+    volumes:
+      - ./volume/mariadb:/var/lib/mysql
+
+  nineprospect:
+    build:
+      context: .
+      dockerfile: ./misc/docker/Dockerfile
+    container_name: nineprospect
+    restart: unless-stopped
+    image: reg.cadoles.com/envole/nineprospect
+    user: "${UID:-1000}:102"
+    depends_on:
+      - mariadb
+    ports:
+      - "8029:80"
+    volumes:
+      - ./public/uploads:/app/public/uploads:delegated
+      - ./uploads:/app/uploads:delegated
+      - ./templates:/app/templates:delegated
+      - ./config:/app/config:delegated
+      - ./src:/app/src:delegated
+      - ./tests:/app/tests:delegated
+      - ./phpunit.xml.dist:/app/phpunit.xml.dist:delegated
+      - ./misc:/app/misc:delegated
+      - ./public/lib:/app/public/lib:delegated
+      - ./var:/app/var
+      - ./.env.local:/app/.env.local
+      - ./.env:/app/.env

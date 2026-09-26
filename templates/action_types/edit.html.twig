@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <div class="position-relative">
+        {% if routedelete is defined and routedelete %}{% include 'include/delete_button.html.twig' with {route: routedelete, id: type.id, tokenId: 'delete-action-type' ~ type.id, classes: 'delete-abs'} %}{% endif %}
+
+        {{ form_start(form) }}
+
+        {{ form_widget(form.submit) }}
+        <a href="{{ path(routecancel) }}" class="btn btn-secondary ms-1">Annuler</a>
+
+        {% include('include/error.html.twig') %}
+
+        <div class="card mt-3">
+            <div class="card-header">Type d'action</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">{{ form_row(form.libelle) }}</div>
+                    <div class="col-md-3">{{ form_row(form.ordre) }}</div>
+                    <div class="col-md-3 d-flex align-items-end">{{ form_row(form.actif) }}</div>
+                </div>
+            </div>
+        </div>
+
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

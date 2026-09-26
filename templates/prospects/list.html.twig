@@ -1,0 +1,155 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end mb-3 w-100">
+        <div class="flex-grow-1" style="min-width: 160px;">
+            <label class="form-label" for="filtre-q">Recherche</label>
+            <input type="text" class="form-control" id="filtre-q" name="q" value="{{ filtres.recherche }}" placeholder="Nom, ville, email...">
+        </div>
+        <div class="flex-grow-1" style="min-width: 160px;">
+            <label class="form-label" for="filtre-campagne">Campagne</label>
+            <select class="form-select" id="filtre-campagne" name="campagne">
+                <option value="">Toutes</option>
+                {% for campagne in campagnes %}
+                    <option value="{{ campagne.id }}" {% if filtres.campagne == campagne.id %}selected{% endif %}>{{ campagne.libelle }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex-grow-1" style="min-width: 140px;">
+            <label class="form-label" for="filtre-sprint">Vague</label>
+            <select class="form-select" id="filtre-sprint" name="sprint">
+                <option value="">Toutes</option>
+                {% for sprint in sprints %}
+                    <option value="{{ sprint.id }}" {% if filtres.sprint == sprint.id %}selected{% endif %}>{{ sprint }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex-grow-1" style="min-width: 160px;">
+            <label class="form-label" for="filtre-departement">Département</label>
+            <select class="form-select" id="filtre-departement" name="departement">
+                <option value="">Tous</option>
+                {% for departement in departements %}
+                    <option value="{{ departement.id }}" {% if filtres.departement == departement.id %}selected{% endif %}>{{ departement }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex-grow-1" style="min-width: 150px;">
+            <label class="form-label" for="filtre-utilisateur">Affecté à</label>
+            <select class="form-select" id="filtre-utilisateur" name="utilisateur">
+                <option value="">Tous</option>
+                {% for utilisateur in utilisateurs %}
+                    <option value="{{ utilisateur.id }}" {% if filtres.userId == utilisateur.id %}selected{% endif %}>{{ utilisateur.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex-grow-1" style="min-width: 130px;">
+            <label class="form-label" for="filtre-contacte">Contacté</label>
+            <select class="form-select" id="filtre-contacte" name="contacte">
+                <option value="">Tous</option>
+                <option value="oui" {% if filtres.contacte == 'oui' %}selected{% endif %}>Oui</option>
+                <option value="non" {% if filtres.contacte == 'non' %}selected{% endif %}>Non</option>
+            </select>
+        </div>
+        <div class="flex-grow-1" style="min-width: 140px;">
+            <label class="form-label" for="filtre-qualifie">Qualifié</label>
+            <select class="form-select" id="filtre-qualifie" name="qualifie">
+                <option value="">Tous</option>
+                <option value="oui" {% if filtres.qualifie == 'oui' %}selected{% endif %}>Oui</option>
+                <option value="non" {% if filtres.qualifie == 'non' %}selected{% endif %}>Non</option>
+                <option value="horscible" {% if filtres.qualifie == 'horscible' %}selected{% endif %}>Hors cible</option>
+            </select>
+        </div>
+        <div class="flex-shrink-0"> 
+            <button type="submit" class="btn btn-primary">Filtrer</button>
+        </div>
+        <div class="flex-shrink-0">
+            <a href="{{ path('app_user_prospects') }}" class="btn btn-secondary">Réinitialiser</a>
+        </div>
+    </form>
+
+    <a href="{{ path(routesubmit, {redirect: path('app_user_prospects')}) }}" class="btn btn-success mb-3">Ajouter</a>
+    <a href="{{ path('app_user_prospects_from_annuaire') }}" class="btn btn-outline-success mb-3 ms-1">
+        <i class="fas fa-magnifying-glass me-1"></i>Créer depuis l'Annuaire
+    </a>
+
+    <div class="dataTable_wrapper">
+        <table class="table table-striped table-bordered table-hover" id="dataTables" style="width:100%" data-order-col="1" data-order-dir="asc">
+            <thead>
+            <tr>
+                <th width="90px" class="no-sort">Action</th>
+                <th>Prospect</th>
+                <th>Contact principal</th>
+                <th>Campagne</th>
+                <th>Vague</th>
+                <th>Pipeline</th>
+                <th>Contacté</th>
+                <th>Qualifié</th>
+                <th>Prc Action</th>
+            </tr>
+            </thead>
+            <tbody>
+                {% for prospect in prospects %}
+                    {% set contact = prospect.contactPrincipal %}
+                    {% set liens = prospect.sprints|sort((a, b) => a.sprint.numero <=> b.sprint.numero) %}
+                    {% set courant = liens|last %}
+                    <tr id="prospect-{{ prospect.id }}">
+                        <td>
+                            <a href="{{ path(routeshow, {id: prospect.id, redirect: prospects_list_url(prospect.id)}) }}" title="Fiche"><i class="fas fa-eye fa-2x"></i></a>
+                            <a href="{{ path(routeupdate, {id: prospect.id, redirect: prospects_list_url(prospect.id)}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
+                        </td>
+                        <td>
+                            <a href="{{ path(routeshow, {id: prospect.id, redirect: prospects_list_url(prospect.id)}) }}">{{ prospect.nom }}</a>
+                            {% if prospect.ville or prospect.codePostal or prospect.departement %}
+                                <br><small class="text-muted">{{- prospect.ville -}}
+                                    {%- if prospect.codePostal %} ({{ prospect.codePostal }}){% endif -%}
+                                    {%- if prospect.departement %} — {{ prospect.departement }}{% endif -%}
+                                </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if contact %}
+                                {{ contact.nomComplet }}<br><small class="text-muted">{{ contact.email }}</small>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td><small class="text-muted">{{ prospect.campagne ? prospect.campagne.libelle : 'Hors Meta' }}</small></td>
+                        <td>
+                            {% for lien in liens %}<span class="badge text-bg-secondary me-1">{{ lien.sprint.numero }}</span>{% else %}<span class="text-muted">—</span>{% endfor %}
+                        </td>
+                        <td>
+                            {% if courant and courant.sprint.pipeline %}
+                                {% for etape in courant.sprint.pipeline.etapes %}
+                                    {% set valeur = courant.statutPour(etape) %}
+                                    <button type="button" class="badge text-bg-{{ pipeline_color(valeur) }} js-cycle-etape" data-prospect="{{ prospect.id }}" data-etape="{{ etape.id }}" data-csrf="{{ csrf_token('cycle-etape-prospect-' ~ prospect.id) }}" title="{{ pipeline_label(valeur) }}">{{ etape.nom }}</button>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="form-check form-switch js-toggle-contacte-wrapper" data-action-id="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-contacte-prospect' ~ prospect.id) }}" data-contacte="{{ prospect.contacte is same as(true) ? '1' : '0' }}">
+                                <input type="checkbox" class="form-check-input js-toggle-contacte" role="switch" {% if prospect.contacte %}checked{% endif %} aria-label="Contacté" title="Contacté">
+                            </div>
+                        </td>
+                        <td>
+                            <button type="button" class="badge text-bg-{{ qualifie_color(prospect.qualifie) }} js-cycle-qualifie" data-prospect="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-qualifie-prospect' ~ prospect.id) }}" title="{{ qualifie_label(prospect.qualifie) }}">{{ qualifie_label(prospect.qualifie) }}</button>
+                        </td>
+                        <td>
+                            {% set prochaine = prospect.prochaineAction %}
+                            {% if prochaine %}
+                                <a href="{{ path('app_user_actions_update', {id: prochaine.id, redirect: prospects_list_url(prospect.id)}) }}" title="{{ prochaine.typeAction ?: '—' }}">{{ prochaine.datePrevue|date('d/m/Y') }}</a>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

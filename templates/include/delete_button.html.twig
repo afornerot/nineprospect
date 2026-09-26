@@ -1,0 +1,26 @@
+{# Bouton de suppression : mini-form POST autonome avec token CSRF. #}
+{# À placer HORS de tout form principal (pas de <form> imbriqué). #}
+{# Paramètres : route (nom Symfony), id, tokenId (ex. 'delete-user5'), #}
+{#              label (optionnel, texte affiché + title/aria), #}
+{#              icon (optionnel, classes Font Awesome, affichée à la place du texte), #}
+{#              btnclasses (optionnel, classes CSS du bouton, défaut 'btn btn-danger'), #}
+{#              classes (optionnel, classes CSS du form), #}
+{#              params (optionnel, paramètres de route supplémentaires), #}
+{#              hidden (optionnel, map de champs hidden supplémentaires #}
+{#                       ex. {redirect: '/chemin'}). #}
+{% set libelle = label|default('Supprimer') %}
+<form method="post" action="{{ path(route, params|default({})|merge({id: id})) }}" class="delete-button d-inline {{ classes|default('') }}" onsubmit="return confirm('Confirmez-vous la suppression de cet enregistrement ?')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token(tokenId) }}">
+    {% if hidden is defined and hidden %}
+        {% for name, value in hidden %}
+            <input type="hidden" name="{{ name }}" value="{{ value }}">
+        {% endfor %}
+    {% endif %}
+    <button type="submit" class="{{ btnclasses|default('btn btn-danger') }}" title="{{ libelle }}" aria-label="{{ libelle }}">
+        {%- if icon is defined and icon -%}
+            <i class="{{ icon }}" aria-hidden="true"></i>
+        {%- else -%}
+            {{ libelle }}
+        {%- endif -%}
+    </button>
+</form>

@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <div class="alert alert-info">
+        <i class="fas fa-circle-info"></i>
+        Un pipeline décrit les étapes d'une vague de traitement (Visio, Démo, Devis, Signature…).
+        Chaque vague affecte un pipeline à ses prospects.
+    </div>
+
+    <a href="{{ path(routesubmit) }}" class="btn btn-success mb-3">Ajouter</a>
+
+    <div class="dataTable_wrapper">
+        <table class="table table-striped table-bordered table-hover" id="dataTables" style="width:100%">
+            <thead>
+            <tr>
+                <th width="90px" class="no-sort">Action</th>
+                <th>Pipeline</th>
+                <th>Étapes</th>
+                <th>Vagues</th>
+                <th>Par défaut</th>
+            </tr>
+            </thead>
+            <tbody>
+                {% for ligne in lignes %}
+                    {% set pipeline = ligne.pipeline %}
+                    <tr>
+                        <td>
+                            <a href="{{ path(routeupdate, {id: pipeline.id}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
+                            <a href="{{ path(routevague, {pipeline: pipeline.id}) }}" title="Vagues"><i class="fas fa-layer-group fa-2x"></i></a>
+                        </td>
+                        <td>{{ pipeline.nom }}</td>
+                        <td>
+                            {% for etape in pipeline.etapes %}
+                                <span class="badge text-bg-secondary me-1">{{ etape.ordre }}. {{ etape.nom }}</span>
+                            {% else %}
+                                <span class="text-muted">Aucune étape</span>
+                            {% endfor %}
+                        </td>
+                        <td>{{ ligne.vagues }}</td>
+                        <td>
+                            {% if pipeline.parDefaut %}
+                                <span class="badge text-bg-info">Oui</span>
+                            {% else %}
+                                <span class="text-muted">Non</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

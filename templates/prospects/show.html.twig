@@ -1,0 +1,309 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1 class="mb-1">{{ title }}</h1>
+
+    {% set backUrl = app.request.query.get('redirect')|default('') %}
+    {% if backUrl|default('')|length == 0 %}
+        {# Sans redirect explicite, l'annulation du formulaire de modification
+           ramène sur la fiche (et « Retour à la liste » ci-dessous reste
+           explicite). #}
+        {% set backUrl = path('app_user_prospects_show', {id: prospect.id}) %}
+    {% endif %}
+    <a href="{{ path(routeupdate, {id: prospect.id, redirect: backUrl}) }}" class="btn btn-primary mb-3">Modifier</a>
+    <button type="button"
+            class="btn btn-outline-primary mb-3 ms-1 js-verify-prospect"
+            data-prospect="{{ prospect.id }}">
+        <i class="fas fa-magnifying-glass me-1"></i>Vérifier les données
+    </button>
+    <a href="{{ backUrl }}" class="btn btn-secondary ms-1 mb-3">Retour à la liste</a>
+
+    {% if prospect.anomalie %}
+        <div class="alert alert-danger">
+            <i class="fas fa-triangle-exclamation"></i>
+            Anomalies signalées à l'import : {{ prospect.anomalieMotif }}
+        </div>
+    {% endif %}
+
+    <div class="row g-2">
+        <div class="col-md-4">
+            <div class="card mb-2">
+                <div class="card-header">Prospect</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Entreprise</dt>
+                        <dd class="col-sm-8">{{ prospect.nom }}</dd>
+
+                        {% if prospect.email %}
+                            <dt class="col-sm-4">Email</dt>
+                            <dd class="col-sm-8">
+                                <a href="mailto:{{ prospect.email }}">{{ prospect.email }}</a>
+                            </dd>
+                        {% endif %}
+
+                        {% if prospect.telephone %}
+                            <dt class="col-sm-4">Téléphone</dt>
+                            <dd class="col-sm-8">
+                                <i class="fas fa-phone me-1"></i>
+                                <a href="tel:{{ prospect.telephone }}">{{ prospect.telephone }}</a>
+                            </dd>
+                        {% endif %}
+
+                        {% if prospect.linkedinUrl %}
+                            <dt class="col-sm-4">LinkedIn</dt>
+                            <dd class="col-sm-8">
+                                <i class="fab fa-linkedin me-1"></i>
+                                <a href="{{ prospect.linkedinUrl }}" target="_blank" rel="noopener">{{ prospect.linkedinUrl }}</a>
+                            </dd>
+                        {% endif %}
+
+                        {% if prospect.siteUrl %}
+                            <dt class="col-sm-4">Site web</dt>
+                            <dd class="col-sm-8">
+                                <i class="fas fa-globe me-1"></i>
+                                <a href="{{ prospect.siteUrl }}" target="_blank" rel="noopener">{{ prospect.siteUrl }}</a>
+                            </dd>
+                        {% endif %}
+
+                        {% if prospect.adresse or prospect.ville or prospect.codePostal or prospect.pays or prospect.departement %}
+                            <dt class="col-sm-4">Localisation</dt>
+                            <dd class="col-sm-8">
+                                {% if prospect.adresse %}{{ prospect.adresse|nl2br }}<br>{% endif %}
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                {{- prospect.ville ?: '—' -}}
+                                {%- if prospect.codePostal %} ({{ prospect.codePostal }}){% endif -%}
+                                {%- if prospect.departement %} — {{ prospect.departement }}{% endif -%}
+                                {%- if prospect.pays %} — {{ prospect.pays }}{% endif -%}
+                            </dd>
+                        {% endif %}
+
+                        {% if prospect.siren or prospect.siret or prospect.naf or prospect.rcsRm or prospect.numTva %}
+                            <dt class="col-sm-4">Identification</dt>
+                            <dd class="col-sm-8 text-muted small">
+                                {% if prospect.siren %}SIREN {{ prospect.siren }}<br>{% endif %}
+                                {% if prospect.siret %}SIRET {{ prospect.siret }}<br>{% endif %}
+                                {% if prospect.naf %}NAF {{ prospect.naf }}<br>{% endif %}
+                                {% if prospect.rcsRm %}RCS/RM {{ prospect.rcsRm }}<br>{% endif %}
+                                {% if prospect.numTva %}TVA {{ prospect.numTva }}<br>{% endif %}
+                            </dd>
+                        {% endif %}
+
+                        {% if prospect.idDolibarr %}
+                            <dt class="col-sm-4">ID Dolibarr</dt>
+                            <dd class="col-sm-8">{{ prospect.idDolibarr }}</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-4">Campagne</dt>
+                        <dd class="col-sm-8">{{ prospect.campagne ? prospect.campagne.libelle : 'Hors Meta' }}</dd>
+
+                        <dt class="col-sm-4">Contacté le</dt>
+                        <dd class="col-sm-8">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="form-check form-switch js-toggle-contacte-wrapper m-0" data-action-id="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-contacte-prospect' ~ prospect.id) }}" data-contacte="{{ prospect.contacte is same as(true) ? '1' : '0' }}">
+                                    <input type="checkbox" class="form-check-input js-toggle-contacte" role="switch" {% if prospect.contacte %}checked{% endif %} aria-label='Contacte' title='Contacte'>
+                                </div>
+                                <span class="js-contacte-date text-muted">
+                                    {{- prospect.datePremierContact ? prospect.datePremierContact|date('d/m/Y') : '' -}}
+                                </span>
+                            </div>
+                        </dd>
+
+                        <dt class="col-sm-4">Qualifié</dt>
+                        <dd class="col-sm-8">
+                            <button type="button" class="badge text-bg-{{ qualifie_color(prospect.qualifie) }} js-cycle-qualifie" data-prospect="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-qualifie-prospect' ~ prospect.id) }}" title="{{ qualifie_label(prospect.qualifie) }}">{{ qualifie_label(prospect.qualifie) }}</button>
+                            {% if prospect.quali %} — <span class="text-muted">{{ prospect.quali }}</span>{% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4">Bureau d'étude</dt>
+                        <dd class="col-sm-8">{{ prospect.bureauEtudeInterne is same as(true) ? 'Oui' : (prospect.bureauEtudeInterne is same as(false) ? 'Non' : '—') }}</dd>
+
+                        <dt class="col-sm-4">Affecté à</dt>
+                        <dd class="col-sm-8">
+                            {% for user in prospect.users %}{{ user.username }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}
+                        </dd>
+
+                        <dt class="col-sm-4">Devis</dt>
+                        <dd class="col-sm-8">{{ prospect.montantDevis ? prospect.montantDevis|number_format(2, ',', ' ') ~ ' €' : '—' }}</dd>
+
+                        <dt class="col-sm-4">Notes</dt>
+                        <dd class="col-sm-8" style="white-space: pre-line">{{ prospect.notes ?: '—' }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            {% if prospect.latitude and prospect.longitude %}
+                <div class="card mb-2">
+                    <div class="card-header">Localisation</div>
+                    <div class="card-body p-0">
+                        <div id="prospect-map" style="height: 320px; border-bottom-left-radius: .5rem; border-bottom-right-radius: .5rem;"></div>
+                        <div class="p-2 small text-muted">
+                            <i class="fas fa-location-crosshairs"></i>
+                            {{ prospect.latitude }}, {{ prospect.longitude }}
+                            &middot;
+                            <a target="_blank" rel="noopener"
+                            href="https://www.openstreetmap.org/?mlat={{ prospect.latitude }}&mlon={{ prospect.longitude }}#map=17/{{ prospect.latitude }}/{{ prospect.longitude }}">
+                                agrandir la carte
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-8">
+            <div class="card mb-2">
+                <div class="card-header">Contacts ({{ prospect.contacts|length }})
+                    <a href="{{ path('app_user_contacts_submit', {prospect: prospect.id, redirect: path('app_user_prospects_show', {id: prospect.id})}) }}" class="btn btn-sm btn-success float-end">Ajouter un contact</a>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Email</th>
+                                <th>Téléphone</th>
+                                <th>Principal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contact in prospect.contacts %}
+                                <tr>
+                                    <td><a href="{{ path('app_user_contacts_update', {id: contact.id, redirect: path('app_user_prospects_show', {id: prospect.id})}) }}">{{ contact.nomComplet }}</a></td>
+                                    <td>{{ contact.email ?: '—' }}</td>
+                                    <td>{{ contact.telephone ?: contact.telephoneBrut }}</td>
+                                    <td>{% if contact.estPrincipal %}<i class="fas fa-star text-warning"></i>{% endif %}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="4" class="text-muted">Aucun contact</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card mb-2">
+                <div class="card-header">Pipeline{% if prospect.sprints|length > 1 %} ({{ prospect.sprints|length }} vagues){% endif %}</div>
+                <div class="card-body">
+                    {% set liens = prospect.sprints|sort((a, b) => a.sprint.numero <=> b.sprint.numero) %}
+                    {% for lien in liens %}
+                        <div {% if not loop.last %}class="mb-3"{% endif %}>
+                            <div class="fw-bold mb-1">
+                                Vague {{ lien.sprint.numero }}{% if lien.sprint.libelle %} — {{ lien.sprint.libelle }}{% endif %}
+                                {% if lien.dateAjout %}<span class="text-muted fw-normal">(ajoutée le {{ lien.dateAjout|date('d/m/Y') }})</span>{% endif %}
+                                {% if loop.last %}<span class="badge text-bg-info">courante</span>{% endif %}
+                            </div>
+                            <table class="table table-sm mb-0 table-pipeline-fixe">
+                                <thead>
+                                    <tr>
+                                        <th>Étape</th>
+                                        <th>Statut</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if lien.sprint.pipeline %}
+                                        {% for etape in lien.sprint.pipeline.etapes %}
+                                            {% set valeur = lien.statutPour(etape) %}
+                                            {% set dateEtape = lien.datePour(etape) %}
+                                            <tr>
+                                                <td>{{ etape.nom }}</td>
+                                                <td>
+                                                    <button type="button" class="badge text-bg-{{ pipeline_color(valeur) }} js-cycle-etape" data-prospect="{{ prospect.id }}" data-etape="{{ etape.id }}" data-csrf="{{ csrf_token('cycle-etape-prospect-' ~ prospect.id) }}" title="{{ pipeline_label(valeur) }}">{{ pipeline_label(valeur) }}</button>
+                                                </td>
+                                                <td>{{ dateEtape ? dateEtape|date('d/m/Y') : '—' }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr><td colspan="3" class="text-muted">Aucun pipeline affecté à cette vague.</td></tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune vague de traitement.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card mb-2">
+                <div class="card-header">
+                    Actions
+                    {% set prospectShowUrl = path('app_user_prospects_show', {id: prospect.id}) %}
+                    <a href="{{ path('app_user_actions_submit', {prospect: prospect.id, redirect: prospectShowUrl}) }}" class="btn btn-sm btn-success float-end">Ajouter une action</a>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>&nbsp;</th>
+                                <th>Type</th>
+                                <th>Réalisée le</th>
+                                <th>Prévue le</th>
+                                <th>Contact</th>
+                                <th>Résultat</th>
+                                <th>À faire par</th>
+                                <th>Réalisé par</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for action in prospect.actions %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ path('app_user_actions_update', {id: action.id, redirect: path('app_user_prospects_show', {id: prospect.id})}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
+                                    </td>
+                                    <td>{{ action.typeAction ?: '—' }}</td>
+                                    <td>{{ action.dateRealisee ? action.dateRealisee|date('d/m/Y') : '—' }}</td>
+                                    <td>{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}</td>
+                                    <td>{{ action.contact ? action.contact.nomComplet : '—' }}</td>
+                                    <td style="white-space: pre-line">{{ action.resultat ?: '—' }}</td>
+                                    <td>{{ action.aFairePar ? action.aFairePar.username : '—' }}</td>
+                                    <td>{{ action.realisePar ? action.realisePar.username : '—' }}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="8" class="text-muted">Aucune action enregistrée</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>            
+        </div>
+    </div>
+
+    {% if prospect.latitude and prospect.longitude %}
+        {% if mapboxToken is not empty %}
+            <link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
+            <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+            <script>
+                (function () {
+                    function ready(fn) {
+                        if (document.readyState !== 'loading') fn();
+                        else document.addEventListener('DOMContentLoaded', fn);
+                    }
+                    ready(function () {
+                        if (!window.mapboxgl) return;
+                        const el = document.getElementById('prospect-map');
+                        if (!el) return;
+                        mapboxgl.accessToken = {{ mapboxToken|json_encode|raw }};
+                        const map = new mapboxgl.Map({
+                            container: el,
+                            style: 'mapbox://styles/mapbox/light-v11',
+                            center: [parseFloat({{ prospect.longitude|json_encode|raw }}), parseFloat({{ prospect.latitude|json_encode|raw }})],
+                            zoom: 14,
+                        });
+                        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+                        new mapboxgl.Marker({ color: '#0d6efd' })
+                            .setLngLat([parseFloat({{ prospect.longitude|json_encode|raw }}), parseFloat({{ prospect.latitude|json_encode|raw }})])
+                            .addTo(map);
+                    });
+                })();
+            </script>
+        {% else %}
+            <div class="card-footer small text-warning">
+                <i class="fas fa-triangle-exclamation"></i>
+                Carte indisponible : renseignez <code>MAPBOX_PUBLIC_TOKEN</code> dans votre <code>.env</code> pour afficher la position du prospect.
+            </div>
+        {% endif %}
+    {% endif %}
+{% endblock %}

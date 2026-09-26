@@ -1,0 +1,181 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <div class="row g-2">
+        <div class="col-md-3">
+            <div class="row text-center g-2 mb-2">
+                <div class="col">
+                    <div class="card"><div class="card-body">
+                        <div class="display-6">{{ kpi.prospects }}</div>
+                        <div class="text-muted">Prospects</div>
+                        <a href="{{ path('app_user_prospects') }}" class="stretched-link" aria-label="Prospects"></a>
+                    </div></div>
+                </div>
+                <div class="col">
+                    <div class="card"><div class="card-body">
+                        <div class="display-6">{{ kpi.contacts }}</div>
+                        <div class="text-muted">Contacts</div>
+                        <a href="{{ path('app_user_contacts') }}" class="stretched-link" aria-label="Contacts"></a>
+                    </div></div>
+                </div>
+            </div>
+
+            <div class="row text-center g-2 mb-2">
+                <div class="col">
+                    <div class="card"><div class="card-body">
+                        <div class="display-6 text-{% if kpi.actionsEnRetard > 0 %}danger{% else %}success{% endif %}">{{ kpi.actionsEnRetard }}</div>
+                        <div class="text-muted">Actions en retard</div>
+                        <a href="{{ path('app_user_actions', {vue: 'retard'}) }}" class="stretched-link" aria-label="Actions en retard"></a>
+                    </div></div>
+                </div>
+                <div class="col">
+                    <div class="card"><div class="card-body">
+                        <div class="display-6 text-{% if kpi.actionsAVenir > 0 %}info{% else %}secondary{% endif %}">{{ kpi.actionsAVenir }}</div>
+                        <div class="text-muted">Actions à venir</div>
+                        <a href="{{ path('app_user_actions', {vue: 'avenir'}) }}" class="stretched-link" aria-label="Actions à venir"></a>
+                    </div></div>
+                </div>
+            </div>
+
+            <div class="row text-center g-2 mb-2">
+                <div class="col">
+                    <div class="card"><div class="card-body">
+                        <div class="display-6 text-{% if kpi.nonContacte > 0 %}warning{% else %}success{% endif %}">{{ kpi.nonContacte }}</div>
+                        <div class="text-muted">Non contactés</div>
+                        <a href="{{ path('app_user_prospects', {contacte: 'non'}) }}" class="stretched-link" aria-label="Prospects non contactés"></a>
+                    </div></div>
+                </div>
+                <div class="col">
+                    <div class="card"><div class="card-body">
+                        <div class="display-6 text-{% if kpi.nonQualifie > 0 %}warning{% else %}success{% endif %}">{{ kpi.nonQualifie }}</div>
+                        <div class="text-muted">Non qualifiés</div>
+                        <a href="{{ path('app_user_prospects', {qualifie: 'non'}) }}" class="stretched-link" aria-label="Prospects non qualifiés"></a>
+                    </div></div>
+                </div>
+            </div>
+
+            <div class="card mb-2">
+                <div class="card-header">Leads par campagne</div>
+                <div class="card-body">
+                    <canvas id="campagneChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-2">
+                <div class="card-header d-flex justify-content-between align-items-center gap-2">
+                    <span>Pipeline</span>
+                    <form method="get" action="{{ path('app_user_dashboard') }}" class="d-flex align-items-center gap-2 flex-wrap">
+                        <label for="filtre-pipeline-pipeline" class="text-muted small mb-0">Pipeline</label>
+                        <select name="pipeline" id="filtre-pipeline-pipeline" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                            {% for pipeline in pipelines %}
+                                <option value="{{ pipeline.id }}" {% if filtrePipeline == pipeline.id %}selected{% endif %}>{{ pipeline }}</option>
+                            {% endfor %}
+                        </select>
+                        <label for="filtre-sprint-pipeline" class="text-muted small mb-0">Vague</label>
+                        <select name="sprint" id="filtre-sprint-pipeline" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                            <option value="">Toutes les vagues</option>
+                            {% for sprint in sprints %}
+                                <option value="{{ sprint.id }}" {% if filtreSprint == sprint.id %}selected{% endif %}>{{ sprint }}</option>
+                            {% endfor %}
+                        </select>
+                        <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filtrer</button></noscript>
+                    </form>
+                </div>
+                <div class="card-body">
+                    <canvas id="pipelineChart" height="220"></canvas>
+                    <p class="text-muted small mb-0 mt-2">
+                        {% if filtreSprint %}
+                            Vague sélectionnée — un prospect présent dans plusieurs vagues est compté dans chacune.
+                        {% else %}
+                            Toutes les vagues — un prospect présent dans plusieurs vagues est compté dans chacune.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <div class="card mb-2">
+                <div class="card-header">Top départements</div>
+                <div class="card-body">
+                    <canvas id="geoChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+
+            <div class="card mb-2">
+                <div class="card-header">En retard</div>
+                <ul class="list-group list-group-flush">
+                    {% for action in retard %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                {% if action.prospect %}<a href="{{ path(routeProspect, {id: action.prospect.id}) }}">{{ action.prospect.nom }}</a>{% endif %}
+                                {% if action.contact %}<br><small class="text-muted">{{ action.contact.nomComplet }}</small>{% endif %}
+                            </span>
+                            <span class="badge text-bg-danger">{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}</span>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-muted">Aucune action en retard</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">À venir</div>
+                <ul class="list-group list-group-flush">
+                    {% for action in avenir %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                {% if action.prospect %}<a href="{{ path(routeProspect, {id: action.prospect.id}) }}">{{ action.prospect.nom }}</a>{% endif %}
+                                {% if action.contact %}<br><small class="text-muted">{{ action.contact.nomComplet }}</small>{% endif %}
+                            </span>
+                            <span class="badge text-bg-secondary">{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}</span>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-muted">Aucune action planifiée</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block localscript %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var pipelineLabels = {{ etapes|json_encode|raw }};
+            var pipelineData = {{ donneesPipeline|json_encode|raw }};
+            var colors = ['#6c757d', '#0dcaf0', '#ffc107', '#adb5bd', '#198754', '#dc3545'];
+
+            new Chart(document.getElementById('pipelineChart'), {
+                type: 'bar',
+                data: { labels: pipelineLabels, datasets: pipelineData.map(function(d, i) {
+                    return { label: d.label, data: d.data, backgroundColor: colors[i % colors.length] };
+                }) },
+                options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+
+            new Chart(document.getElementById('campagneChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: {{ campagnes.noms|default([])|json_encode|raw }},
+                    datasets: [{ data: {{ campagnes.totaux|default([])|json_encode|raw }}, backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997'] }]
+                },
+                options: { plugins: { legend: { position: 'bottom' } } }
+            });
+
+            var geoLabels = {{ geo|map(l => (l.numero ~ ' — ' ~ (l.nom ?: '')))|json_encode|raw }};
+            var geoData = {{ geo|map(l => l.total)|json_encode|raw }};
+
+            new Chart(document.getElementById('geoChart'), {
+                type: 'bar',
+                data: { labels: geoLabels, datasets: [{ label: 'Prospects', data: geoData, backgroundColor: '#0d6efd' }] },
+                options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        });
+    </script>
+{% endblock %}

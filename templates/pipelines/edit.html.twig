@@ -1,0 +1,85 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <div class="position-relative">
+        {% if routedelete is defined and routedelete %}{% include 'include/delete_button.html.twig' with {route: routedelete, id: pipeline.id, tokenId: 'delete-pipeline' ~ pipeline.id, classes: 'delete-abs'} %}{% endif %}
+    </div>
+
+    <div class="row">
+        <div class="col-md-{{(mode is defined and mode == 'update') ? '4' : '12'}} mx-auto">
+            {{ form_start(form) }}
+                {{ form_widget(form.submit) }}
+                <a href="{{ path(routecancel) }}" class="btn btn-secondary ms-1">Annuler</a>
+
+                {% include('include/error.html.twig') %}
+
+                <div class="card mt-3">
+                    <div class="card-header">Pipeline</div>
+                    <div class="card-body">
+                        {{ form_row(form.nom) }}
+                        {{ form_row(form.parDefaut) }}
+                    </div>
+                </div>
+
+            {{ form_end(form) }}
+        </div>
+
+        {% if mode is defined and mode == 'update' %}
+            <div class="col-md-8" style="margin-top: 37px;">
+                <div class="card mt-3">
+                    <div class="card-header">Étapes du pipeline</div>
+                    <div class="card-body">
+                        {% if formEtapes %}
+                            <div class="pipeline-etape-ligne pipeline-etape-tete">
+                                <div class="pipeline-etape-col-nom">Nom de l'étape</div>
+                                <div class="pipeline-etape-col-ordre">Ordre</div>
+                                <div class="pipeline-etape-col-bouton"></div>
+                                <div class="pipeline-etape-col-bouton"></div>
+                            </div>
+
+                            {% for etapeId, formEtape in formEtapes %}
+                                <div class="pipeline-etape-ligne">
+                                    {{ form_start(formEtape) }}
+                                        <div class="pipeline-etape-col-nom">{{ form_widget(formEtape.nom) }}</div>
+                                        <div class="pipeline-etape-col-ordre">{{ form_widget(formEtape.ordre) }}</div>
+                                        <div class="pipeline-etape-col-bouton">
+                                            <button type="submit" class="btn btn-sm btn-primary" title="Enregistrer" aria-label="Enregistrer"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i></button>
+                                        </div>
+                                        {{ form_errors(formEtape.nom) }}
+                                        {{ form_errors(formEtape.ordre) }}
+                                    {{ form_end(formEtape) }}
+                                    <div class="pipeline-etape-col-bouton">
+                                        {% include 'include/delete_button.html.twig' with {route: routeEtapeDelete, id: pipeline.id, tokenId: 'delete-pipeline-etape' ~ pipeline.id, params: {etapeId: etapeId}, label: 'Supprimer', icon: 'fa-solid fa-trash-can', btnclasses: 'btn btn-danger btn-sm'} %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-3">Aucune étape : ce pipeline n'affichera rien sur les prospects.</p>
+                        {% endif %}
+
+                        <hr>
+
+                        {% if formAjout %}
+                            <div class="pipeline-etape-ligne">
+                                {{ form_start(formAjout) }}
+                                    <div class="pipeline-etape-col-nom">{{ form_widget(formAjout.nom) }}</div>
+                                    <div class="pipeline-etape-col-ordre">{{ form_widget(formAjout.ordre) }}</div>
+                                    <div class="pipeline-etape-col-bouton">
+                                        <button type="submit" class="btn btn-success btn-sm" title="Ajouter" aria-label="Ajouter"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                                    </div>
+                                    {{ form_errors(formAjout.nom) }}
+                                    {{ form_errors(formAjout.ordre) }}
+                                {{ form_end(formAjout) }}
+                                <div class="pipeline-etape-col-bouton"></div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

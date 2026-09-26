@@ -1,0 +1,104 @@
+{# Modale de vérification via l'API Annuaire des Entreprises.
+   Injectée dans la fiche prospect via fetch JS (`/user/prospects/verify/{id}`).
+   L'utilisateur choisit un résultat et le POST `/apply` met à jour le prospect. #}
+
+<div class="modal fade" id="js-verify-modal-{{ prospect.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-magnifying-glass me-2"></i>
+                    Vérification via Annuaire des Entreprises
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    {% if query == prospect.nom %}
+                        Recherche sur <strong>{{ prospect.nom ?: '—' }}</strong>.
+                    {% else %}
+                        Recherche sur <strong>{{ query }}</strong>
+                        (critère personnalisé pour ce prospect).
+                    {% endif %}
+                    {% if apiError %}
+                        <br><span class="text-warning">
+                            <i class="fas fa-triangle-exclamation"></i>
+                            API indisponible : {{ apiError }}. Réessayez plus tard.
+                        </span>
+                    {% endif %}
+                </p>
+
+                <form id="js-verify-search-{{ prospect.id }}" data-search-url="{{ searchUrl }}" class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="search"
+                               name="q"
+                               value="{{ query }}"
+                               class="form-control"
+                               placeholder="Raison sociale, SIREN, dénomination…"
+                               autocomplete="off">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-magnifying-glass me-1"></i>Rechercher
+                        </button>
+                    </div>
+                    <small class="form-text text-muted">
+                        Vous pouvez saisir une raison sociale, un SIREN, une dénomination…
+                        Le critère est envoyé tel quel à l'Annuaire des Entreprises.
+                    </small>
+                </form>
+
+                {% if rows is empty and apiError is null %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        Aucune entreprise correspondante trouvée dans l'Annuaire des Entreprises.
+                    </div>
+                {% endif %}
+
+                <form id="js-verify-form-{{ prospect.id }}" data-apply-url="{{ applyUrl }}" {% if rows is empty %}class="d-none"{% endif %}>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf }}">
+                    <input type="hidden" name="redirect" value="{{ redirect }}">
+
+                    {% if rows is not empty %}
+                        <div class="list-group">
+                            {% for row in rows %}
+                                <label class="list-group-item js-verify-option" style="cursor: pointer;">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <input type="radio"
+                                               name="siren"
+                                               value="{{ row.siren }}"
+                                               class="form-check-input flex-shrink-0 mt-1"
+                                               {% if loop.first %}checked{% endif %}>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <strong>{{ row.nom ?: '—' }}</strong><br>
+                                                    <span class="text-muted small">
+                                                        {{ row.adresse ?: '—' }}<br>
+                                                        {{ row.code_postal ?: '—' }} {{ row.ville ?: '' }}
+                                                    </span>
+                                                </div>
+                                                <div class="text-end small text-muted">
+                                                    <span class="badge text-bg-secondary">SIREN {{ row.siren ?: '—' }}</span><br>
+                                                    {% if row.siret %}<span class="d-block mt-1">SIRET {{ row.siret }}</span>{% endif %}
+                                                    {% if row.naf %}<span class="d-block">NAF {{ row.naf }}</span>{% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="modal-footer">
+                <a href="{{ path('app_user_prospects') }}" class="btn btn-secondary">Annuler</a>
+                {% if rows is not empty %}
+                    <button type="button" class="btn btn-primary js-verify-apply" data-form="#js-verify-form-{{ prospect.id }}">
+                        <i class="fas fa-check me-1"></i>Appliquer ce résultat
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

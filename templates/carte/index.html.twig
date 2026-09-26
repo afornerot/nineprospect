@@ -1,0 +1,120 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    {% if mapboxToken is empty %}
+        <div class="alert alert-warning">
+            <i class="fas fa-triangle-exclamation"></i>
+            Aucun jeton Mapbox n'est configuré. Renseignez <code>MAPBOX_PUBLIC_TOKEN</code>
+            dans votre fichier <code>.env</code> (compte sur
+            <a href="https://account.mapbox.com/access-tokens" target="_blank" rel="noopener">mapbox.com</a>)
+            pour activer la carte.
+        </div>
+    {% endif %}
+
+    <p class="text-muted">
+        {{ prospectsGeo|length }} prospect{{ prospectsGeo|length > 1 ? 's' : '' }} géolocalisé{{ prospectsGeo|length > 1 ? 's' : '' }}
+        sur {{ totalProspects }} au total. Les coordonnées sont issues du champ
+        « Latitude/Longitude » rempli via l'autocompletion d'adresse ou saisies à la main.
+    </p>
+
+    <form method="get" action="{{ path('app_user_carte') }}" class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+        <label for="carte-style" class="text-muted small mb-0">Style de carte</label>
+        <select id="carte-style" name="style" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+            {% for key, label in styles %}
+                <option value="{{ key }}" {% if styleKey == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">OK</button></noscript>
+    </form>
+
+    <div id="map" style="height: 70vh; min-height: 480px; border-radius: .5rem;"></div>
+
+    <div class="mt-3 small text-muted">
+        <i class="fas fa-info-circle"></i>
+        Cliquez sur un marqueur pour ouvrir la fiche prospect dans un nouvel onglet.
+    </div>
+{% endblock %}
+
+{% block localscript %}
+    {{ parent() }}
+    <script>
+        window.__MAPBOX_TOKEN__ = {{ mapboxToken|json_encode|raw }};
+        window.__MAPBOX_STYLE__ = {{ styleKey|json_encode|raw }};
+        window.__PROSPECTS_GEO__ = [
+        {%- for p in prospectsGeo -%}
+            {
+                id: {{ p.id }},
+                nom: {{ p.nom|json_encode|raw }},
+                ville: {{ p.ville|default('')|json_encode|raw }},
+                cp: {{ p.codePostal|default('')|json_encode|raw }},
+                campagne: {{ (p.campagne ? p.campagne.libelle : '')|json_encode|raw }},
+                lat: parseFloat({{ p.latitude|json_encode|raw }}),
+                lon: parseFloat({{ p.longitude|json_encode|raw }})
+            }{% if not loop.last %},{% endif %}
+        {%- endfor -%}
+        ];
+    </script>
+
+    {% if mapboxToken is not empty %}
+        <link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
+        <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+        <script>
+            (function () {
+                if (!window.mapboxgl) return;
+                mapboxgl.accessToken = window.__MAPBOX_TOKEN__;
+
+                const prospects = window.__PROSPECTS_GEO__ || [];
+                const styleKey = window.__MAPBOX_STYLE__ || 'light-v11';
+                const map = new mapboxgl.Map({
+                    container: 'map',
+                    style: 'mapbox://styles/mapbox/' + styleKey,
+                    center: [2.213749, 46.227638], // centre de la France
+                    zoom: 5,
+                    minZoom: 4,
+                    maxZoom: 16,
+                });
+                map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+                map.addControl(new mapboxgl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+
+                prospects.forEach(function (p) {
+                    if (!isFinite(p.lat) || !isFinite(p.lon)) return;
+                    const el = document.createElement('div');
+                    el.className = 'js-prospect-marker';
+                    el.style.width = '14px';
+                    el.style.height = '14px';
+                    el.style.borderRadius = '50%';
+                    el.style.background = '#0d6efd';
+                    el.style.border = '2px solid #fff';
+                    el.style.boxShadow = '0 0 0 1px rgba(0,0,0,.25)';
+                    el.style.cursor = 'pointer';
+
+                    const popupHtml = '<div class="p-2"><strong>'
+                        + (p.nom || '')
+                        + '</strong><br>'
+                        + (p.cp ? p.cp + ' ' : '')
+                        + (p.ville || '')
+                        + (p.campagne ? '<br><small class="text-muted">' + p.campagne + '</small>' : '')
+                        + '<br><a target="_blank" rel="noopener" href="/user/prospects/show/'
+                        + p.id + '">Fiche prospect</a></div>';
+
+                    new mapboxgl.Marker(el)
+                        .setLngLat([p.lon, p.lat])
+                        .setPopup(new mapboxgl.Popup({ offset: 12 }).setHTML(popupHtml))
+                        .addTo(map);
+                });
+
+                // Vue par défaut : englober toute la France métropolitaine,
+                // indépendamment des prospects présents.
+                const franceBounds = [
+                    [-5.5, 41.0],  // sud-ouest (Finistère / Pyrénées)
+                    [9.7, 51.2],   // nord-est (Corse / Alsace / Nord)
+                ];
+                map.fitBounds(franceBounds, { padding: 40, duration: 0 });
+            })();
+        </script>
+    {% endif %}
+{% endblock %}
