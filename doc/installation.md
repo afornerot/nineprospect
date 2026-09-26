@@ -104,3 +104,35 @@ chmod -R 777 ./uploads ./public/uploads
 
 En production, le Dockerfile gère automatiquement les permissions avec
 l'utilisateur `apache`.
+
+## Schéma BDD (sans migration Doctrine)
+
+Le projet n'utilise **pas** les migrations Doctrine : `doctrine:schema:update --force`
+fait foi pour faire évoluer le schéma.
+
+> **Attention** : `--force` **DROPpe les tables / colonnes inconnues du mapping**.
+> Sauvegarder **hors base** avant toute mise à jour :
+> ```bash
+> docker compose exec -T mariadb mariadb-dump -unineprospect -p<mdp> --single-transaction nineprospect > /tmp/avant.sql
+> ```
+
+Procédure standard quand on ajoute/modifie un champ Doctrine :
+
+```bash
+# 1. modifier l'Entity et le FormType
+# 2. appliquer le schéma :
+docker compose exec -T nineprospect php bin/console doctrine:schema:update --force
+# 3. (optionnel) rejouer l'import CSV pour enrichir la base existante :
+docker compose exec -T nineprospect php bin/console app:import-prospects misc/import/Prospects.csv
+```
+
+Pour une correction ponctuelle de **données** (jamais de schéma) : `UPDATE` SQL
+direct autorisé. Exemple historique : réaligner `pipeline.par_defaut=1` sur le
+vrai « Pipeline par défaut » (id=1) :
+```bash
+docker compose exec -T mariadb mariadb -unineprospect -p<mdp> nineprospect -e \
+  "UPDATE pipeline SET par_defaut = 0 WHERE id = 2; UPDATE pipeline SET par_defaut = 1 WHERE id = 1;"
+```
+
+Voir [prospection.md](prospection.md) section « Migration schéma » pour le détail
+et l'historique de conversion du schéma pipeline.

@@ -1,16 +1,19 @@
 # Prospection (nineprospect)
 
-Application de gestion de prospects et de campagnes de prospection (sources Meta),
-sous les routes `/user/*` (firewall `main`, rôle `ROLE_USER`).
+Application de gestion de prospects, campagnes Meta, vagues de traitement et
+pipeline commercial, sous les routes `/user/*` (firewall `main`, rôle `ROLE_USER`).
 
 ## Modules
 
 | Module | Routes | Écran |
 |--------|--------|-------|
-| Tableau de bord | `/user/dashboard` | KPIs, pipeline, leads par campagne, top départements, actions en retard |
-| Prospects | `/user/prospects`, `/show/{id}`, `/submit`, `/update/{id}`, `/delete/{id}` | Liste filtrée + fiche prospect (contacts, actions, pipeline) |
+| Tableau de bord | `/user/dashboard` | KPIs (prospects, contacts, actions en retard / à venir, prospects non contactés, non qualifiés), pipeline, leads par campagne, top départements, actions en retard |
+| Prospects | `/user/prospects`, `/show/{id}`, `/submit`, `/update/{id}`, `/delete/{id}`, `/verify/{id}`, `/verify/{id}/apply` | Liste filtrée + fiche prospect (contacts, actions, pipeline, carte Mapbox). Vérification des données via Annuaire des Entreprises (data.gouv.fr) avec modale inline |
+| Créer depuis l'Annuaire | `/user/prospects/from-annuaire`, `/from-annuaire/create` | Page dédiée pour créer un prospect en cherchant par SIREN / raison sociale — n'écrase aucun prospect existant |
+| Carte | `/user/carte` | Vue plein écran Mapbox de tous les prospects géolocalisés. Style sélectionnable (Rues / Clair / Sombre / Satellite / Terrain, défaut Clair) |
 | Contacts | `/user/contacts` | Liste, création, modification, suppression |
-| Actions | `/user/actions` | 3 vues (En retard / À venir / Réalisées), création, modification, suppression |
+| Actions | `/user/actions` | 3 vues (En retard / À venir / Réalisées), création, modification, suppression, clôture/déclôture |
+| Agenda | `/user/agenda`, `/user/agenda/events`, `/user/agenda/csr/{id}`, `/user/agenda/csr/{id}/set-date` | Calendrier FullCalendar (vues mois/semaine/liste). Création d'action par clic sur une date, déplacement drag & drop d'événements, retour à la date mise à jour |
 | Types d'action | `/user/action-types` | CRUD des types suggérés à la création d'une action (libellé, ordre, actif) |
 | Campagnes | `/user/campagnes` | Budget, leads, coût par lead |
 | Vagues | `/user/vagues` | Vagues de traitement (anciennement « sprints »), pipeline affecté |
@@ -23,7 +26,14 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
 
 - `Prospect` : l'entreprise (regroupée sur une clé normalisée) ou un particulier (1 prospect/ligne).
   Porte le suivi : campagne, vagues de traitement, qualification, affectation (`users`,
-  ManyToMany), géolocalisation.
+  ManyToMany), géolocalisation, informations d'identification enrichies (SIREN, SIRET,
+  NAF, RCS/RM, N° TVA, ID Dolibarr), email, téléphone, LinkedIn, site web, latitude/longitude
+  (calculées via API Adresse sur autocompletion ou via l'Annuaire des Entreprises).
+  - **Contacté** : booléen simple `contacte` (cycle `null → true → false → true`,
+    date premier contact syncronisée automatiquement à `true`).
+  - **Qualifié** : `qualifie` nullable (`null` = Non, `true` = Oui, `false` = Hors cible).
+  - **Prochaine action** : `Prospect::getProchaineAction()` calcule l'action planifiée la
+    plus proche dans le futur (`datePrevue >= today`, non réalisée).
 - `ProspectSprint` : lien **prospect ↔ vague** (table `prospect_sprint`, contrainte
   `uniq_prospect_sprint`). Un prospect appartient à **0..n vagues** (relance en vague
   suivante) ; ses valeurs de pipeline sont portées par `pipeline_valeur` (ci-dessous).
@@ -41,17 +51,26 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
   `statut` SMALLINT `App\Enum\PipelineStatut` + `date` nullable). **Stockage creux** :
   la ligne n'est créée que si `statut != NON_DEMARRE` ou `date != null`, sinon elle est
   retirée ; l'absence de ligne se lit `NON_DEMARRE` (`ProspectSprint::statutPour()`).
+  **Cycle de statut cliquable** sur la liste et la fiche (`Prospect::cycleEtape()`,
+  `PipelineStatut::suivant()`) : avance `NON_DEMARRE → OUI → NON → EN_COURS → PERDU →
+  A_RELANCER → NON_DEMARRE` ; pose la date du jour à chaque clic et l'efface
+  quand le statut revient à `NON_DEMARRE`.
 - `Contact` : la personne, rattachée à un prospect ; contact principal choisi à l'import.
+  Téléphone validé via `libphonenumber` (format E164 stocké, `default_region='FR'`).
 - `Action` : une action de prospection, **soit planifiée** (à faire à une date), **soit réalisée**
   (avec un résultat). Champs : `datePrevue` (échéance d'une planifiée, colonne SQL `date_relance`),
-  `dateRealisee` (date effective de réalisation, colonne SQL `date`), `resultat`.
-  Statut **dérivé** : réalisée si `dateRealisee != null`, planifiée sinon. Aucune colonne
-  `faite` / `statut` : le statut n'est jamais stocké, il se recalcule à chaque requête.
+  `dateRealisee` (date effective de réalisation, colonne SQL `date`), `typeAction`
+  (obligatoire, suggestions paramétrables), `aFairePar` (FK user), `realisePar` (FK user),
+  `resultat`. Statut **dérivé** : réalisée si `dateRealisee != null`, planifiée sinon.
+  Aucune colonne `faite` / `statut` : le statut n'est jamais stocké, il se recalcule à
+  chaque requête.
 - `Campagne` : campagne publicitaire Meta (identifiant externe, budget).
 - `Sprint` : vague interne de traitement des leads (numéro, période) ; porte son
   **pipeline** (`pipeline_id`, ManyToOne, obligatoire au niveau applicatif, `RESTRICT`
   en base) et expose `getLiens()`.
 - `Departement` : référentiel des 101 départements (fixtures).
+- `ActionTypeDefaut` : types d'action suggérés à la création d'une action
+  (`libellé`, `ordre`, `actif`). CRUD via `/user/action-types`.
 
 Qualité des données : l'import **normalise et signale** (`anomalie` + `anomalieMotif`),
 il ne supprime jamais d'enregistrement. Avoir un prospect dans plusieurs vagues est un
@@ -79,16 +98,197 @@ il ne supprime jamais d'enregistrement. Avoir un prospect dans plusieurs vagues 
   `prospect[dateEtape{ID}]`, optionnelles). Une valeur soumise sans vague est refusée
   (« Sélectionnez au moins une vague de traitement pour renseigner le pipeline. »).
   Les champs d'un ancien pipeline sont ignorés (`allow_extra_fields`).
-- Fiche prospect : badges des vagues + un tableau de pipeline **par vague**.
-- Liste prospects : badges des vagues + pipeline de la vague courante (colonnes = étapes).
+- Fiche prospect : badges des vagues + un tableau de pipeline **par vague** avec
+  bouton de cycle cliquable sur chaque étape (badge `js-cycle-etape`).
+- Liste prospects : badges des vagues + pipeline de la vague courante (colonnes = étapes)
+  avec cycle cliquable. Colonne supplémentaire **« Prc Action »** : lien vers la fiche
+  de la prochaine action planifiée (`Prospect::getProchaineAction()`).
 - Tableau de bord : sélecteur **Pipeline** ET sélecteur de vague sur le graphe Pipeline
   (défaut « Toutes les vagues » ; un prospect présent dans plusieurs vagues est compté
   dans chacune). Les libellés de séries sont les **noms d'étapes** du pipeline choisi.
+  Le pipeline par défaut (`par_defaut=1`) est sélectionné automatiquement s'il n'y a pas
+  de query param `?pipeline=`.
 - Import : les colonnes `Visio/Demo/Devis/Signature` du CSV sont associées aux étapes
   **par nom normalisé** (accents/espaces/casse ignorés) ; une colonne sans étape
   correspondante produit une anomalie.
 
-### Migration schéma (sans migration Doctrine)
+## Liste des prospects — filtres et tri
+
+La liste (`/user/prospects`, `templates/prospects/list.html.twig`) supporte
+les filtres suivants (query string) :
+
+- `q` : recherche plein texte (nom, ville, email, nomComplet d'un contact)
+- `campagne`, `sprint`, `departement`, `utilisateur` : filtres par FK
+- `contacte` : `oui` (match exact `true`) ou `non` (match `IS NULL OR false`,
+  c'est-à-dire tous les prospects sans `true`)
+- `qualifie` : `oui` (match exact `true`), `non` (`IS NULL`, défaut Non), `horscible`
+  (match exact `false`)
+
+Les filtres « En anomalie », « Hors Meta », « Sans département » ont été
+**retirés** de la barre de filtres (les KPI correspondants ont aussi été
+retirés du dashboard) ; les données restent en base et restent filtrables
+programmatiquement via le repository (`countAnomalies`, `countHorsCampagne`,
+`countProspectsSansDepartement`).
+
+Boutons en haut de la liste :
+- **Ajouter** : `/user/prospects/submit` (form prospect vierge)
+- **Créer depuis l'Annuaire** : `/user/prospects/from-annuaire` (page dédiée
+  décrite plus bas)
+
+## Annuaire des Entreprises (data.gouv.fr)
+
+Mécanisme d'enrichissement automatique des prospects via l'API publique
+[Annuaire des Entreprises](https://recherche-entreprises.api.gouv.fr)
+(alias opéré par Etalab/DINUM). Pas de clé API, throttling implicite.
+
+### Services
+
+- `src/Service/AnnuaireEntreprises.php` :
+  - `search(string $q)` : GET `recherche-entreprises.api.gouv.fr/search?q=…&per_page=10`
+  - `searchBySiren(string $siren)` : filtre match exact sur le champ `siren`
+  - `normalize(array $row)` : extrait `siren`, `siret`, `nom`, `adresse`,
+    `code_postal`, `ville`, `naf`, `lat`, `lon`, `dept`, `ville_greffe`
+  - `buildRcs(string $siren, string $deptCode)` : produit `<SIREN> RCS <VILLE>`
+    via table statique departement → ville du greffe (table de correspondance
+    de 100+ entrées stockée en constante de classe, couvrant métropole +
+    Corse + DOM 971-976)
+  - `computeTva(string $siren)` : TVA intracommunautaire française
+    `FR + ((12 + 3 × (SIREN mod 97)) mod 97) formaté sur 2 chiffres + SIREN`
+    → 13 caractères
+  - Toutes les méthodes sont tolérantes aux erreurs HTTP / réseau (try/catch +
+    logger, retour `['results' => [], 'error' => '…']`)
+- `src/Service/AdresseApi.php` :
+  - `geocode(string $adresse, string $cp, string $ville)` : GET
+    `api-adresse.data.gouv.fr/search/?q=…&postcode=…&limit=1`
+    → `{lat, lon}` ou `null`
+
+### Endpoint `verify` (modale inline depuis la fiche prospect)
+
+- Bouton **« Vérifier les données »** dans la fiche prospect
+  (`templates/prospects/show.html.twig`, classe `.js-verify-prospect`).
+- Click → fetch GET `/user/prospects/verify/{id}?q=…` (le query `q` est
+  optionnel : par défaut le nom du prospect).
+- Le serveur retourne le fragment HTML de la modale Bootstrap
+  (`templates/prospects/_verify_modal.html.twig`) injectée dans le DOM puis
+  ouverte par `bootstrap.Modal.getOrCreateInstance()`.
+- La modale contient : champ de recherche pour changer le critère, liste
+  radio de résultats (SIREN, SIRET, NAF, adresse, ville), bouton
+  **« Appliquer ce résultat »** (`js-verify-apply`).
+- Submit → fetch POST `/user/prospects/verify/{id}/apply` (JSON :
+  `{siren, csrf_token, redirect}`). Le serveur re-vérifie le SIREN côté API
+  avant d'écrire, et applique via `ProspectController::applyAnnuaire()` qui :
+  - écrase SIREN, SIRET, NAF, adresse, code postal, ville, pays (`FR`), RCS/RM,
+    TVA, **nom** et **latitude/longitude** (re-géocodage via AdresseApi si
+    l'API ne fournit pas les coords)
+- CSRF : token `verify-prospect{id}` lié à la session (endpoint `/csrf/{id}`
+  pour le récupérer côté JS).
+
+### Endpoint `from-annuaire` (page dédiée)
+
+Bouton **« Créer depuis l'Annuaire »** dans la liste prospects à côté de
+« Ajouter ». Le bouton ouvre `/user/prospects/from-annuaire` :
+
+- Page avec champ de recherche (`?q=…`) + liste radio de résultats
+  + bouton **« Créer ce prospect »**.
+- Submit → POST `/user/prospects/from-annuaire/create` (JSON :
+  `{siren, csrf_token}`).
+- Le serveur :
+  1. Valide CSRF (`from-annuaire-create`).
+  2. Valide SIREN (9 chiffres).
+  3. Re-cherche par SIREN exact côté API.
+  4. Vérifie l'unicité : `prospect.siren` doit être unique (sinon 409
+     Conflict avec `existingRedirect` pointant vers le prospect existant).
+  5. Crée un nouveau `Prospect` avec tous les champs remplis.
+- Redirection vers `/user/prospects/update/{id}` (form d'édition pour
+  finaliser campagne, vagues, etc.).
+
+### Tests
+
+- `tests/Service/AnnuaireEntreprisesTest.php` (20 tests, 42 assertions) :
+  parsing JSON, gestion erreurs HTTP 503/500, extraction département
+  (Corse / DOM), calcul RCS, calcul TVA (avec SIREN de référence).
+- `tests/Service/AdresseApiTest.php` (4 tests, 7 assertions) : parsing
+  coordonnées, gestion erreurs.
+- `tests/ProspectVerifyTest.php` (7 tests, 13 assertions) : GET modale,
+  rejet CSRF, SIREN invalide, SIREN inconnu, page dédiée, création.
+
+## Carte (Mapbox)
+
+- Vue plein écran `/user/carte` (`src/Controller/CarteController.php`).
+  Le lien est dans la sidebar (`templates/base.html.twig`, icône
+  `fa-map-location-dot`).
+- Affiche tous les prospects géolocalisés (`ProspectRepository::findGeolocalises()`,
+  retourne ceux avec `latitude` ET `longitude` non nulls + joins
+  `campagne` et `departement`).
+- Token Mapbox via `#[Autowire('%mapboxPublicToken%')]` — variable
+  `MAPBOX_PUBLIC_TOKEN` dans `.env.local` (vide par défaut ; un
+  avertissement s'affiche si vide).
+- Mapbox GL JS v3.6 via CDN. 5 styles whitelistés (sélection depuis un
+  `<select>` qui soumet l'URL en `?style=…`) :
+  - `streets-v12` (Rues)
+  - `light-v11` (Clair, **défaut**)
+  - `dark-v11` (Sombre)
+  - `satellite-streets-v12` (Satellite)
+  - `outdoors-v12` (Terrain)
+- Vue initiale : `fitBounds` sur les bounds fixes France métropolitaine
+  `[[-5.5, 41.0], [9.7, 51.2]]` + `padding: 40`. Marqueur bleu par prospect,
+  popup au clic (nom + adresse + SIREN + lien fiche). Navigation Mapbox
+  native (`NavigationControl`, `ScaleControl`).
+- Le pavé carte de la fiche prospect (`templates/prospects/show.html.twig`)
+  affiche la carte centrée sur le prospect (zoom 14) si lat/lon sont définis.
+  Fallback warning si token Mapbox absent.
+
+## Agenda (FullCalendar)
+
+- Page `/user/agenda` (`src/Controller/AgendaController.php`) : calendrier
+  FullCalendar v6.1.15 via CDN, locale `fr`, vues `dayGridMonth` /
+  `timeGridWeek` / `listWeek`.
+- Endpoint JSON `/user/agenda/events` (paramètres `start`/`end`) :
+  renvoie les actions via `ActionRepository::findForAgendaRange(start, end)`
+  (planifiées `datePrevue < end` + réalisées `[start, end[`).
+  Couleurs : vert `#198754` si faite, orange `#fd7e14` sinon.
+  Tooltip natif via `eventDidMount` + `title` attr.
+- **Création d'action** : clic sur une date → `/user/actions/submit?date=YYYY-MM-DD`.
+  Le contrôleur initialise `datePrevue` à la date cliquée.
+- **Drag & drop** d'un événement : endpoint POST
+  `/user/actions/set-date/{id}` (JSON `{date, csrf_token}`), CSRF lié
+  session (`set-date-action{id}`). Met à jour `datePrevue` (ou `dateRealisee`
+  si l'action est déjà clôturée). Token récupéré via
+  `GET /user/agenda/csrf/{id}`. En cas d'erreur serveur, `info.revert()`
+  annule le déplacement côté UI.
+- **Retour à l'agenda** : `redirect=/user/agenda?date=YYYY-MM-DD` où la
+  date est la date prévue (ou réalisée) de l'action. Le contrôleur
+  `ActionController::update()` **régénère** ce redirect avec la date
+  actuelle si l'utilisateur a modifié `datePrevue` (ou `dateRealisee`) — le
+  retour cible la date mise à jour, pas l'ancienne.
+- `initialDate` du calendrier lit `?date=YYYY-MM-DD` au load.
+
+## Champs étendus du prospect
+
+- **SIREN / SIRET / NAF / RCS/RM / N° TVA / ID Dolibarr** : stockés sur
+  `Prospect`, pré-remplis via l'Annuaire des Entreprises.
+- **Email / Téléphone / LinkedIn / Site web** : stockés sur `Prospect`,
+  **auto-initialisés depuis le contact principal** à la soumission du
+  formulaire si le champ prospect est vide (helpers
+  `appliquerEmailDepuisContactPrincipal`,
+  `appliquerTelephoneDepuisContactPrincipal`,
+  `appliquerLinkedinDepuisContactPrincipal` dans `ProspectController`).
+  Le téléphone est validé via `App\Form\Type\PhoneNumberType` (libphonenumber,
+  format E164).
+- **Adresse / Pays / Latitude / Longitude** : saisis via l'autocompletion
+  de l'API Adresse (data.gouv.fr) côté formulaire :
+  - `templates/prospects/edit.html.twig` + `public/lib/app/app.js` : handler
+    `dateClick` → fetch API Adresse, suggestions clavier (↑/↓/Échap/Entrée),
+    clic sur une suggestion → remplit `rue`, `code_postal`, `ville`,
+    `latitude`, `longitude`, `pays='FR'`, et département via match
+    `data-numero` sur l'`<option>` du `<select>` (2 chiffres métropole,
+    3 chiffres DOM 97x/98x). L'input n'a pas de `name` côté visible pour
+    éviter l'autocomplétion Firefox native (qui contredit nos suggestions) ;
+    un `<input type="hidden">` porte la valeur à la soumission.
+- **Géolocalisation** : recalculée via AdresseApi lors de la mise à jour
+  Annuaire, sinon saisie manuelle latitude/longitude.
+
+## Migration schéma (sans migration Doctrine)
 
 Le projet n'utilise pas les migrations : `doctrine:schema:update --force` fait foi.
 
@@ -116,6 +316,23 @@ docker compose exec -T nineprospect php bin/console app:import-prospects misc/im
 L'étape 5 est indispensable : `d:s:update --force` supprime les anciennes colonnes
 (sans sauvegarde possible dans la base) ; l'import rejoué est sans effet sur le reste
 des données et réécrit `pipeline_valeur` à partir du CSV.
+
+Pour ajouter un nouveau champ `Prospect` (ex. `idDolibarr`) :
+
+```bash
+# 1. ajouter la propriété + l'accesseur dans src/Entity/Prospect.php
+# 2. ajouter le champ dans src/Form/ProspectType.php
+# 3. mettre à jour le schéma :
+docker compose exec -T nineprospect php bin/console doctrine:schema:update --force
+# 4. (optionnel) rejouer l'import CSV pour enrichir la base existante
+docker compose exec -T nineprospect php bin/console app:import-prospects misc/import/Prospects.csv
+```
+
+Pas de migration Doctrine générée : le `d:s:update --force` est la procédure
+officielle du projet (cf. `doc/installation.md`, section « Schéma BDD »).
+Les `UPDATE` SQL directs sur les données sont autorisés (ex. correction
+du `par_defaut` du pipeline « Pipeline par défaut »), mais **jamais**
+sur le schéma.
 
 ## Import des données (one-shot)
 
@@ -149,6 +366,10 @@ php vendor/bin/php-cs-fixer fix
 docker compose exec -T nineprospect php bin/console lint:twig templates
 docker compose exec -T nineprospect php vendor/bin/phpunit
 ```
+
+Le projet vise **117 tests verts** (3 skipped quand la base de test n'est pas
+disponible) couvrant : prospection, contacts, CRUD générique, agenda, agenda
+CSRF/déplacement, AnnuaireEntreprises, AdresseApi, services, etc.
 
 ## Base de test
 

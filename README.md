@@ -1,7 +1,7 @@
-# Skeletor
+# nineprospect
 
-Base Symfony 7.4 pour applications internes.
-Stack : PHP 8.4, MariaDB, Apache, Docker.
+Application de gestion de prospects, campagnes Meta, vagues de traitement et
+pipeline commercial. Stack : PHP 8.4, Symfony 7.4, MariaDB, Apache, Docker.
 
 ## Licence
 
@@ -11,7 +11,7 @@ Ce projet est distribué sous licence **[AGPL-3.0](LICENSE)** (GNU Affero Genera
 
 ```bash
 # 1. Cloner
-git clone <repo> && cd skeletor
+git clone https://github.com/afornerot/nineprospect.git && cd nineprospect
 
 # 2. Configurer les secrets (voir doc/installation.md)
 cp .env .env.local
@@ -36,9 +36,10 @@ La documentation détaillée se trouve dans [doc/](doc/index.md) :
 
 | Sujet | Documentation |
 |-------|---------------|
+| Modules métier (prospects, actions, agenda, carte, Annuaire Entreprises) | [doc/prospection.md](doc/prospection.md) |
 | Installation détaillée (secrets, BDD, permissions) | [doc/installation.md](doc/installation.md) |
 | Authentification (rôles, CAS/OIDC/SQL, MCP) | [doc/authentification.md](doc/authentification.md) |
-| Variables d'environnement, mailer | [doc/configuration.md](doc/configuration.md) |
+| Variables d'environnement, mailer, Mapbox | [doc/configuration.md](doc/configuration.md) |
 | Fixtures (données initiales, compte admin) | [doc/fixtures.md](doc/fixtures.md) |
 | Crons (planificateur de tâches) | [doc/crons.md](doc/crons.md) |
 | IA / LLM (service AiService) | [doc/ai.md](doc/ai.md) |
@@ -46,6 +47,7 @@ La documentation détaillée se trouve dans [doc/](doc/index.md) :
 
 ## Liens utiles
 
+- Application : http://localhost:8029
 - Swagger : http://localhost:8029/v1/api/doc
 - Admin crons : http://localhost:8029/admin/cron
 - Endpoint MCP : http://localhost:8029/mcp

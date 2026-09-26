@@ -43,6 +43,18 @@ MAILER_DSN="https://KEY:DOMAIN@mailgun.org"
 MAILER_DSN="smtp://localhost:25"
 ```
 
+## Mapbox (vue Carte)
+
+Utilisée par la vue carte plein écran (`/user/carte`) et le pavé carte dans la fiche prospect.
+
+| Variable | Description |
+|----------|-------------|
+| `MAPBOX_PUBLIC_TOKEN` | Token public Mapbox ([compte Mapbox](https://account.mapbox.com/access-tokens/)) |
+
+Le défaut (vide) désactive ces deux vues avec un message d'avertissement invitant
+à renseigner la clé. La saisie d'un token dans `.env` ne nécessite **pas** de
+rebuild d'image (Symfony lit `.env` au boot du conteneur ; un `cache:clear` suffit).
+
 ## Notifications
 
 Les notifications admin sont envoyées à l'adresse `APP_ADMIN_EMAIL`.
