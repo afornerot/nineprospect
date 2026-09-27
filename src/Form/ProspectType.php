@@ -38,6 +38,8 @@ class ProspectType extends AbstractType
                 'attr' => ['class' => 'btn btn-success no-print'],
             ])
 
+            ->add('logo', HiddenType::class)
+
             ->add('nom', TextType::class, [
                 'label' => 'Entreprise / prospect',
             ])

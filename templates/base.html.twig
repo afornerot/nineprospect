@@ -19,21 +19,21 @@
         <link rel="stylesheet" href="{{ asset('lib/app/selbg.css') }}">
         <link rel="stylesheet" href="{{ asset('bundles/bninefiles/css/bninefiles.css') }}">
 
-        <script defer src="{{ asset('lib/jquery/jquery.min.js')  }}"></script>
-        <script defer src="{{ asset('lib/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-        <script defer src="{{ asset('lib/datatables/datatables.min.js') }}"></script>
-        <script defer src="{{ asset('lib/datatables/datatables.init.js') }}"></script>
-        <script defer src="{{ asset('lib/select2/select2.min.js') }}"></script>
-        <script defer src="{{ asset('lib/select2/select2.init.js') }}"></script>
-        <script defer src="{{ asset('lib/dropzone/dropzone.min.js') }}"></script>
-        <script defer src="{{ asset('lib/imgareaselect/js/jquery.imgareaselect.dev.js') }}"></script>
-        <script defer src="{{ asset('lib/jqueryui/jquery-ui.min.js') }}"></script>
-        <script defer src="{{ asset('lib/chart/chart.js') }}"></script>
-        <script defer src="{{ asset('lib/marked/marked.min.js') }}"></script>
+        <script src="{{ asset('lib/jquery/jquery.min.js')  }}"></script>
+        <script src="{{ asset('lib/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+        <script src="{{ asset('lib/datatables/datatables.min.js') }}"></script>
+        <script src="{{ asset('lib/datatables/datatables.init.js') }}"></script>
+        <script src="{{ asset('lib/select2/select2.min.js') }}"></script>
+        <script src="{{ asset('lib/select2/select2.init.js') }}"></script>
+        <script src="{{ asset('lib/dropzone/dropzone.min.js') }}"></script>
+        <script src="{{ asset('lib/imgareaselect/js/jquery.imgareaselect.dev.js') }}"></script>
+        <script src="{{ asset('lib/jqueryui/jquery-ui.min.js') }}"></script>
+        <script src="{{ asset('lib/chart/chart.js') }}"></script>
+        <script src="{{ asset('lib/marked/marked.min.js') }}"></script>
 
-        <script defer src="{{ asset('bundles/bninemdeditor/bninemdeditor.js') }}"></script>
-        <script defer src="{{ asset('bundles/bninefiles/js/bninefiles.js') }}"></script>
-        <script defer src="{{ asset('lib/app/app.js') }}?v=2026-09-26i"></script>
+        <script src="{{ asset('bundles/bninemdeditor/bninemdeditor.js') }}"></script>
+        <script src="{{ asset('bundles/bninefiles/js/bninefiles.js') }}"></script>
+        <script src="{{ asset('lib/app/app.js') }}?v=2026-09-26i"></script>
 
         {% block javascripts %}
 
@@ -55,6 +55,8 @@
                     </div>
 
                     <div class="navbar-nav ms-auto ps-3 d-flex flex-row align-items-center position-absolute" style="right: 15px; top:15px">
+                        {% block extramenu %}
+                        {% endblock %}
                         {% if app.user %}
                             {% if is_granted('ROLE_ADMIN') %}
                                 <a class="nav-link px-2" href="{{path('app_admin')}}" aria-label="Administration"><i class="fa-solid fa-cog fa-2x"></i></a>

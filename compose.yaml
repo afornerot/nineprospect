@@ -22,7 +22,7 @@ services:
     depends_on:
       - mariadb
     ports:
-      - "8029:80"
+      - "8030:80"
     volumes:
       - ./public/uploads:/app/public/uploads:delegated
       - ./uploads:/app/uploads:delegated

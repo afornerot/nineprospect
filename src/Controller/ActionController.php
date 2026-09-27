@@ -7,6 +7,7 @@ use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Action;
 use App\Entity\User;
 use App\Form\ActionType;
+use App\Form\BulkActionType;
 use App\Repository\ActionRepository;
 use App\Repository\ActionTypeDefautRepository;
 use App\Repository\ContactRepository;
@@ -105,6 +106,55 @@ class ActionController extends AbstractController
             'typesSuggestions' => $this->types->findActifsOrdonnes(),
             'redirect' => $redirect,
         ]);
+    }
+
+    #[Route('/bulk', name: 'app_user_actions_bulk')]
+    public function bulk(Request $request): Response
+    {
+        $sprints = $this->prospects->findAllSprintsWithProspects();
+        $allProspects = $this->prospects->findAllWithSprint();
+
+        return $this->renderLayout('actions/bulk.html.twig', 'Actions en masse', [
+            'sprints' => $sprints,
+            'allProspects' => $allProspects,
+            'typesSuggestions' => $this->types->findActifsOrdonnes(),
+        ]);
+    }
+
+    #[Route('/bulk/submit', name: 'app_user_actions_bulk_submit', methods: ['POST'])]
+    public function bulkSubmit(Request $request, #[CurrentUser] ?User $user = null): Response
+    {
+        $json = $request->request->get('prospects_data', '{}');
+        $prospectsData = json_decode($json, true) ?: [];
+
+        if (empty($prospectsData)) {
+            $this->addFlash('error', 'Aucun prospect sélectionné.');
+
+            return $this->redirectToRoute('app_user_actions_bulk');
+        }
+
+        $count = 0;
+        foreach ($prospectsData as $prospectId => $data) {
+            $prospect = $this->prospects->find((int) $prospectId);
+            if (!$prospect) {
+                continue;
+            }
+
+            $action = new Action();
+            $action->setProspect($prospect);
+            $action->setDatePrevue(new \DateTime($data['date']));
+            $action->setTypeAction($data['type']);
+            if (null !== $user) {
+                $action->setAFairePar($user);
+            }
+            $this->em->persist($action);
+            $count++;
+        }
+
+        $this->em->flush();
+        $this->addFlash('success', $count . ' action(s) créée(s).');
+
+        return $this->redirectToRoute('app_user_actions');
     }
 
     #[Route('/update/{id}', name: 'app_user_actions_update')]

@@ -19,6 +19,19 @@
         <i class="fas fa-magnifying-glass me-1"></i>Vérifier les données
     </button>
     <a href="{{ backUrl }}" class="btn btn-secondary ms-1 mb-3">Retour à la liste</a>
+    {% if prevNext and (prevNext[0] is not null or prevNext[1] is not null) %}
+        {% set vague = prospect.vagueCourante() %}
+        <div class="float-end">
+            Navigation sur <a href="{{ path('app_user_prospects', {sprint: vague.sprint.id}) }}">Vague {{ vague.sprint.numero }}{% if vague.sprint.libelle %} — {{ vague.sprint.libelle }}{% endif %}</a>
+            &nbsp;
+            {% if prevNext[0] is not null %}
+                <a href="{{ path('app_user_prospects_show', {id: prevNext[0], redirect: backUrl}) }}" class="btn btn-secondary" title="Précédent"><i class="fas fa-chevron-left"></i></a>
+            {% endif %}
+            {% if prevNext[1] is not null %}
+                <a href="{{ path('app_user_prospects_show', {id: prevNext[1], redirect: backUrl}) }}" class="btn btn-secondary" title="Suivant"><i class="fas fa-chevron-right"></i></a>
+            {% endif %}
+        </div>
+    {% endif %}
 
     {% if prospect.anomalie %}
         <div class="alert alert-danger">
@@ -32,9 +45,17 @@
             <div class="card mb-2">
                 <div class="card-header">Prospect</div>
                 <div class="card-body">
+                    {% if prospect.logo %}
+                        <div class="text-center mb-3">
+                            <img src="{{ path('bninefiles_files_image', {domain: 'logo', id: prospect.id, path: prospect.logo}) }}" alt="Logo" class="me-2" style="max-height: 80px; max-width: 100px; object-fit: contain;">
+                        </div>  
+                    {% endif %}
+
                     <dl class="row mb-0">
                         <dt class="col-sm-4">Entreprise</dt>
-                        <dd class="col-sm-8">{{ prospect.nom }}</dd>
+                        <dd class="col-sm-8">
+                            {{ prospect.nom }}
+                        </dd>
 
                         {% if prospect.email %}
                             <dt class="col-sm-4">Email</dt>
@@ -133,23 +154,21 @@
                 </div>
             </div>
 
-            {% if prospect.latitude and prospect.longitude %}
-                <div class="card mb-2">
-                    <div class="card-header">Localisation</div>
-                    <div class="card-body p-0">
-                        <div id="prospect-map" style="height: 320px; border-bottom-left-radius: .5rem; border-bottom-right-radius: .5rem;"></div>
-                        <div class="p-2 small text-muted">
-                            <i class="fas fa-location-crosshairs"></i>
-                            {{ prospect.latitude }}, {{ prospect.longitude }}
-                            &middot;
-                            <a target="_blank" rel="noopener"
-                            href="https://www.openstreetmap.org/?mlat={{ prospect.latitude }}&mlon={{ prospect.longitude }}#map=17/{{ prospect.latitude }}/{{ prospect.longitude }}">
-                                agrandir la carte
-                            </a>
-                        </div>
+            <div class="card mb-2">
+                <div class="card-header">Localisation</div>
+                <div class="card-body p-0">
+                    <div id="prospect-map" style="height: 320px; border-bottom-left-radius: .5rem; border-bottom-right-radius: .5rem;"></div>
+                    <div class="p-2 small text-muted">
+                        <i class="fas fa-location-crosshairs"></i>
+                        {{ prospect.latitude }}, {{ prospect.longitude }}
+                        &middot;
+                        <a target="_blank" rel="noopener"
+                        href="https://www.openstreetmap.org/?mlat={{ prospect.latitude }}&mlon={{ prospect.longitude }}#map=17/{{ prospect.latitude }}/{{ prospect.longitude }}">
+                            agrandir la carte
+                        </a>
                     </div>
                 </div>
-            {% endif %}
+            </div>
         </div>
 
         <div class="col-md-8">
@@ -239,35 +258,46 @@
                             <tr>
                                 <th>&nbsp;</th>
                                 <th>Type</th>
-                                <th>Réalisée le</th>
                                 <th>Prévue le</th>
+                                <th>Réalisée le</th>
                                 <th>Contact</th>
                                 <th>Résultat</th>
-                                <th>À faire par</th>
-                                <th>Réalisé par</th>
+                                <th class="no-sort">Clôture</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for action in prospect.actions %}
-                                <tr>
+                                <tr data-action-id="{{ action.id }}">
                                     <td>
                                         <a href="{{ path('app_user_actions_update', {id: action.id, redirect: path('app_user_prospects_show', {id: prospect.id})}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
                                     </td>
                                     <td>{{ action.typeAction ?: '—' }}</td>
-                                    <td>{{ action.dateRealisee ? action.dateRealisee|date('d/m/Y') : '—' }}</td>
                                     <td>{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}</td>
+                                    <td>{{ action.dateRealisee ? action.dateRealisee|date('d/m/Y') : '—' }}</td>
                                     <td>{{ action.contact ? action.contact.nomComplet : '—' }}</td>
                                     <td style="white-space: pre-line">{{ action.resultat ?: '—' }}</td>
-                                    <td>{{ action.aFairePar ? action.aFairePar.username : '—' }}</td>
-                                    <td>{{ action.realisePar ? action.realisePar.username : '—' }}</td>
+                                    <td>
+                                        {% if action.dateRealisee %}
+                                            <div class="form-check form-switch js-decloturer-wrapper" data-action-id="{{ action.id }}" data-csrf="{{ csrf_token('decloturer-action' ~ action.id) }}">
+                                                <input type="checkbox" class="form-check-input js-decloturer" role="switch" checked aria-label="Annuler la clôture de cette action" title="Annuler la clôture">
+                                            </div>
+                                        {% else %}
+                                            <div class="form-check form-switch js-cloturer-wrapper" data-action-id="{{ action.id }}" data-csrf="{{ csrf_token('cloturer-action' ~ action.id) }}">
+                                                <input type="checkbox" class="form-check-input js-cloturer" role="switch" aria-label="Clôturer cette action" title="Clôturer l'action">
+                                            </div>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             {% else %}
-                                <tr><td colspan="8" class="text-muted">Aucune action enregistrée</td></tr>
+                                <tr><td colspan="7" class="text-muted">Aucune action enregistrée</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
-            </div>            
+            </div>
+
+            {{ render(path('bninefiles_files', {domain: 'prospect_file', id: prospect.id, editable: 0})) }}
+
         </div>
     </div>
 
@@ -288,7 +318,7 @@
                         mapboxgl.accessToken = {{ mapboxToken|json_encode|raw }};
                         const map = new mapboxgl.Map({
                             container: el,
-                            style: 'mapbox://styles/mapbox/light-v11',
+                            style: 'mapbox://styles/mapbox/streets-v12',
                             center: [parseFloat({{ prospect.longitude|json_encode|raw }}), parseFloat({{ prospect.latitude|json_encode|raw }})],
                             zoom: 14,
                         });
@@ -306,4 +336,206 @@
             </div>
         {% endif %}
     {% endif %}
+
+    <div class="modal fade" id="js-cloturer-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Clôturer l'action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="js-cloturer-form">
+                        <div class="mb-3">
+                            <label class="form-label" for="js-cloturer-date">Réalisée le</label>
+                            <input type="date" id="js-cloturer-date" class="form-control" value="{{ 'now'|date('Y-m-d') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="js-cloturer-resultat">Résultat</label>
+                            <textarea id="js-cloturer-resultat" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="js-cloturer-suivante">Prochaine action le</label>
+                            <input type="date" id="js-cloturer-suivante" class="form-control">
+                            <div class="form-text">Optionnel. Si renseignée, une nouvelle action planifiée est créée et affectée à l'utilisateur courant par défaut.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="js-cloturer-type">Type de la prochaine action</label>
+                            <input type="text" id="js-cloturer-type" class="form-control" list="js-cloturer-type-suggestions" placeholder="Appel, Mail, Visio…">
+                            <datalist id="js-cloturer-type-suggestions">
+                                {% for t in typesSuggestions ?? [] %}
+                                    <option value="{{ t.libelle }}"></option>
+                                {% endfor %}
+                            </datalist>
+                            <div class="form-text">Obligatoire si une date de prochaine action est saisie.</div>
+                        </div>
+                    </form>
+                    <div class="alert alert-danger d-none js-cloturer-error" role="alert"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-success js-cloturer-confirm">Clôturer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block localscript %}
+    {{ parent() }}
+    <script>
+        (function () {
+            function ready(fn) {
+                if (document.readyState !== 'loading') fn();
+                else document.addEventListener('DOMContentLoaded', fn);
+            }
+
+            ready(function () {
+                const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                const csrfFromMeta = csrfMeta ? csrfMeta.getAttribute('content') : null;
+
+                const modalEl = document.getElementById('js-cloturer-modal');
+                const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+                let pendingWrapper = null;
+
+                document.querySelectorAll('.js-cloturer-wrapper').forEach(function (wrapper) {
+                    const checkbox = wrapper.querySelector('.js-cloturer');
+                    const actionId = wrapper.dataset.actionId;
+                    const csrf = wrapper.dataset.csrf || csrfFromMeta;
+                    if (!checkbox || !actionId || !csrf) return;
+
+                    checkbox.addEventListener('change', function () {
+                        if (!modal) return;
+                        pendingWrapper = wrapper;
+                        document.getElementById('js-cloturer-date').value = new Date().toISOString().slice(0, 10);
+                        document.getElementById('js-cloturer-resultat').value = '';
+                        document.getElementById('js-cloturer-suivante').value = '';
+                        document.getElementById('js-cloturer-type').value = '';
+                        const errEl = modalEl.querySelector('.js-cloturer-error');
+                        errEl.classList.add('d-none');
+                        errEl.textContent = '';
+                        modal.show();
+                    });
+                });
+
+                if (modalEl) {
+                    modalEl.addEventListener('hidden.bs.modal', function () {
+                        if (pendingWrapper) {
+                            const cb = pendingWrapper.querySelector('.js-cloturer');
+                            if (cb) cb.checked = false;
+                            pendingWrapper = null;
+                        }
+                    });
+
+                    modalEl.querySelector('.js-cloturer-confirm').addEventListener('click', function () {
+                        if (!pendingWrapper) return;
+                        const wrapper = pendingWrapper;
+                        const checkbox = wrapper.querySelector('.js-cloturer');
+                        const actionId = wrapper.dataset.actionId;
+                        const csrf = wrapper.dataset.csrf || csrfFromMeta;
+                        const url = '/user/actions/cloturer/' + actionId;
+                        const body = new URLSearchParams();
+                        body.set('_csrf_token', csrf);
+                        body.set('dateRealisee', document.getElementById('js-cloturer-date').value);
+                        body.set('resultat', document.getElementById('js-cloturer-resultat').value);
+                        body.set('datePrevueSuivante', document.getElementById('js-cloturer-suivante').value);
+                        body.set('typeSuivant', document.getElementById('js-cloturer-type').value);
+
+                        checkbox.disabled = true;
+                        const errEl = modalEl.querySelector('.js-cloturer-error');
+
+                        fetch(url, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Origin': window.location.origin,
+                            },
+                            body: body.toString(),
+                        }).then(function (resp) {
+                            checkbox.disabled = false;
+                            return resp.json().then(function (data) { return { ok: resp.ok, status: resp.status, data: data }; });
+                        }).then(function (r) {
+                            if (!r.ok || !r.data.ok) {
+                                checkbox.checked = false;
+                                errEl.textContent = (r.data && r.data.error) ? r.data.error : ('Erreur ' + r.status);
+                                errEl.classList.remove('d-none');
+                                return;
+                            }
+                            window.location.reload();
+                        }).catch(function () {
+                            checkbox.disabled = false;
+                            checkbox.checked = false;
+                            errEl.textContent = 'Erreur réseau. Veuillez réessayer.';
+                            errEl.classList.remove('d-none');
+                        });
+                    });
+                }
+
+                document.querySelectorAll('.js-decloturer-wrapper').forEach(function (wrapper) {
+                    const checkbox = wrapper.querySelector('.js-decloturer');
+                    const actionId = wrapper.dataset.actionId;
+                    const csrf = wrapper.dataset.csrf || csrfFromMeta;
+                    if (!checkbox || !actionId || !csrf) return;
+
+                    checkbox.addEventListener('change', function () {
+                        checkbox.disabled = true;
+                        const url = '/user/actions/decloturer/' + actionId;
+                        const body = new URLSearchParams();
+                        body.set('_csrf_token', csrf);
+
+                        fetch(url, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Origin': window.location.origin,
+                            },
+                            body: body.toString(),
+                        }).then(function (resp) {
+                            checkbox.disabled = false;
+                            return resp.json().then(function (data) { return { ok: resp.ok, status: resp.status, data: data }; });
+                        }).then(function (r) {
+                            if (!r.ok || !r.data.ok) {
+                                checkbox.checked = true;
+                                const msg = (r.data && r.data.error) ? r.data.error : ('Erreur ' + r.status);
+                                if (window.bootstrap && window.bootstrap.Toast) {
+                                    showToast(msg);
+                                } else {
+                                    alert(msg);
+                                }
+                                return;
+                            }
+                            window.location.reload();
+                        }).catch(function () {
+                            checkbox.disabled = false;
+                            checkbox.checked = true;
+                            alert('Erreur réseau. Veuillez réessayer.');
+                        });
+                    });
+                });
+
+                function showToast(message) {
+                    let toastEl = document.getElementById('js-app-toast');
+                    if (!toastEl) {
+                        toastEl = document.createElement('div');
+                        toastEl.id = 'js-app-toast';
+                        toastEl.className = 'toast position-fixed bottom-0 end-0 m-3';
+                        toastEl.setAttribute('role', 'alert');
+                        toastEl.innerHTML = '<div class="toast-body bg-danger text-white"></div>';
+                        document.body.appendChild(toastEl);
+                    }
+                    toastEl.querySelector('.toast-body').textContent = message;
+                    const t = new bootstrap.Toast(toastEl, { delay: 5000 });
+                    t.show();
+                }
+            });
+        })();
+    </script>
+{% endblock %}
+
+{% block extramenu %}
+    <a class="nav-link px-2" href="{{ path('app_user_reporting_prospect_pdf', {id: prospect.id}) }}" target="_blank" title="Imprimer"><i class="fas fa-print fa-2x"></i></a>
 {% endblock %}

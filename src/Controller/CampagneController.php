@@ -53,6 +53,53 @@ class CampagneController extends AbstractController
         ]);
     }
 
+    #[Route('/bulk', name: 'app_user_campagnes_bulk')]
+    public function bulk(): Response
+    {
+        $campagnes = $this->campagnes->findAllOrdered();
+        $prospectsWithoutCampagne = $this->prospects->findWithoutCampagne();
+
+        return $this->renderLayout('campagnes/bulk.html.twig', 'Affecter en masse', [
+            'campagnes' => $campagnes,
+            'prospectsWithoutCampagne' => $prospectsWithoutCampagne,
+        ]);
+    }
+
+    #[Route('/bulk/submit', name: 'app_user_campagnes_bulk_submit', methods: ['POST'])]
+    public function bulkSubmit(Request $request): Response
+    {
+        $campagneId = $request->request->getInt('campagne_id');
+        $prospectIds = $request->request->all('prospect_ids');
+
+        if (0 === $campagneId) {
+            $this->addFlash('error', 'Sélectionnez une campagne.');
+
+            return $this->redirectToRoute('app_user_campagnes_bulk');
+        }
+
+        $campagne = $this->campagnes->find($campagneId);
+        if (!$campagne) {
+            $this->addFlash('error', 'Campagne introuvable.');
+
+            return $this->redirectToRoute('app_user_campagnes_bulk');
+        }
+
+        $count = 0;
+        foreach ($prospectIds as $prospectId) {
+            $prospect = $this->prospects->find((int) $prospectId);
+            if (!$prospect) {
+                continue;
+            }
+            $prospect->setCampagne($campagne);
+            $count++;
+        }
+
+        $this->em->flush();
+        $this->addFlash('success', $count . ' prospect(s) affecté(s) à la campagne "' . $campagne->getLibelle() . '".');
+
+        return $this->redirectToRoute('app_user_campagnes');
+    }
+
     #[Route('/submit', name: 'app_user_campagnes_submit')]
     public function submit(Request $request): Response
     {

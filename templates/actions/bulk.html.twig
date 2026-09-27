@@ -1,0 +1,236 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <a href="{{ path('app_user_actions') }}" class="btn btn-secondary mb-3">Retour</a>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Prospects
+                    <select id="js-sprint-filter" class="form-select form-select-sm float-end" style="width: auto;">
+                        <option value="">Toutes les vagues</option>
+                        {% for sprint in sprints %}
+                            <option value="{{ sprint.id }}">Vague {{ sprint.numero }}{% if sprint.libelle %} — {{ sprint.libelle }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-bordered table-hover" id="js-prospects-left" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"></th>
+                                <th>Prospect</th>
+                                <th>Vague</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prospect in allProspects %}
+                                <tr data-sprint-id="{{ prospect.sprintId }}">
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-success js-add-prospect"
+                                                data-prospect-id="{{ prospect.id }}"
+                                                data-prospect-nom="{{ prospect.nom }}">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </td>
+                                    <td data-search="{{ prospect.nom|lower }}">{{ prospect.nom }}</td>
+                                    <td data-sprint-search="{{ prospect.sprintId }}">{% if prospect.sprintId %}Vague {{ prospect.sprintNumero }}{% else %}—{% endif %}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Actions à créer</span>
+                    <input type="hidden" name="prospects_data" id="js-prospects-data" value="">
+                    <button type="submit" form="js-bulk-form" class="btn btn-sm btn-success" id="js-submit-btn" disabled>Créer les actions</button>
+                </div>
+                <div class="card-body p-0">
+                    <form id="js-bulk-form" method="post" action="{{ path('app_user_actions_bulk_submit') }}">
+                        <table class="table table-sm table-striped mb-0" id="js-prospects-right">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th>Prospect</th>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="js-selected-list">
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="js-add-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ajouter une action pour <span id="js-modal-prospect-name"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="js-modal-prospect-id" value="">
+                    <div class="mb-3">
+                        <label class="form-label">Date à faire</label>
+                        <input type="date" id="js-modal-date" class="form-control" value="{{ 'now'|date('Y-m-d') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type d'action</label>
+                        <input type="text" id="js-modal-type" class="form-control" list="js-bulk-type-suggestions" placeholder="Appel, Mail, Visio…">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-success js-confirm-add">Ajouter</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if typesSuggestions is defined and typesSuggestions|length > 0 %}
+        <datalist id="js-bulk-type-suggestions">
+            {% for type in typesSuggestions %}
+                <option value="{{ type.libelle }}">
+            {% endfor %}
+        </datalist>
+    {% endif %}
+{% endblock %}
+
+{% block localscript %}
+    {{ parent() }}
+    <script>
+        (function() {
+            function ready(fn) {
+                if (document.readyState !== 'loading') fn();
+                else document.addEventListener('DOMContentLoaded', fn);
+            }
+
+            ready(function() {
+                const selected = {};
+
+                function updateSubmitBtn() {
+                    const btn = document.getElementById('js-submit-btn');
+                    const input = document.getElementById('js-prospects-data');
+                    const count = Object.keys(selected).length;
+                    btn.disabled = count === 0;
+                    input.value = JSON.stringify(selected);
+                }
+
+                function addRowToTable(id, nom, date, type) {
+                    const tbody = document.getElementById('js-selected-list');
+                    const tr = document.createElement('tr');
+                    tr.dataset.prospectId = id;
+                    tr.innerHTML = 
+                        '<td><button type="button" class="btn btn-sm btn-danger js-remove-prospect"><i class="fas fa-minus"></i></button></td>' +
+                        '<td>' + nom + '</td>' +
+                        '<td>' + (date ? date.split('-').reverse().join('/') : '') + '</td>' +
+                        '<td>' + (type || '') + '</td>';
+                    tbody.appendChild(tr);
+                }
+
+                function removeRowFromTable(id) {
+                    const tr = document.querySelector('#js-selected-list tr[data-prospect-id="' + id + '"]');
+                    if (tr) tr.remove();
+                }
+
+                const modalEl = document.getElementById('js-add-modal');
+                modalEl.addEventListener('shown.bs.modal', function() {
+                    document.getElementById('js-modal-date').focus();
+                });
+
+                document.querySelectorAll('.js-add-prospect').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.prospectId;
+                        const nom = this.dataset.prospectNom;
+                        document.getElementById('js-modal-prospect-id').value = id;
+                        document.getElementById('js-modal-prospect-name').textContent = nom;
+                        document.getElementById('js-modal-date').value = new Date().toISOString().slice(0, 10);
+                        document.getElementById('js-modal-type').value = '';
+                        const modal = new bootstrap.Modal(modalEl);
+                        modal.show();
+                    });
+                });
+
+                document.getElementById('js-modal-date').addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.getElementById('js-modal-type').focus();
+                    }
+                });
+
+                document.getElementById('js-modal-type').addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        document.querySelector('.js-confirm-add').click();
+                    }
+                });
+
+                document.querySelector('.js-confirm-add').addEventListener('click', function() {
+                    const id = document.getElementById('js-modal-prospect-id').value;
+                    const nom = document.getElementById('js-modal-prospect-name').textContent;
+                    const date = document.getElementById('js-modal-date').value;
+                    const type = document.getElementById('js-modal-type').value;
+
+                    if (!date || !type) {
+                        alert('Renseignez la date et le type.');
+                        return;
+                    }
+
+                    selected[id] = { nom: nom, date: date, type: type };
+                    addRowToTable(id, nom, date, type);
+                    updateSubmitBtn();
+
+                    bootstrap.Modal.getInstance(document.getElementById('js-add-modal')).hide();
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (e.target.closest('.js-remove-prospect')) {
+                        const btn = e.target.closest('.js-remove-prospect');
+                        const tr = btn.closest('tr');
+                        const id = tr.dataset.prospectId;
+                        delete selected[id];
+                        removeRowFromTable(id);
+                        updateSubmitBtn();
+                    }
+                });
+
+                document.getElementById('js-sprint-filter').addEventListener('change', function() {
+                    const sprintId = this.value;
+                    const table = $('#js-prospects-left').DataTable();
+                    if (sprintId === '') {
+                        $.fn.dataTable.ext.search.pop();
+                    } else {
+                        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                            const tr = table.row(dataIndex).node();
+                            return tr.dataset.sprintId === sprintId;
+                        });
+                    }
+                    table.draw();
+                });
+
+                $('#js-prospects-left').DataTable({
+                    order: [[1, 'asc']],
+                    pageLength: 25,
+                    lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'Tous']],
+                    columnDefs: [
+                        { orderable: false, targets: 0 }
+                    ]
+                });
+            });
+        })();
+    </script>
+{% endblock %}

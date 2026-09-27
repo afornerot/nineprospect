@@ -105,6 +105,9 @@ class Prospect
     #[ORM\Column(nullable: true)]
     private ?float $montantDevis = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $logo = null;
+
     /**
      * Campagne d'acquisition publicitaire qui a généré ce prospect.
      */
@@ -719,6 +722,18 @@ class Prospect
         $existant = (string) $this->anomalieMotif;
         $this->anomalieMotif = mb_substr('' === $existant ? $motif : $existant.' ; '.$motif, 0, 500);
         $this->anomalie = true;
+
+        return $this;
+    }
+
+    public function getLogo(): ?string
+    {
+        return $this->logo;
+    }
+
+    public function setLogo(?string $logo): static
+    {
+        $this->logo = $logo;
 
         return $this;
     }

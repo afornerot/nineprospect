@@ -37,9 +37,9 @@ class CarteController extends AbstractController
     #[Route('', name: 'app_user_carte')]
     public function index(Request $request): Response
     {
-        $style = (string) $request->query->get('style', 'light-v11');
+        $style = (string) $request->query->get('style', 'streets-v12');
         if (!isset(self::STYLES[$style])) {
-            $style = 'light-v11';
+            $style = 'streets-v12';
         }
 
         $prospectsGeo = $this->prospects->findGeolocalises();

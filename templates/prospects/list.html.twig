@@ -139,12 +139,12 @@
                         <td>
                             <button type="button" class="badge text-bg-{{ qualifie_color(prospect.qualifie) }} js-cycle-qualifie" data-prospect="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-qualifie-prospect' ~ prospect.id) }}" title="{{ qualifie_label(prospect.qualifie) }}">{{ qualifie_label(prospect.qualifie) }}</button>
                         </td>
-                        <td>
+                        <td class="text-center">
                             {% set prochaine = prospect.prochaineAction %}
                             {% if prochaine %}
                                 <a href="{{ path('app_user_actions_update', {id: prochaine.id, redirect: prospects_list_url(prospect.id)}) }}" title="{{ prochaine.typeAction ?: '—' }}">{{ prochaine.datePrevue|date('d/m/Y') }}</a>
                             {% else %}
-                                <span class="text-muted">—</span>
+                                <a href="{{ path('app_user_actions_submit', {prospect: prospect.id, redirect: prospects_list_url(prospect.id)}) }}" class="btn btn-sm btn-outline-primary" title="Créer une action"><i class="fas fa-plus"></i></a>
                             {% endif %}
                         </td>
                     </tr>

@@ -53,6 +53,58 @@ class SprintController extends AbstractController
         ]);
     }
 
+    #[Route('/bulk', name: 'app_user_vagues_bulk')]
+    public function bulk(): Response
+    {
+        $sprints = $this->sprints->findAllOrdered();
+        $lastSprint = !empty($sprints) ? $sprints[0] : null;
+        $prospectsAll = $this->prospects->findAllWithCurrentSprint();
+
+        return $this->renderLayout('vagues/bulk.html.twig', 'Affecter en masse', [
+            'sprints' => $sprints,
+            'lastSprint' => $lastSprint,
+            'prospectsAll' => $prospectsAll,
+        ]);
+    }
+
+    #[Route('/bulk/submit', name: 'app_user_vagues_bulk_submit', methods: ['POST'])]
+    public function bulkSubmit(Request $request): Response
+    {
+        $sprintId = $request->request->getInt('sprint_id');
+        $prospectIds = $request->request->all('prospect_ids');
+
+        if (0 === $sprintId) {
+            $this->addFlash('error', 'Sélectionnez une vague.');
+
+            return $this->redirectToRoute('app_user_vagues_bulk');
+        }
+
+        $sprint = $this->sprints->find($sprintId);
+        if (!$sprint) {
+            $this->addFlash('error', 'Vague introuvable.');
+
+            return $this->redirectToRoute('app_user_vagues_bulk');
+        }
+
+        $count = 0;
+        foreach ($prospectIds as $prospectId) {
+            $prospect = $this->prospects->find((int) $prospectId);
+            if (!$prospect) {
+                continue;
+            }
+            $link = new ProspectSprint();
+            $link->setProspect($prospect);
+            $link->setSprint($sprint);
+            $this->em->persist($link);
+            $count++;
+        }
+
+        $this->em->flush();
+        $this->addFlash('success', $count . ' prospect(s) affecté(s) à la vague ' . $sprint->getNumero() . '.');
+
+        return $this->redirectToRoute('app_user_vagues');
+    }
+
     #[Route('/submit', name: 'app_user_vagues_submit')]
     public function submit(Request $request): Response
     {

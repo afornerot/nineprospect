@@ -245,10 +245,20 @@ table td {
     vertical-align: top;
 }
 
+table {
+    margin-bottom: 0;
+}
+
 table thead th {
-    background-color: var(--bs-light);
+    background-color: #343a40;
+    color: #fff;
     font-weight: bold;
     vertical-align: bottom;
+}
+
+.fc .fc-daygrid-week-number {
+    color: var(--bs-link-color, #375a7f);
+    font-style: normal;
 }
 
 h1,

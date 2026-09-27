@@ -2,7 +2,7 @@
 
 ## Swagger
 
-Documentation Swagger : http://localhost:8029/v1/api/doc
+Documentation Swagger : http://localhost:8030/v1/api/doc
 
 ## Authentification API
 
@@ -10,7 +10,7 @@ Header `X-API-SECRET` (valeur de `APP_SECRET`).
 
 ## MCP
 
-Endpoint MCP : http://localhost:8029/mcp
+Endpoint MCP : http://localhost:8030/mcp
 
 Authentification : Bearer token dans le header `Authorization`
 (`Bearer MCP_SECRET` à chaque requête, `stateless: true` — aucune session).

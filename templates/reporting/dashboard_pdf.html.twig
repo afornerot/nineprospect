@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tableau de bord</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+        h1 { font-size: 18px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        h2 { font-size: 14px; background: #f0f0f0; padding: 5px; margin-top: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+        .kpi { border: 1px solid #ccc; padding: 15px; text-align: center; }
+        .kpi-number { font-size: 24px; font-weight: bold; }
+        .kpi-label { font-size: 11px; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+        th { background: #343a40; color: white; }
+        .footer { margin-top: 30px; font-size: 10px; color: #666; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>Tableau de bord - NineProspect</h1>
+
+    <div class="kpi-grid">
+        <div class="kpi">
+            <div class="kpi-number">{{ stats.totalProspects }}</div>
+            <div class="kpi-label">Prospects</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-number">{{ stats.prospectsContactes }}</div>
+            <div class="kpi-label">Contactés</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-number">{{ stats.prospectsQualifies }}</div>
+            <div class="kpi-label">Qualifiés</div>
+        </div>
+        <div class="kpi">
+            <div class="kpi-number text-danger">{{ stats.actionsEnRetard }}</div>
+            <div class="kpi-label">Actions en retard</div>
+        </div>
+    </div>
+
+    <h2>Top départements</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Département</th>
+                <th>Prospects</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for dept in topDepartements %}
+            <tr>
+                <td>{{ dept.numero }} - {{ dept.nom }}</td>
+                <td>{{ dept.total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Vagues</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Vague</th>
+                <th>Libellé</th>
+                <th>Prospects</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in pipelineStats %}
+            <tr>
+                <td>Vague {{ item.sprint.numero }}</td>
+                <td>{{ item.sprint.libelle ?: '—' }}</td>
+                <td>{{ item.total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Document généré le {{ stats.generatedAt|date('d/m/Y à H:i') }}
+        {% if stats.generatedBy %}par {{ stats.generatedBy }}{% endif %}
+    </div>
+</body>
+</html>

@@ -27,7 +27,7 @@ mkdir -p var uploads public/uploads
 docker compose up -d --build
 ```
 
-Application accessible sur http://localhost:8029 — compte admin créé
+Application accessible sur http://localhost:8030 — compte admin créé
 automatiquement (login = `APP_ADMIN`, mot de passe = `APP_SECRET`).
 
 ## Documentation
@@ -47,7 +47,7 @@ La documentation détaillée se trouve dans [doc/](doc/index.md) :
 
 ## Liens utiles
 
-- Application : http://localhost:8029
-- Swagger : http://localhost:8029/v1/api/doc
-- Admin crons : http://localhost:8029/admin/cron
-- Endpoint MCP : http://localhost:8029/mcp
+- Application : http://localhost:8030
+- Swagger : http://localhost:8030/v1/api/doc
+- Admin crons : http://localhost:8030/admin/cron
+- Endpoint MCP : http://localhost:8030/mcp

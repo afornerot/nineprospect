@@ -22,9 +22,18 @@ class SprintRepository extends ServiceEntityRepository
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('s')
-            ->orderBy('s.numero', 'ASC')
+            ->orderBy('s.numero', 'DESC')
             ->getQuery()
             ->getResult();
+    }
+
+    public function findLast(): ?Sprint
+    {
+        return $this->createQueryBuilder('s')
+            ->orderBy('s.numero', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     public function findOneByNumero(int $numero): ?Sprint

@@ -179,3 +179,7 @@
         });
     </script>
 {% endblock %}
+
+{% block extramenu %}
+    <a class="nav-link px-2" href="{{ path('app_user_reporting_pdf') }}" target="_blank" title="Imprimer"><i class="fas fa-print fa-2x"></i></a>
+{% endblock %}

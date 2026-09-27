@@ -83,7 +83,7 @@ docker compose up -d --build
 > `root:root` — ce qui casse les permissions. Créés à l'avance, ils
 > appartiennent à votre utilisateur et tout fonctionne.
 
-L'application est accessible sur http://localhost:8029
+L'application est accessible sur http://localhost:8030
 
 ## Permissions — plateau
 

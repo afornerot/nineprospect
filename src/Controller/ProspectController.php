@@ -10,6 +10,7 @@ use App\Entity\ProspectSprint;
 use App\Entity\Sprint;
 use App\Enum\PipelineStatut;
 use App\Form\ProspectType;
+use App\Repository\ActionTypeDefautRepository;
 use App\Repository\CampagneRepository;
 use App\Repository\DepartementRepository;
 use App\Repository\PipelineRepository;
@@ -18,6 +19,7 @@ use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
 use App\Service\AdresseApi;
 use App\Service\AnnuaireEntreprises;
+use Bnine\FilesBundle\Service\FileService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -47,6 +49,8 @@ class ProspectController extends AbstractController
         private string $mapboxPublicToken,
         private AnnuaireEntreprises $annuaire,
         private AdresseApi $adresseApi,
+        private ActionTypeDefautRepository $types,
+        private FileService $fileService,
     ) {
     }
 
@@ -78,10 +82,20 @@ class ProspectController extends AbstractController
             return $this->redirectToRoute('app_user_prospects');
         }
 
+        $this->fileService->init('prospect_file', (string) $id);
+
+        $vagueCourante = $prospect->vagueCourante();
+        $prevNext = null;
+        if (null !== $vagueCourante && null !== $vagueCourante->getSprint()) {
+            $prevNext = $this->prospects->findPrevNextInSprint($id, $vagueCourante->getSprint()->getId());
+        }
+
         return $this->renderLayout('prospects/show.html.twig', $prospect->getNom() ?? 'Prospect', [
             'prospect' => $prospect,
             'routeupdate' => 'app_user_prospects_update',
             'mapboxToken' => $this->mapboxPublicToken,
+            'typesSuggestions' => $this->types->findActifsOrdonnes(),
+            'prevNext' => $prevNext,
         ]);
     }
 
@@ -352,6 +366,9 @@ class ProspectController extends AbstractController
             return $this->redirectToRoute('app_user_prospects');
         }
 
+        $this->fileService->init('logo', (string) $id);
+        $this->fileService->init('prospect_file', (string) $id);
+
         $etapes = $this->etapesCible($request, $prospect);
 
         $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'update', 'etapes' => $etapes]);
@@ -359,6 +376,9 @@ class ProspectController extends AbstractController
         $redirect = $this->resolveRedirect($request, $prospect);
         $form->get('redirect')->setData($redirect);
         $form->handleRequest($request);
+        if ('' === $form->get('logo')->getData()) {
+            $prospect->setLogo(null);
+        }
         $this->appliquerContacteEtDate($form);
         $this->appliquerEmailDepuisContactPrincipal($prospect, $form);
         $this->appliquerTelephoneDepuisContactPrincipal($prospect, $form);

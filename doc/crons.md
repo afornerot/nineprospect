@@ -19,7 +19,7 @@ supercronic (chaque minute) ──> app:cron ──> table cron ──> exécute
 - Un cron resté bloqué en "exécution en cours" plus d'une heure (crash
   précédent) est recalé automatiquement en "à exécuter"
 - Les logs sont dans `var/log/cron.log`
-- Gestion via l'interface admin : http://localhost:8029/admin/cron
+- Gestion via l'interface admin : http://localhost:8030/admin/cron
 
 ## Ajouter un cron
 

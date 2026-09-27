@@ -178,6 +178,83 @@ class ProspectRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
+    public function findPrevNextInSprint(int $prospectId, int $sprintId): ?array
+    {
+        $all = $this->createQueryBuilder('p')
+            ->select('p.id')
+            ->innerJoin('p.sprints', 'ps')
+            ->where('ps.sprint = :sprint')
+            ->setParameter('sprint', $sprintId)
+            ->orderBy('p.nom', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        $ids = array_column($all, 'id');
+        $current = array_search($prospectId, $ids, false);
+        if (false === $current) {
+            return null;
+        }
+
+        $prev = $current > 0 ? $ids[$current - 1] : null;
+        $next = $current < count($ids) - 1 ? $ids[$current + 1] : null;
+
+        return [$prev, $next];
+    }
+
+    public function findAllWithSprint(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->select('p.id, p.nom, s.id AS sprintId, s.numero AS sprintNumero')
+            ->leftJoin('p.sprints', 'ps')
+            ->leftJoin('ps.sprint', 's')
+            ->orderBy('p.nom', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+    }
+
+    public function findAllSprintsWithProspects(): array
+    {
+        return $this->getEntityManager()->createQueryBuilder()
+            ->select('s.id, s.numero, s.libelle')
+            ->from(\App\Entity\Sprint::class, 's')
+            ->innerJoin('s.liens', 'ps')
+            ->groupBy('s.id')
+            ->orderBy('s.numero', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+    }
+
+    public function findWithoutSprint(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.id NOT IN (
+                SELECT IDENTITY(ps.prospect) FROM App\Entity\ProspectSprint ps
+            )')
+            ->orderBy('p.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findWithoutCampagne(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.campagne IS NULL')
+            ->orderBy('p.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findAllWithCurrentSprint(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->select('p.id, p.nom, s.id AS sprintId, s.numero AS sprintNumero')
+            ->leftJoin('p.sprints', 'ps')
+            ->leftJoin('ps.sprint', 's')
+            ->orderBy('p.nom', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+    }
+
     /**
      * Prospects non contactés (contacte = false ou NULL). Le switch « contacte »
      * bascule entre true et false, le NULL initial compte comme non contacté.
@@ -202,6 +279,38 @@ class ProspectRepository extends ServiceEntityRepository
             ->where('p.qualifie IS NULL')
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    public function countContacte(): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.contacte = :true')
+            ->setParameter('true', true)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function countQualifies(): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.qualifie = :true')
+            ->setParameter('true', true)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function countByDepartement(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->select('d.numero, d.nom, COUNT(p.id) as total')
+            ->innerJoin('p.departement', 'd')
+            ->groupBy('d.id')
+            ->orderBy('total', 'DESC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getArrayResult();
     }
 
     public function save(Prospect $prospect, bool $flush = true): void
