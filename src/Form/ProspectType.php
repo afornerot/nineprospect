@@ -10,6 +10,7 @@ use App\Entity\Sprint;
 use App\Entity\User;
 use App\Enum\PipelineStatut;
 use App\Form\Type\PhoneNumberType;
+use Bnine\FilesBundle\Form\Type\IconUploadType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
@@ -37,9 +38,23 @@ class ProspectType extends AbstractType
                 'label' => 'Valider',
                 'attr' => ['class' => 'btn btn-success no-print'],
             ])
+        ;
 
-            ->add('logo', HiddenType::class)
+        // Le logo n'est éditable qu'en update (l'id du prospect n'existe pas
+        // encore en création, et le bundle upload nécessite domain+id).
+        if ('update' === $options['mode']) {
+            $builder->add('logo', IconUploadType::class, [
+                'label' => false,
+                'icon_label' => 'Logo',
+                'icon_empty_preview' => 'medias/logo.png',
+                'icon_domain' => 'logo',
+                'icon_entity_id' => $options['prospect_id'],
+                'crop' => false,
+                'preview_max_height' => 80,
+            ]);
+        }
 
+        $builder
             ->add('nom', TextType::class, [
                 'label' => 'Entreprise / prospect',
             ])
@@ -284,11 +299,13 @@ class ProspectType extends AbstractType
             'data_class' => Prospect::class,
             'mode' => 'update',
             'etapes' => [],
+            'prospect_id' => 0,
             // Les champs pipeline dépendent du pipeline de la vague soumise :
             // un champ d'un ancien pipeline reste acceptable (ignoré).
             'allow_extra_fields' => true,
             'attr' => ['autocomplete' => 'off'],
         ]);
         $resolver->setAllowedTypes('etapes', 'array');
+        $resolver->setAllowedTypes('prospect_id', ['int', 'string']);
     }
 }

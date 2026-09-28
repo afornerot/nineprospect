@@ -36,6 +36,12 @@
                     <div class="card-header">Identification</div>
                     <div class="card-body">
                         <div class="row">
+                            {% if form.logo is defined %}
+                                <div class="col-md-12">
+                                    {{ form_row(form.logo) }}
+                                </div>
+                            {% endif %}
+
                             <div class="col-md-12">{{ form_row(form.nom) }}</div>
 
                             <div class="col-md-12">{{ form_row(form.email) }}</div>
@@ -43,20 +49,6 @@
 
                             <div class="col-md-12">{{ form_row(form.siteUrl) }}</div>
                             <div class="col-md-12">{{ form_row(form.linkedinUrl) }}</div>
-
-                            <div class="col-md-12">
-                                <label class="form-label">Logo</label>
-                                <div class="position-relative d-inline-block">
-                                    <img id="prospect_logo_img" src="{{ prospect.logo ? path('bninefiles_files_image', {domain: 'logo', id: prospect.id, path: prospect.logo}) : asset('medias/logo.png') }}" class="mb-2" style="max-height: 80px; max-width: 150px; object-fit: contain;">
-                                    <button type="button" id="prospect_logo_delete" class="btn btn-sm btn-danger position-absolute top-0 end-0" onclick="document.getElementById('prospect_logo').value='';document.getElementById('prospect_logo_img').style.display='none';this.style.display='none';" title="Supprimer le logo" {% if not prospect.logo %}style="display:none"{% endif %}>
-                                        &times;
-                                    </button>
-                                </div>
-                                {{ form_widget(form.logo) }}
-                                <a class="btn btn-sm btn-outline-secondary" onclick="BnineModalOpen({id:'bnine-modal-logo',title:'Logo',url:'{{ path('bninefiles_files_uploadmodal',{domain:'logo',id:prospect.id}) }}',currentInput:'prospect_logo'})">
-                                    <i class="fas fa-image"></i> Modifier le logo
-                                </a>
-                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6"></div>
@@ -158,15 +150,5 @@
         $(document).ready(function() {
             $("#prospect_nom").focus();
         });
-
-        window.imageUploadDone = function(filepath) {
-            if (filepath && _bnineCurrentInput === 'prospect_logo') {
-                document.getElementById('prospect_logo').value = filepath;
-                document.getElementById('prospect_logo_img').src = '{{ path('bninefiles_files_image', {domain: 'logo', id: prospect.id}) }}?path=' + encodeURIComponent(filepath);
-                document.getElementById('prospect_logo_img').style.display = '';
-                document.getElementById('prospect_logo_delete').style.display = '';
-            }
-            BnineModalClose();
-        };
     </script>
 {% endblock %}

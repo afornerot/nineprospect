@@ -125,7 +125,7 @@
                             {% if courant and courant.sprint.pipeline %}
                                 {% for etape in courant.sprint.pipeline.etapes %}
                                     {% set valeur = courant.statutPour(etape) %}
-                                    <button type="button" class="badge text-bg-{{ pipeline_color(valeur) }} js-cycle-etape" data-prospect="{{ prospect.id }}" data-etape="{{ etape.id }}" data-csrf="{{ csrf_token('cycle-etape-prospect-' ~ prospect.id) }}" title="{{ pipeline_label(valeur) }}">{{ etape.nom }}</button>
+                                    <button type="button" class="badge text-bg-{{ pipeline_color(valeur) }} js-cycle-etape" data-prospect="{{ prospect.id }}" data-etape="{{ etape.id }}" data-csrf="{{ csrf_token('cycle-etape-prospect-' ~ prospect.id) }}" title="{{ pipeline_label(valeur) }}" data-static-label="{{ etape.nom }}">{{ etape.nom }}</button>
                                 {% endfor %}
                             {% else %}
                                 <span class="text-muted">—</span>

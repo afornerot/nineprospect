@@ -7,7 +7,6 @@ use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\User;
 use App\Form\UserType;
 use App\Repository\UserRepository;
-use Bnine\FilesBundle\Service\FileService;
 use Doctrine\ORM\EntityManagerInterface;
 use Ramsey\Uuid\Uuid;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -71,15 +70,13 @@ class UserController extends AbstractController
     }
 
     #[Route('/admin/user/update/{id}', name: 'app_admin_user_update')]
-    public function update(int $id, Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $em, FileService $fileService): Response
+    public function update(int $id, Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $em): Response
     {
         $user = $em->getRepository(User::class)->find($id);
         if (!$user) {
             return $this->redirectToRoute('app_admin_user');
         }
         $hashedPassword = $user->getPassword();
-
-        $fileService->init('avatar', '0');
 
         $form = $this->createForm(UserType::class, $user, ['mode' => 'update', 'modeAuth' => $this->getParameter('modeAuth')]);
         $form->handleRequest($request);
@@ -121,15 +118,13 @@ class UserController extends AbstractController
     }
 
     #[Route('/user', name: 'app_user_profil')]
-    public function profil(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $em, FileService $fileService): Response
+    public function profil(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $em): Response
     {
         $user = $em->getRepository(User::class)->find($this->getUser());
         if (!$user) {
             return $this->redirectToRoute('app_home');
         }
         $hashedPassword = $user->getPassword();
-
-        $fileService->init('avatar', '0');
 
         $form = $this->createForm(UserType::class, $user, ['mode' => 'profil', 'modeAuth' => $this->getParameter('modeAuth')]);
         $form->handleRequest($request);

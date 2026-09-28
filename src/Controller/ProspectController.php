@@ -19,7 +19,6 @@ use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
 use App\Service\AdresseApi;
 use App\Service\AnnuaireEntreprises;
-use Bnine\FilesBundle\Service\FileService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -50,7 +49,6 @@ class ProspectController extends AbstractController
         private AnnuaireEntreprises $annuaire,
         private AdresseApi $adresseApi,
         private ActionTypeDefautRepository $types,
-        private FileService $fileService,
     ) {
     }
 
@@ -81,8 +79,6 @@ class ProspectController extends AbstractController
 
             return $this->redirectToRoute('app_user_prospects');
         }
-
-        $this->fileService->init('prospect_file', (string) $id);
 
         $vagueCourante = $prospect->vagueCourante();
         $prevNext = null;
@@ -327,7 +323,7 @@ class ProspectController extends AbstractController
         $prospect = new Prospect();
         $etapes = $this->etapesCible($request, $prospect);
 
-        $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'submit', 'etapes' => $etapes]);
+        $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'submit', 'etapes' => $etapes, 'prospect_id' => 0]);
         $this->initialiserFormulaire($form, $prospect, $etapes);
         $redirect = $this->resolveRedirect($request);
         $form->get('redirect')->setData($redirect);
@@ -366,12 +362,9 @@ class ProspectController extends AbstractController
             return $this->redirectToRoute('app_user_prospects');
         }
 
-        $this->fileService->init('logo', (string) $id);
-        $this->fileService->init('prospect_file', (string) $id);
-
         $etapes = $this->etapesCible($request, $prospect);
 
-        $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'update', 'etapes' => $etapes]);
+        $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'update', 'etapes' => $etapes, 'prospect_id' => $prospect->getId()]);
         $this->initialiserFormulaire($form, $prospect, $etapes);
         $redirect = $this->resolveRedirect($request, $prospect);
         $form->get('redirect')->setData($redirect);

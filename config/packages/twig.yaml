@@ -1,6 +1,6 @@
 twig:
   file_name_pattern: "*.twig"
-  form_themes: ['bootstrap_5_layout.html.twig']
+  form_themes: ['bootstrap_5_layout.html.twig', '@BnineFilesBundle/Form/_theme.html.twig']
   globals:
     appName: "%appName%"
   paths:

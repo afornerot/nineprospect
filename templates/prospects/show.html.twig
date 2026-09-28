@@ -229,7 +229,7 @@
                                             <tr>
                                                 <td>{{ etape.nom }}</td>
                                                 <td>
-                                                    <button type="button" class="badge text-bg-{{ pipeline_color(valeur) }} js-cycle-etape" data-prospect="{{ prospect.id }}" data-etape="{{ etape.id }}" data-csrf="{{ csrf_token('cycle-etape-prospect-' ~ prospect.id) }}" title="{{ pipeline_label(valeur) }}">{{ pipeline_label(valeur) }}</button>
+                                                    <button type="button" class="badge text-bg-{{ pipeline_color(valeur) }} js-cycle-etape" data-prospect="{{ prospect.id }}" data-etape="{{ etape.id }}" data-csrf="{{ csrf_token('cycle-etape-prospect-' ~ prospect.id) }}" title="{{ pipeline_label(valeur) }}" data-update-date="1">{{ pipeline_label(valeur) }}</button>
                                                 </td>
                                                 <td>{{ dateEtape ? dateEtape|date('d/m/Y') : '—' }}</td>
                                             </tr>

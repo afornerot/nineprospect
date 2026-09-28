@@ -305,14 +305,25 @@ $(document).ready(function () {
 				return;
 			}
 			// Mise à jour visuelle : on reconstruit les classes + title + badge.
+			// Le label à l'intérieur du bouton reste celui d'origine (data-static-label)
+			// pour ne pas écraser le nom de l'étape ; seules la couleur (statut) et
+			// l'infobulle changent.
 			const newClass = 'badge text-bg-' + r.data.color + ' js-cycle-etape';
 			$btn.attr('class', newClass);
 			$btn.attr('title', r.data.label);
-			$btn.text(r.data.label);
-			// Si la réponse porte une date et qu'une cellule <td> suit le badge,
-			// on l'actualise (utile sur la fiche prospect où chaque ligne
-			// pipeline a une colonne Date à côté du statut).
-			if (r.data.date !== undefined) {
+			const staticLabel = $btn.data('static-label');
+			if (staticLabel !== undefined && staticLabel !== '') {
+				$btn.text(staticLabel);
+			} else {
+				$btn.text(r.data.label);
+			}
+			// Si la réponse porte une date et que le bouton a explicitement été
+			// marqué data-update-date (utile sur la fiche prospect où chaque
+			// ligne pipeline a une colonne Date à côté du statut), on actualise
+			// la cellule suivante. Sinon on n'écrase pas le contenu du <td> voisin
+			// (sur la liste, ce <td> contient le switch Contacté et ne doit pas
+			// être touché).
+			if (r.data.date !== undefined && $btn.data('update-date')) {
 				const $nextTd = $btn.closest('td').next('td');
 				if ($nextTd.length) {
 					$nextTd.text(r.data.date || '—');
