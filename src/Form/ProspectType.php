@@ -10,8 +10,8 @@ use App\Entity\Sprint;
 use App\Entity\User;
 use App\Enum\PipelineStatut;
 use App\Form\Type\PhoneNumberType;
-use App\Repository\SprintRepository;
 use Bnine\FilesBundle\Form\Type\IconUploadType;
+use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
@@ -208,7 +208,7 @@ class ProspectType extends AbstractType
                 'multiple' => true,
                 'required' => false,
                 'mapped' => false,
-                'query_builder' => static fn (SprintRepository $er): \Doctrine\ORM\QueryBuilder => $er->createQueryBuilder('s')->orderBy('s.numero', 'DESC'),
+                'query_builder' => static fn (EntityRepository $er): \Doctrine\ORM\QueryBuilder => $er->createQueryBuilder('s')->orderBy('s.numero', 'DESC'),
                 'attr' => ['class' => 'select2'],
             ])
 
