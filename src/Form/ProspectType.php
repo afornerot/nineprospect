@@ -10,6 +10,7 @@ use App\Entity\Sprint;
 use App\Entity\User;
 use App\Enum\PipelineStatut;
 use App\Form\Type\PhoneNumberType;
+use App\Repository\SprintRepository;
 use Bnine\FilesBundle\Form\Type\IconUploadType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -207,6 +208,7 @@ class ProspectType extends AbstractType
                 'multiple' => true,
                 'required' => false,
                 'mapped' => false,
+                'query_builder' => static fn (SprintRepository $er): \Doctrine\ORM\QueryBuilder => $er->createQueryBuilder('s')->orderBy('s.numero', 'DESC'),
                 'attr' => ['class' => 'select2'],
             ])
 
