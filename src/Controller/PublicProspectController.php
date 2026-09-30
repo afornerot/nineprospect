@@ -84,6 +84,7 @@ class PublicProspectController extends AbstractController
             $response = [
                 'success' => true,
                 'verified' => true,
+                'error' => null,
                 'spam' => false,
             ];
 

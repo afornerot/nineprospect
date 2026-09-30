@@ -1,92 +1,128 @@
-const s = () => {
+const noop = () => {
 };
-function g(e, t) {
-  return e != e ? t == t : e !== t || e !== null && typeof e == "object" || typeof e == "function";
+function safe_not_equal(a, b) {
+  return a != a ? b == b : a !== b || a !== null && typeof a === "object" || typeof a === "function";
 }
-let c = !1;
-function d(e) {
-  var t = c;
-  try {
-    return c = !0, e();
-  } finally {
-    c = t;
+function subscribe_to_store(store2, run, invalidate) {
+  if (store2 == null) {
+    run(void 0);
+    return noop;
   }
-}
-function p(e, t, r) {
-  if (e == null)
-    return t(void 0), s;
-  const n = d(
-    () => e.subscribe(
-      t,
+  const unsub = untrack(
+    () => store2.subscribe(
+      run,
       // @ts-expect-error
-      r
+      invalidate
     )
   );
-  return n.unsubscribe ? () => n.unsubscribe() : n;
+  return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
 }
-const a = [];
-function z(e, t = s) {
-  let r = null;
-  const n = /* @__PURE__ */ new Set();
-  function l(o) {
-    if (g(e, o) && (e = o, r)) {
-      const u = !a.length;
-      for (const i of n)
-        i[1](), a.push(i, e);
-      if (u) {
-        for (let i = 0; i < a.length; i += 2)
-          a[i][0](a[i + 1]);
-        a.length = 0;
+const subscriber_queue = [];
+function writable(value, start = noop) {
+  let stop = null;
+  const subscribers = /* @__PURE__ */ new Set();
+  function set(new_value) {
+    if (safe_not_equal(value, new_value)) {
+      value = new_value;
+      if (stop) {
+        const run_queue = !subscriber_queue.length;
+        for (const subscriber of subscribers) {
+          subscriber[1]();
+          subscriber_queue.push(subscriber, value);
+        }
+        if (run_queue) {
+          for (let i = 0; i < subscriber_queue.length; i += 2) {
+            subscriber_queue[i][0](subscriber_queue[i + 1]);
+          }
+          subscriber_queue.length = 0;
+        }
       }
     }
   }
-  function b(o) {
-    l(o(
+  function update(fn) {
+    set(fn(
       /** @type {T} */
-      e
+      value
     ));
   }
-  function h(o, u = s) {
-    const i = [o, u];
-    return n.add(i), n.size === 1 && (r = t(l, b) || s), o(
+  function subscribe(run, invalidate = noop) {
+    const subscriber = [run, invalidate];
+    subscribers.add(subscriber);
+    if (subscribers.size === 1) {
+      stop = start(set, update) || noop;
+    }
+    run(
       /** @type {T} */
-      e
-    ), () => {
-      n.delete(i), n.size === 0 && r && (r(), r = null);
+      value
+    );
+    return () => {
+      subscribers.delete(subscriber);
+      if (subscribers.size === 0 && stop) {
+        stop();
+        stop = null;
+      }
     };
   }
-  return { set: l, update: b, subscribe: h };
+  return { set, update, subscribe };
 }
-function f(e) {
-  let t;
-  return p(e, (r) => t = r)(), t;
+function get(store2) {
+  let value;
+  subscribe_to_store(store2, (_) => value = _)();
+  return value;
 }
-globalThis.altchaPlugins = globalThis.altchaPlugins || [];
-globalThis.altchaI18n = globalThis.altchaI18n || {
-  get: (e) => f(globalThis.altchaI18n.store)[e],
-  set: (e, t) => {
-    Object.assign(f(globalThis.altchaI18n.store), {
-      [e]: t
-    }), globalThis.altchaI18n.store.set(f(globalThis.altchaI18n.store));
-  },
-  store: z({})
+let untracking = false;
+function untrack(fn) {
+  var previous_untracking = untracking;
+  try {
+    untracking = true;
+    return fn();
+  } finally {
+    untracking = previous_untracking;
+  }
+}
+function store(defaultValue) {
+  const scope = {
+    get: (name) => {
+      return get(scope.store)[name];
+    },
+    set: (name, value) => {
+      if (typeof name === "string") {
+        Object.assign(get(scope.store), {
+          [name]: value
+        });
+      } else {
+        Object.assign(get(scope.store), name);
+      }
+      scope.store.set(get(scope.store));
+    },
+    store: writable(defaultValue)
+  };
+  return scope;
+}
+globalThis.$altcha = globalThis.$altcha || {
+  algorithms: /* @__PURE__ */ new Map(),
+  defaults: store({}),
+  i18n: store({}),
+  instances: /* @__PURE__ */ new Set(),
+  plugins: /* @__PURE__ */ new Set()
 };
-const T = {
-  ariaLinkLabel: "Visitez Altcha.org",
+const i18n = {
+  ariaLinkLabel: "Altcha (site officiel)",
   enterCode: "Entrez le code",
   enterCodeAria: "Entrez le code que vous entendez. Appuyez sur Espace pour écouter l'audio.",
   error: "Échec de la vérification. Essayez à nouveau plus tard.",
   expired: "La vérification a expiré. Essayez à nouveau.",
-  verificationRequired: "Vérification requise !",
-  footer: '',
+  footer: 'Protégé par <a href="https://altcha.org/" tabindex="-1" target="_blank" rel="noopener" aria-label="Altcha (site officiel)">ALTCHA</a>',
   getAudioChallenge: "Obtenir un défi audio",
-  label: "Pas un robot",
+  label: "Je ne suis pas un robot",
   loading: "Chargement...",
   reload: "Recharger",
   verify: "Vérifier",
+  verificationRequired: "Vérification requise !",
   verified: "Vérifié",
   verifying: "Vérification en cours...",
-  waitAlert: "Vérification en cours... veuillez patienter."
+  waitAlert: "Vérification en cours... veuillez patienter.",
+  cancel: "Annuler",
+  enterCodeFromImage: "Pour continuer, veuillez entrer le code de l'image ci-dessous."
 };
-globalThis.altchaI18n.set("fr-fr", T);
-globalThis.altchaI18n.set("fr", T);
+globalThis.$altcha.i18n.set("fr-fr", i18n);
