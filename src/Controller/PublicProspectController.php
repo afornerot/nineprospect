@@ -433,6 +433,32 @@ class PublicProspectController extends AbstractController
         return new JsonResponse(['ok' => true]);
     }
 
+    #[Route('/annuaire/search-by-name', name: 'app_public_annuaire_search_by_name', methods: ['GET'])]
+    public function searchByName(Request $request): JsonResponse
+    {
+        $query = $request->query->get('q', '');
+
+        if (\strlen($query) < 3) {
+            return new JsonResponse([]);
+        }
+
+        $response = $this->annuaire->search($query);
+        $results = [];
+        foreach ($response['results'] as $row) {
+            $data = $this->annuaire->normalize($row);
+            $results[] = [
+                'nom' => $data['nom'],
+                'siren' => $data['siren'],
+                'adresse' => $data['adresse'],
+                'codePostal' => $data['code_postal'],
+                'ville' => $data['ville'],
+                'naf' => $data['naf'],
+            ];
+        }
+
+        return new JsonResponse($results);
+    }
+
     #[Route('/annuaire/cible/{id}', name: 'app_public_annuaire_cible', methods: ['GET'])]
     public function getCible(int $id): JsonResponse
     {
