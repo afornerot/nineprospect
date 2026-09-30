@@ -38,12 +38,27 @@ class AltchaService
             }
         }
 
-        $response = $this->http->request('POST', self::ALTCHA_SERVER_URL . '/verify', [
-            'json' => $data,
-        ]);
+        try {
+            $ch = curl_init(self::ALTCHA_SERVER_URL . '/verify');
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($data),
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json'],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 10,
+            ]);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-        $result = $response->toArray();
+            $result = json_decode($response, true);
+            if (isset($result['success']) && $result['success'] === true) {
+                return true;
+            }
 
-        return $result['success'] ?? false;
+            return false;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 }

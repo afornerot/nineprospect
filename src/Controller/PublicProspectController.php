@@ -63,20 +63,18 @@ class PublicProspectController extends AbstractController
     #[Route('/altcha/verify', name: 'app_altcha_verify', methods: ['POST'])]
     public function altchaVerify(Request $request): JsonResponse
     {
-        $content = $request->getContent();
-        $payload = json_decode($content, true);
-
-        if (!$payload) {
-            return new JsonResponse(['error' => 'Invalid payload', 'raw' => substr($content, 0, 500)], 400);
-        }
-
-        error_log('ALTCHA verify payload: ' . $content);
-
         try {
+            $content = $request->getContent();
+            $payload = json_decode($content, true);
+
+            if (!$payload) {
+                return new JsonResponse(['error' => 'Invalid JSON'], 400);
+            }
+
             $verified = $this->altcha->verifySolution($payload);
+
             return new JsonResponse(['success' => $verified]);
-        } catch (\Exception $e) {
-            error_log('ALTCHA verify error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
             return new JsonResponse(['error' => $e->getMessage()], 500);
         }
     }
