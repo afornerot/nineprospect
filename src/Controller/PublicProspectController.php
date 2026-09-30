@@ -402,4 +402,21 @@ class PublicProspectController extends AbstractController
 
         return new JsonResponse($results);
     }
+
+    #[Route('/annuaire/cible/{id}', name: 'app_public_annuaire_cible', methods: ['GET'])]
+    public function getCible(int $id): JsonResponse
+    {
+        $cible = $this->cibles->find($id);
+
+        if (!$cible) {
+            return new JsonResponse(['error' => 'Cible non trouvée'], 404);
+        }
+
+        return new JsonResponse([
+            'id' => $cible->getId(),
+            'titre' => $cible->getTitre(),
+            'description' => $cible->getDescription(),
+            'slug' => $cible->getSlug() ?? (string) $cible->getId(),
+        ]);
+    }
 }
