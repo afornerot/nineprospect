@@ -109,7 +109,19 @@ class Campagne
     {
         $this->nom = $nom;
 
+        if (null === $this->slug || '' === $this->slug) {
+            $this->slug = $this->generateSlug($nom);
+        }
+
         return $this;
+    }
+
+    private function generateSlug(string $text): string
+    {
+        $text = strtolower($text);
+        $text = preg_replace('/[^a-z0-9]+/', '-', $text);
+        $text = trim($text, '-');
+        return $text ?: bin2hex(random_bytes(4));
     }
 
     public function getSourceLabel(): ?string
