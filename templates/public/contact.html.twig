@@ -3,7 +3,7 @@
 {% block title %}{{ cible.titre }} - Nous contacter{% endblock %}
 
 {% block body %}
-<div class="app-content">
+<div class="app-content public-contact">
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12 text-center">
@@ -160,11 +160,76 @@
 </div>
 
 <style>
+body.public-contact {
+    background-color: #0f2f3f;
+    color: #ffffff;
+    font-family: 'Open Sans', Arial, sans-serif;
+}
+body.public-contact h1,
+body.public-contact h2,
+body.public-contact h3 {
+    font-family: 'Space Mono', monospace;
+    color: #ff974a;
+}
+body.public-contact .card {
+    background-color: rgba(15, 47, 63, 0.9);
+    border: 1px solid rgba(255, 151, 74, 0.3);
+    border-radius: 8px;
+}
+body.public-contact .card-header {
+    background-color: rgba(255, 151, 74, 0.2) !important;
+    border-bottom: 1px solid rgba(255, 151, 74, 0.3);
+}
+body.public-contact .card-header h2 {
+    color: #ff974a;
+}
+body.public-contact .form-control {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+}
+body.public-contact .form-control:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: #ff974a;
+    color: #ffffff;
+}
+body.public-contact .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+body.public-contact .form-label {
+    color: rgba(255, 255, 255, 0.9);
+}
+body.public-contact .form-check-label {
+    color: rgba(255, 255, 255, 0.8);
+}
+body.public-contact .form-check-input {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+body.public-contact .form-check-input:checked {
+    background-color: #ff974a;
+    border-color: #ff974a;
+}
+body.public-contact .btn-primary {
+    background-color: #ff974a;
+    border-color: #ff974a;
+    color: #0f2f3f;
+}
+body.public-contact .btn-primary:hover {
+    background-color: #6fc7e2;
+    border-color: #6fc7e2;
+    color: #ffffff;
+}
+body.public-contact .form-text {
+    color: rgba(255, 255, 255, 0.5);
+}
 .cible-description {
     font-size: 1.1rem;
     line-height: 1.5;
+    color: rgba(255, 255, 255, 0.9);
 }
 .cible-description h1, .cible-description h2, .cible-description h3 {
+    color: #ff974a;
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
 }
@@ -179,6 +244,9 @@
 .cible-description ul, .cible-description ol {
     margin-bottom: 1rem;
     padding-left: 1.5rem;
+}
+.cible-description a {
+    color: #6fc7e2;
 }
 #altcha-message altcha-widget,
 #altcha-widget {
@@ -196,6 +264,7 @@
     font-style: italic;
 }
 </style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400&family=Space+Mono&display=swap">
 
 <script src="/lib/altcha/dist_i18n/fr-fr.js?v=2"></script>
 <script type="module" src="/lib/altcha/altcha.min.js?v=2"></script>
