@@ -200,37 +200,34 @@
 <script src="/lib/altcha/dist_i18n/fr-fr.js"></script>
 <script type="module" src="/lib/altcha/altcha.min.js"></script>
 <script>
-window.addEventListener('load', function() {
-    var widget = document.getElementById('altcha-widget');
-    if (widget && widget.language !== undefined) {
-        widget.language = 'fr';
-    }
-});
-</script>
-<script>
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('raisonSociale').focus();
 
     const altchaWidget = document.getElementById('altcha-widget');
-    altchaWidget.addEventListener('altcha_done', function(e) {
-        const { challenge, salt, signature, solution } = e.detail;
-        document.getElementById('altcha-challenge').value = challenge;
-        document.getElementById('altcha-salt').value = salt;
-        document.getElementById('altcha-signature').value = signature;
-        document.getElementById('altcha-solution').value = solution;
-        document.getElementById('altcha-message').style.display = 'none';
-        document.getElementById('contact-form').style.display = 'block';
+
+    customElements.whenDefined('altcha-widget').then(function() {
+        altchaWidget.addEventListener('altcha_done', function(e) {
+            const { challenge, salt, signature, solution } = e.detail;
+            document.getElementById('altcha-challenge').value = challenge;
+            document.getElementById('altcha-salt').value = salt;
+            document.getElementById('altcha-signature').value = signature;
+            document.getElementById('altcha-solution').value = solution;
+            document.getElementById('altcha-message').style.display = 'none';
+            document.getElementById('contact-form').style.display = 'block';
+        });
     });
 
-    if (altchaWidget.updateTranslations) {
-        altchaWidget.updateTranslations({
-            notARobot: 'Je ne suis pas un robot',
-            verifying: 'Vérification en cours…',
-            verified: 'Vérifié',
-            error: 'Erreur',
-            challengeExpired: 'Défi expiré, rechargez la page'
-        });
-    }
+    customElements.whenDefined('altcha-widget').then(function() {
+        if (altchaWidget.updateTranslations) {
+            altchaWidget.updateTranslations({
+                notARobot: 'Je ne suis pas un robot',
+                verifying: 'Vérification en cours…',
+                verified: 'Vérifié',
+                error: 'Erreur',
+                challengeExpired: 'Défi expiré, rechargez la page'
+            });
+        }
+    });
 
     const typeMorale = document.getElementById('typeMorale');
     const typePhysique = document.getElementById('typePhysique');
