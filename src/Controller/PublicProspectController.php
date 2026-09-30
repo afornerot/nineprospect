@@ -139,7 +139,28 @@ class PublicProspectController extends AbstractController
                 return new Response('Cible invalide', 400);
             }
 
-            $prospect = $this->prospects->findOneBy(['email' => $email]);
+            $prospect = null;
+            $nom = null;
+
+            if ('morale' === $typePersonne) {
+                $siren = $request->request->get('siren');
+                $nom = $request->request->get('raisonSociale') ?: 'Entreprise ' . $siren;
+
+                if ($siren) {
+                    $prospect = $this->prospects->findOneBy(['siren' => $siren]);
+                }
+
+                if (!$prospect) {
+                    $prospect = $this->prospects->findOneBy(['nom' => $nom]);
+                }
+            } else {
+                $nom = trim($request->request->get('nom') . ' ' . $request->request->get('prenom'));
+                $prospect = $this->prospects->findOneBy(['nom' => $nom]);
+            }
+
+            if (!$prospect) {
+                $prospect = $this->prospects->findOneBy(['email' => $email]);
+            }
 
             if (!$prospect) {
                 $prospect = new Prospect();
@@ -149,7 +170,7 @@ class PublicProspectController extends AbstractController
 
             if ('morale' === $typePersonne) {
                 $siren = $request->request->get('siren');
-                $prospect->setNom($request->request->get('raisonSociale') ?: 'Entreprise ' . $siren);
+                $prospect->setNom($nom);
                 $prospect->setSiren($siren);
                 $prospect->setSiret($request->request->get('siret'));
                 $prospect->setNaf($request->request->get('naf'));
@@ -157,9 +178,7 @@ class PublicProspectController extends AbstractController
                 $prospect->setCodePostal($request->request->get('codePostal'));
                 $prospect->setVille($request->request->get('ville'));
             } else {
-                $nom = $request->request->get('nom');
-                $prenom = $request->request->get('prenom');
-                $prospect->setNom($nom . ' ' . $prenom);
+                $prospect->setNom($nom);
             }
 
             $prospect->setEmail($email);
