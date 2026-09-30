@@ -211,6 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function showForm() {
             altchaMessage.style.display = 'none';
             contactForm.style.display = 'block';
+            document.getElementById('raisonSociale').focus();
         }
 
         altchaWidget.addEventListener('statechange', function(e) {
