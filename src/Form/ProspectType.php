@@ -223,38 +223,10 @@ class ProspectType extends AbstractType
                 'required' => false,
             ])
 
-            ->add('bureauEtudeInterne', CheckboxType::class, [
-                'label' => 'Bureau d\'étude interne',
-                'required' => false,
-            ])
-
-            ->add('qualifie', ChoiceType::class, [
-                'label' => 'Lead qualifié',
-                'choices' => [
-                    'Non' => null,
-                    'Oui' => true,
-                    'Hors cible' => false,
-                ],
-                'choice_value' => static fn (?bool $v) => null === $v ? '__null__' : ($v ? '1' : '0'),
-                'placeholder' => false,
-                'required' => false,
-                'help' => 'Non (par défaut) / Oui / Hors cible — aussi éditable via le badge dans la liste.',
-            ])
-
-            ->add('quali', TextType::class, [
-                'label' => 'Qualification',
-                'required' => false,
-            ])
-
             ->add('notes', TextareaType::class, [
                 'label' => 'Notes',
                 'required' => false,
                 'attr' => ['rows' => 4],
-            ])
-
-            ->add('montantDevis', NumberType::class, [
-                'label' => 'Montant du devis (€)',
-                'required' => false,
             ])
 
             ->add('users', EntityType::class, [

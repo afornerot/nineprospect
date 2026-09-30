@@ -1,0 +1,101 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Inscription réussie - {{ campagne.nom }}{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <div class="alert alert-success">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Merci pour votre inscription !
+                </h1>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0">{{ cible.titre }}</h2>
+                </div>
+                <div class="card-body">
+                    {% if cible.description %}
+                        <div class="cible-description">
+                            {{ cible.description|markdown_to_html }}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Pas de description disponible.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0">Documents disponibles</h2>
+                </div>
+                <div class="card-body">
+                    {{ render(path('bninefiles_files', {
+                        domain: 'cible',
+                        id: cible.id,
+                        editable: 0
+                    })) }}
+                </div>
+            </div>
+
+            {% if availableCibles|length > 0 %}
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h2 class="h5 mb-0">Intéressé par d'autres cibles ?</h2>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ path('app_public_add_cible', {campagneSlug: campagne.slug, cibleSlug: cible.slug}) }}">
+                            <div class="mb-3">
+                                <label for="autre-cible" class="form-label">Sélectionnez une autre cible</label>
+                                <select class="form-select" id="autre-cible" name="cible" required>
+                                    <option value="">Choisir une cible...</option>
+                                    {% for c in availableCibles %}
+                                        <option value="{{ c.id }}">{{ c.titre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="fas fa-plus me-2"></i>Voir les documents
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="mt-4">
+                <a href="{{ redirectUrl }}" class="btn btn-secondary">
+                    <i class="fas fa-home me-2"></i>Retour au site
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.cible-description {
+    line-height: 1.8;
+}
+.cible-description h1, .cible-description h2, .cible-description h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+.cible-description p {
+    margin-bottom: 1rem;
+}
+.cible-description ul, .cible-description ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+</style>
+{% endblock %}

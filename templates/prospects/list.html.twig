@@ -28,15 +28,7 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="flex-grow-1" style="min-width: 160px;">
-            <label class="form-label" for="filtre-departement">Département</label>
-            <select class="form-select" id="filtre-departement" name="departement">
-                <option value="">Tous</option>
-                {% for departement in departements %}
-                    <option value="{{ departement.id }}" {% if filtres.departement == departement.id %}selected{% endif %}>{{ departement }}</option>
-                {% endfor %}
-            </select>
-        </div>
+
         <div class="flex-grow-1" style="min-width: 150px;">
             <label class="form-label" for="filtre-utilisateur">Affecté à</label>
             <select class="form-select" id="filtre-utilisateur" name="utilisateur">
@@ -52,6 +44,15 @@
                 <option value="">Tous</option>
                 <option value="oui" {% if filtres.contacte == 'oui' %}selected{% endif %}>Oui</option>
                 <option value="non" {% if filtres.contacte == 'non' %}selected{% endif %}>Non</option>
+            </select>
+        </div>
+        <div class="flex-grow-1" style="min-width: 160px;">
+            <label class="form-label" for="filtre-cible">Cible</label>
+            <select class="form-select" id="filtre-cible" name="cible">
+                <option value="">Toutes</option>
+                {% for cible in cibles %}
+                    <option value="{{ cible.id }}" {% if filtres.cible == cible.id %}selected{% endif %}>{{ cible.titre }}</option>
+                {% endfor %}
             </select>
         </div>
         <div class="flex-grow-1" style="min-width: 140px;">
@@ -82,13 +83,13 @@
             <tr>
                 <th width="90px" class="no-sort">Action</th>
                 <th>Prospect</th>
-                <th>Contact principal</th>
-                <th>Campagne</th>
+                <th width="150px">Contact principal</th>
+                <th width="100px">Campagne</th>
                 <th>Vague</th>
                 <th>Pipeline</th>
-                <th>Contacté</th>
-                <th>Qualifié</th>
-                <th>Prc Action</th>
+                <th width="80px">Contacté</th>
+                <th>Cible</th>
+                <th width="100px">Prc Action</th>
             </tr>
             </thead>
             <tbody>
@@ -137,7 +138,41 @@
                             </div>
                         </td>
                         <td>
-                            <button type="button" class="badge text-bg-{{ qualifie_color(prospect.qualifie) }} js-cycle-qualifie" data-prospect="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-qualifie-prospect' ~ prospect.id) }}" title="{{ qualifie_label(prospect.qualifie) }}">{{ qualifie_label(prospect.qualifie) }}</button>
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                                {% for pc in prospect.prospectCibles %}
+                                    <button type="button" class="badge text-bg-{{ qualifie_color(pc.qualifie) }} js-cycle-cible" data-prospect="{{ prospect.id }}" data-cible="{{ pc.cible.id }}" data-csrf="{{ csrf_token('toggle-cible-prospect-' ~ prospect.id ~ '-' ~ pc.cible.id) }}" title="{{ qualifie_label(pc.qualifie) }}">
+                                        {{ pc.cible.titre }}
+                                    </button>
+                                {% endfor %}
+                                {% set ciblesDisponibles = [] %}
+                                {% for cible in cibles %}
+                                    {% set dejaLiee = false %}
+                                    {% for pc in prospect.prospectCibles %}
+                                        {% if pc.cible.id == cible.id %}
+                                            {% set dejaLiee = true %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if not dejaLiee %}
+                                        {% set ciblesDisponibles = ciblesDisponibles|merge([cible]) %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if ciblesDisponibles|length > 0 %}
+                                <div class="dropdown">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-add-cible dropdown-toggle" data-bs-toggle="dropdown" data-prospect="{{ prospect.id }}" aria-expanded="false" title="Ajouter une cible">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        {% for cible in ciblesDisponibles %}
+                                            <li>
+                                                <a class="dropdown-item js-link-cible" href="#" data-prospect="{{ prospect.id }}" data-cible="{{ cible.id }}" data-csrf="{{ csrf_token('add-cible-prospect-' ~ prospect.id ~ '-' ~ cible.id) }}">
+                                                    {{ cible.titre }}
+                                                </a>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
                         </td>
                         <td class="text-center">
                             {% set prochaine = prospect.prochaineAction %}

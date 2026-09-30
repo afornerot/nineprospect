@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <a href="{{ path(routesubmit) }}" class="btn btn-success mb-3">Ajouter</a>
+
+    <div class="dataTable_wrapper">
+        <table class="table table-striped table-bordered table-hover" id="dataTables" style="width:100%">
+            <thead>
+            <tr>
+                <th width="60px" class="no-sort">Action</th>
+                <th>Titre</th>
+                <th>Description</th>
+                <th>Prospects</th>
+                <th>Form Contact</th>
+            </tr>
+            </thead>
+            <tbody>
+                {% for cible in cibles %}
+                    <tr>
+                        <td>
+                            <a href="{{ path(routeupdate, {id: cible.id}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
+                        </td>
+                        <td>{{ cible.titre }}</td>
+                        <td>{{ cible.description|length > 100 ? cible.description|slice(0, 100) ~ '…' : cible.description ?: '—' }}</td>
+                        <td>{{ cible.prospectCibles|length }}</td>
+                        <td>
+                            {% for campagne in campagnes %}
+                                {% set contactUrl = url('app_public_contact', {campagneSlug: campagne.slug ?: campagne.externalId, cibleSlug: cible.slug ?: cible.id})|replace({'http://': 'https://'}) %}
+                                <a href="{{ contactUrl }}" target="_blank" class="btn btn-sm btn-outline-primary mb-1 me-1" title="{{ campagne.nom }}">
+                                    {{ campagne.nom }}
+                                </a>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

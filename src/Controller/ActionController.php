@@ -398,17 +398,13 @@ class ActionController extends AbstractController
     /**
      * Détermine l'URL de retour :
      *  - priorité au query param `redirect` (URL absolue ou chemin interne),
-     *  - sinon, si on a une action liée à un prospect → fiche prospect,
-     *  - sinon, liste des actions.
+     *  - sinon, liste des prospects.
      */
     private function resolveRedirect(Request $request, ?Action $action = null): string
     {
         $requested = trim((string) ($request->query->get('redirect') ?? $request->request->get('redirect', '')));
-        if ('' === $requested && null !== $action && null !== $action->getProspect()) {
-            $requested = $this->generateUrl('app_user_prospects_show', ['id' => $action->getProspect()->getId()]);
-        }
         if ('' === $requested) {
-            $requested = $this->generateUrl('app_user_actions');
+            $requested = $this->generateUrl('app_user_prospects');
         }
 
         return $requested;

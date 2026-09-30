@@ -35,9 +35,7 @@
     <h2>Suivi</h2>
     <table>
         <tr><th>Contacté</th><td>{{ prospect.contacte ? 'Oui' : 'Non' }}{% if prospect.datePremierContact %} le {{ prospect.datePremierContact|date('d/m/Y') }}{% endif %}</td></tr>
-        <tr><th>Qualifié</th><td>{{ prospect.qualifie ? 'Oui' : 'Non' }}</td></tr>
         <tr><th>Campagne</th><td>{{ prospect.campagne ? prospect.campagne.libelle : '—' }}</td></tr>
-        <tr><th>Montant devis</th><td>{{ prospect.montantDevis ? prospect.montantDevis|number_format(2, ',', ' ') ~ ' €' : '—' }}</td></tr>
     </table>
 
     {% if prospect.contacts|length > 0 %}
@@ -62,6 +60,58 @@
             {% endfor %}
         </tbody>
     </table>
+    {% endif %}
+
+    {% if prospect.prospectCibles|length > 0 %}
+    <h2>Cibles ({{ prospect.prospectCibles|length }})</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Cible</th>
+                <th>Qualifié</th>
+                <th>Qualification</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pc in prospect.prospectCibles %}
+            <tr>
+                <td>{{ pc.cible ? pc.cible.titre : '—' }}</td>
+                <td>{{ qualifie_label(pc.qualifie) }}</td>
+                <td>{{ pc.qualification ?: '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if prospect.sprints|length > 0 %}
+    <h2>Vagues ({{ prospect.sprints|length }})</h2>
+    {% set liens = prospect.sprints|sort((a, b) => a.sprint.numero <=> b.sprint.numero) %}
+    {% for lien in liens %}
+    <h3 style="font-size: 12px; margin-top: 15px;">Vague {{ lien.sprint.numero }}{% if lien.sprint.libelle %} — {{ lien.sprint.libelle }}{% endif %}{% if lien.sprint.pipeline %} ({{ lien.sprint.pipeline.nom }}){% endif %}</h3>
+    {% if lien.sprint.pipeline and lien.sprint.pipeline.etapes|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>Étape</th>
+                <th>Statut</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for etape in lien.sprint.pipeline.etapes %}
+            {% set valeur = lien.statutPour(etape) %}
+            {% set dateEtape = lien.datePour(etape) %}
+            <tr>
+                <td>{{ etape.nom }}</td>
+                <td>{{ pipeline_label(valeur) }}</td>
+                <td>{{ dateEtape ? dateEtape|date('d/m/Y') : '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% endfor %}
     {% endif %}
 
     {% if prospect.actions|length > 0 %}

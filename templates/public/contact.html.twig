@@ -1,0 +1,378 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ campagne.nom }} - Nous contacter{% endblock %}
+
+{% block body %}
+<div class="app-content">
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1>{{ campagne.nom }}</h1>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0">Vos coordonnées</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="contact-form">
+                        <div class="mb-1">
+                            <label class="form-label fw-bold mb-0">Vous êtes</label>
+                            <div class="d-flex gap-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="typePersonne" id="typeMorale" value="morale" checked>
+                                    <label class="form-check-label" for="typeMorale">
+                                        Personne morale (entreprise)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="typePersonne" id="typePhysique" value="physique">
+                                    <label class="form-check-label" for="typePhysique">
+                                        Personne physique (particulier)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="form-morale">
+                            <div class="mb-1">
+                                <label for="raisonSociale" class="form-label">Raison sociale *</label>
+                                <input type="text" class="form-control" id="raisonSociale" name="raisonSociale" autocomplete="off" required>
+                                <div class="form-text">Tapez pour rechercher une société dans l'annuaire</div>
+                            </div>
+
+                            <div class="mb-1">
+                                <label for="siren" class="form-label">SIREN</label>
+                                <input type="text" class="form-control" id="siren" name="siren" maxlength="9" pattern="[0-9]{9}" placeholder="123456789">
+                                <div class="invalid-feedback" id="siren-error"></div>
+                            </div>
+
+                            <div class="row mb-1">
+                                <div class="col-8">
+                                    <label for="adresse" class="form-label">Adresse</label>
+                                    <input type="text" class="form-control" id="adresse" name="adresse">
+                                </div>
+                                <div class="col-4">
+                                    <label for="codePostal" class="form-label">Code postal</label>
+                                    <input type="text" class="form-control" id="codePostal" name="codePostal">
+                                </div>
+                            </div>
+
+                            <div class="row mb-1">
+                                <div class="col-6">
+                                    <label for="ville" class="form-label">Ville</label>
+                                    <input type="text" class="form-control" id="ville" name="ville">
+                                </div>
+                                <div class="col-6">
+                                    <label for="naf" class="form-label">Code NAF</label>
+                                    <input type="text" class="form-control" id="naf" name="naf">
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <div class="row mb-1">
+                                <div class="col-6">
+                                    <label for="contactNom" class="form-label">Nom du contact *</label>
+                                    <input type="text" class="form-control" id="contactNom" name="contactNom" required>
+                                </div>
+                                <div class="col-6">
+                                    <label for="contactPrenom" class="form-label">Prénom du contact *</label>
+                                    <input type="text" class="form-control" id="contactPrenom" name="contactPrenom" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="form-physique" style="display: none;">
+                            <div class="row mb-1">
+                                <div class="col-6">
+                                    <label for="nom" class="form-label">Nom *</label>
+                                    <input type="text" class="form-control" id="nom" name="nom">
+                                </div>
+                                <div class="col-6">
+                                    <label for="prenom" class="form-label">Prénom *</label>
+                                    <input type="text" class="form-control" id="prenom" name="prenom">
+                                </div>
+                            </div>
+
+                            <div class="mb-1">
+                                <label for="adresse" class="form-label">Adresse</label>
+                                <input type="text" class="form-control" id="adresse" name="adresse">
+                            </div>
+
+                            <div class="row mb-1">
+                                <div class="col-4">
+                                    <label for="codePostal" class="form-label">Code postal</label>
+                                    <input type="text" class="form-control" id="codePostal" name="codePostal">
+                                </div>
+                                <div class="col-8">
+                                    <label for="ville" class="form-label">Ville</label>
+                                    <input type="text" class="form-control" id="ville" name="ville">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-1">
+                            <div class="col-6">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="email" name="email" placeholder="contact@exemple.fr" required>
+                            </div>
+                            <div class="col-6">
+                                <label for="telephone" class="form-label">Téléphone *</label>
+                                <input type="tel" class="form-control" id="telephone" name="telephone" placeholder="06 12 34 56 78" required>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="cible" name="cible" value="{{ cible.id }}">
+                        <input type="hidden" id="altcha-challenge" name="altcha-challenge">
+                        <input type="hidden" id="altcha-salt" name="altcha-salt">
+                        <input type="hidden" id="altcha-signature" name="altcha-signature">
+                        <input type="hidden" id="altcha-solution" name="altcha-solution">
+
+                        <altcha-widget id="altcha-widget" challengeurl="/altcha/request" hidefooter language="fr"></altcha-widget>
+
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>Envoyer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="cible-description">
+                {% if cible.description %}
+                    {{ cible.description|markdown_to_html }}
+                {% else %}
+                    <p class="text-muted">Pas de description disponible.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.cible-description {
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+.cible-description h1, .cible-description h2, .cible-description h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+.cible-description h1:first-child,
+.cible-description h2:first-child,
+.cible-description h3:first-child {
+    margin-top: 0;
+}
+.cible-description p {
+    margin-bottom: 0;
+}
+.cible-description ul, .cible-description ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+#contact-form .form-label {
+    margin-bottom: 0;
+}
+#contact-form .form-text {
+    margin-top: 0;
+    font-size: 0.75rem;
+    font-style: italic;
+}
+</style>
+
+<script src="/lib/altcha/dist_i18n/fr-fr.js"></script>
+<script type="module" src="/lib/altcha/altcha.min.js"></script>
+<script>
+window.addEventListener('load', function() {
+    var widget = document.getElementById('altcha-widget');
+    if (widget && widget.language !== undefined) {
+        widget.language = 'fr';
+    }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('raisonSociale').focus();
+
+    const altchaWidget = document.getElementById('altcha-widget');
+    altchaWidget.addEventListener('altcha_done', function(e) {
+        const { challenge, salt, signature, solution } = e.detail;
+        document.getElementById('altcha-challenge').value = challenge;
+        document.getElementById('altcha-salt').value = salt;
+        document.getElementById('altcha-signature').value = signature;
+        document.getElementById('altcha-solution').value = solution;
+    });
+
+    if (altchaWidget.updateTranslations) {
+        altchaWidget.updateTranslations({
+            notARobot: 'Je ne suis pas un robot',
+            verifying: 'Vérification en cours…',
+            verified: 'Vérifié',
+            error: 'Erreur',
+            challengeExpired: 'Défi expiré, rechargez la page'
+        });
+    }
+
+    const typeMorale = document.getElementById('typeMorale');
+    const typePhysique = document.getElementById('typePhysique');
+    const formMorale = document.getElementById('form-morale');
+    const formPhysique = document.getElementById('form-physique');
+
+    function toggleForms() {
+        if (typeMorale.checked) {
+            formMorale.style.display = 'block';
+            formPhysique.style.display = 'none';
+            document.getElementById('raisonSociale').required = true;
+            document.getElementById('nom').required = false;
+            document.getElementById('prenom').required = false;
+            document.getElementById('contactNom').required = true;
+            document.getElementById('contactPrenom').required = true;
+            document.getElementById('raisonSociale').focus();
+        } else {
+            formMorale.style.display = 'none';
+            formPhysique.style.display = 'block';
+            document.getElementById('raisonSociale').required = false;
+            document.getElementById('nom').required = true;
+            document.getElementById('prenom').required = true;
+            document.getElementById('contactNom').required = false;
+            document.getElementById('contactPrenom').required = false;
+            document.getElementById('nom').focus();
+        }
+    }
+
+    typeMorale.addEventListener('change', toggleForms);
+    typePhysique.addEventListener('change', toggleForms);
+
+    const raisonSocialeInput = document.getElementById('raisonSociale');
+    let searchTimeout = null;
+
+    raisonSocialeInput.addEventListener('input', function() {
+        const query = this.value.trim();
+
+        clearTimeout(searchTimeout);
+
+        if (query.length < 3) {
+            return;
+        }
+
+        searchTimeout = setTimeout(function() {
+            fetch('/annuaire/search-by-name?q=' + encodeURIComponent(query))
+                .then(function(resp) { return resp.json(); })
+                .then(showSuggestions)
+                .catch(function() {});
+        }, 300);
+    });
+
+    const suggestionsList = document.createElement('ul');
+    suggestionsList.className = 'list-group position-absolute w-100';
+    suggestionsList.style.zIndex = '1000';
+    suggestionsList.style.maxHeight = '200px';
+    suggestionsList.style.overflowY = 'auto';
+    suggestionsList.style.display = 'none';
+    raisonSocialeInput.parentElement.style.position = 'relative';
+    raisonSocialeInput.parentElement.appendChild(suggestionsList);
+
+    let selectedIndex = -1;
+    let suggestions = [];
+
+    function showSuggestions(data) {
+        suggestions = data;
+        suggestionsList.innerHTML = '';
+        selectedIndex = -1;
+
+        if (suggestions.length === 0) {
+            suggestionsList.style.display = 'none';
+            return;
+        }
+
+        suggestions.forEach(function(item, index) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-action';
+            li.style.cursor = 'pointer';
+            li.style.fontSize = '0.9rem';
+            li.dataset.index = index;
+            li.innerHTML = '<strong>' + item.nom + '</strong>';
+            if (item.siren) {
+                li.innerHTML += ' <span class="text-muted">(' + item.siren + ')</span>';
+            }
+            if (item.adresse) {
+                li.innerHTML += '<br><small class="text-muted">' + item.adresse + ', ' + item.codePostal + ' ' + item.ville + '</small>';
+            }
+            li.addEventListener('click', function() {
+                selectSociete(item);
+            });
+            li.addEventListener('mouseenter', function() {
+                setSelected(index);
+            });
+            suggestionsList.appendChild(li);
+        });
+
+        suggestionsList.style.display = 'block';
+    }
+
+    function setSelected(index) {
+        const items = suggestionsList.querySelectorAll('li');
+        items.forEach(function(item, i) {
+            item.classList.toggle('active', i === index);
+        });
+        selectedIndex = index;
+    }
+
+    function selectSociete(societe) {
+        raisonSocialeInput.value = societe.nom || '';
+        document.getElementById('siren').value = societe.siren || '';
+        document.getElementById('adresse').value = societe.adresse || '';
+        document.getElementById('codePostal').value = societe.codePostal || '';
+        document.getElementById('ville').value = societe.ville || '';
+        document.getElementById('naf').value = societe.naf || '';
+        suggestionsList.style.display = 'none';
+        suggestions = [];
+        selectedIndex = -1;
+
+        document.getElementById('contactNom').focus();
+    }
+
+    raisonSocialeInput.addEventListener('keydown', function(e) {
+        if (suggestions.length === 0) {
+            return;
+        }
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const newIndex = selectedIndex < suggestions.length - 1 ? selectedIndex + 1 : 0;
+            setSelected(newIndex);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const newIndex = selectedIndex > 0 ? selectedIndex - 1 : suggestions.length - 1;
+            setSelected(newIndex);
+        } else if (e.key === 'Enter' && selectedIndex >= 0) {
+            e.preventDefault();
+            selectSociete(suggestions[selectedIndex]);
+        } else if (e.key === 'Escape') {
+            suggestionsList.style.display = 'none';
+            suggestions = [];
+            selectedIndex = -1;
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!raisonSocialeInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+            suggestionsList.style.display = 'none';
+        }
+    });
+
+    raisonSocialeInput.addEventListener('blur', function() {
+        setTimeout(function() {
+            suggestionsList.style.display = 'none';
+        }, 200);
+    });
+});
+</script>
+{% endblock %}

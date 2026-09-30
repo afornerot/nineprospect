@@ -10,7 +10,7 @@
         {# Sans redirect explicite, l'annulation du formulaire de modification
            ramène sur la fiche (et « Retour à la liste » ci-dessous reste
            explicite). #}
-        {% set backUrl = path('app_user_prospects_show', {id: prospect.id}) %}
+        {% set backUrl = path('app_user_prospects') %}
     {% endif %}
     <a href="{{ path(routeupdate, {id: prospect.id, redirect: backUrl}) }}" class="btn btn-primary mb-3">Modifier</a>
     <button type="button"
@@ -131,22 +131,10 @@
                             </div>
                         </dd>
 
-                        <dt class="col-sm-4">Qualifié</dt>
-                        <dd class="col-sm-8">
-                            <button type="button" class="badge text-bg-{{ qualifie_color(prospect.qualifie) }} js-cycle-qualifie" data-prospect="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-qualifie-prospect' ~ prospect.id) }}" title="{{ qualifie_label(prospect.qualifie) }}">{{ qualifie_label(prospect.qualifie) }}</button>
-                            {% if prospect.quali %} — <span class="text-muted">{{ prospect.quali }}</span>{% endif %}
-                        </dd>
-
-                        <dt class="col-sm-4">Bureau d'étude</dt>
-                        <dd class="col-sm-8">{{ prospect.bureauEtudeInterne is same as(true) ? 'Oui' : (prospect.bureauEtudeInterne is same as(false) ? 'Non' : '—') }}</dd>
-
                         <dt class="col-sm-4">Affecté à</dt>
                         <dd class="col-sm-8">
                             {% for user in prospect.users %}{{ user.username }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}
                         </dd>
-
-                        <dt class="col-sm-4">Devis</dt>
-                        <dd class="col-sm-8">{{ prospect.montantDevis ? prospect.montantDevis|number_format(2, ',', ' ') ~ ' €' : '—' }}</dd>
 
                         <dt class="col-sm-4">Notes</dt>
                         <dd class="col-sm-8" style="white-space: pre-line">{{ prospect.notes ?: '—' }}</dd>
@@ -243,6 +231,36 @@
                     {% else %}
                         <p class="text-muted mb-0">Aucune vague de traitement.</p>
                     {% endfor %}
+                </div>
+            </div>
+
+            <div class="card mb-2">
+                <div class="card-header">Cibles ({{ prospect.prospectCibles|length }})</div>
+                <div class="card-body">
+                    {% if prospect.prospectCibles|length > 0 %}
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%">Cible</th>
+                                    <th style="width: 15%">Qualifié</th>
+                                    <th style="width: 55%">Qualification</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pc in prospect.prospectCibles %}
+                                    <tr>
+                                        <td>{{ pc.cible ? pc.cible.titre : '—' }}</td>
+                                        <td>
+                                            <button type="button" class="badge text-bg-{{ qualifie_color(pc.qualifie) }} js-cycle-cible" data-prospect="{{ prospect.id }}" data-cible="{{ pc.cible.id }}" data-csrf="{{ csrf_token('toggle-cible-prospect-' ~ prospect.id ~ '-' ~ pc.cible.id) }}" title="{{ qualifie_label(pc.qualifie) }}">{{ qualifie_label(pc.qualifie) }}</button>
+                                        </td>
+                                        <td>{{ pc.qualification ?: '—' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune cible associée.</p>
+                    {% endif %}
                 </div>
             </div>
 

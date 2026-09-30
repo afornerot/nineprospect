@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <div class="position-relative">
+        {% if routedelete is defined and routedelete %}{% include 'include/delete_button.html.twig' with {route: routedelete, id: cible.id, tokenId: 'delete-cible' ~ cible.id, classes: 'delete-abs'} %}{% endif %}
+
+        {{ form_start(form) }}
+
+        {{ form_widget(form.submit) }}
+        <a href="{{ path(routecancel) }}" class="btn btn-secondary ms-1">Annuler</a>
+
+        {% include('include/error.html.twig') %}
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mt-3">
+                    <div class="card-header">Cible</div>
+                    <div class="card-body">
+                        {{ form_row(form.titre) }}
+                        {{ form_row(form.description) }}
+                    </div>
+                </div>
+            </div>
+
+            {% if cible.id is defined %}
+            <div class="col-md-6">
+                <div class="card mt-3">
+                    <div class="card-header">Documents</div>
+                    <div class="card-body p-0">
+                        {{ render(path('bninefiles_files', {domain: 'cible', id: cible.id, editable: 1})) }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

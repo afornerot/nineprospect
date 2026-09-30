@@ -19,14 +19,14 @@ class ProspectRepository extends ServiceEntityRepository
     }
 
     /**
-     * Filtres de la liste : campagne, vague, département, qualification,
+     * Filtres de la liste : campagne, vague, qualification,
      * affectation et recherche plein texte.
      *
      * @param array{
      *     campagne?: int|null,
      *     sprint?: int|null,
-     *     departement?: int|null,
      *     contacte?: string|null,
+     *     cible?: int|null,
      *     qualifie?: string|null,
      *     userId?: int|null,
      *     recherche?: string|null
@@ -43,11 +43,12 @@ class ProspectRepository extends ServiceEntityRepository
             ->leftJoin('s.pipeline', 'pl')
             ->leftJoin('ps.valeurs', 'v')
             ->leftJoin('v.etape', 've')
-            ->leftJoin('p.departement', 'd')
             ->leftJoin('p.contacts', 'ct')
             ->leftJoin('p.users', 'u')
             ->leftJoin('p.actions', 'a')
-            ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'd', 'ct', 'u', 'a')
+            ->leftJoin('p.prospectCibles', 'pc')
+            ->leftJoin('pc.cible', 'ci')
+            ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'ct', 'u', 'a', 'pc', 'ci')
             ->orderBy('p.nom', 'ASC');
 
         if (isset($filtres['campagne'])) {
@@ -56,10 +57,6 @@ class ProspectRepository extends ServiceEntityRepository
 
         if (isset($filtres['sprint'])) {
             $qb->andWhere('s.id = :sprint')->setParameter('sprint', $filtres['sprint']);
-        }
-
-        if (isset($filtres['departement'])) {
-            $qb->andWhere('d.id = :departement')->setParameter('departement', $filtres['departement']);
         }
 
         if (isset($filtres['userId'])) {
@@ -77,16 +74,17 @@ class ProspectRepository extends ServiceEntityRepository
             }
         }
 
+        if (isset($filtres['cible'])) {
+            $qb->andWhere('ci.id = :cible')->setParameter('cible', $filtres['cible']);
+        }
+
         if (isset($filtres['qualifie'])) {
             if ('oui' === $filtres['qualifie']) {
-                $qb->andWhere('p.qualifie = :qualifie')->setParameter('qualifie', true);
+                $qb->andWhere('EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
             } elseif ('horscible' === $filtres['qualifie']) {
-                $qb->andWhere('p.qualifie = :qualifie')->setParameter('qualifie', false);
+                $qb->andWhere('EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc2 WHERE pc2.prospect = p AND pc2.qualifie = false)');
             } else {
-                // « non » = pas de décision (qualifie IS NULL). On ne peut
-                // pas utiliser `= NULL` (SQL ne matche jamais), il faut
-                // explicitement `IS NULL` via QueryBuilder::isNull().
-                $qb->andWhere($qb->expr()->isNull('p.qualifie'));
+                $qb->andWhere('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
             }
         }
 
@@ -276,7 +274,7 @@ class ProspectRepository extends ServiceEntityRepository
     {
         return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
-            ->where('p.qualifie IS NULL')
+            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc WHERE pc.prospect = p AND pc.qualifie = true)')
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -295,8 +293,7 @@ class ProspectRepository extends ServiceEntityRepository
     {
         return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
-            ->where('p.qualifie = :true')
-            ->setParameter('true', true)
+            ->where('EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc WHERE pc.prospect = p AND pc.qualifie = true)')
             ->getQuery()
             ->getSingleScalarResult();
     }

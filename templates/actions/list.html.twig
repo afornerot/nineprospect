@@ -44,7 +44,7 @@
                     {% set dateAffichage = action.dateRealisee ? action.dateRealisee : action.datePrevue %}
                     <tr data-action-id="{{ action.id }}">
                         <td>
-                            <a href="{{ path(routeupdate, {id: action.id}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
+                            <a href="{{ path(routeupdate, {id: action.id, redirect: path('app_user_actions', {vue: vue})}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
                             {% if action.prospect %}
                                 <a href="{{ path(routeprospect, {id: action.prospect.id}) }}" title="Fiche prospect"><i class="fas fa-building fa-2x"></i></a>
                             {% endif %}

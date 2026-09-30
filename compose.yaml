@@ -11,6 +11,15 @@ services:
     volumes:
       - ./volume/mariadb:/var/lib/mysql
 
+  altcha:
+    image: reg.cadoles.com/cadoles/altcha
+    container_name: nineprospect-altcha
+    restart: unless-stopped
+    environment:
+      ALTCHA_HMAC_KEY: "${ALTCHA_HMAC_KEY}"
+      ALTCHA_PORT: "3333"
+      ALTCHA_EXPIRE: "1800"
+
   nineprospect:
     build:
       context: .
@@ -21,6 +30,7 @@ services:
     user: "${UID:-1000}:102"
     depends_on:
       - mariadb
+      - altcha
     ports:
       - "8030:80"
     volumes:

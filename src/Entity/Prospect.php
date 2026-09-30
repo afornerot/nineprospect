@@ -42,9 +42,6 @@ class Prospect
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Departement $departement = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?bool $bureauEtudeInterne = null;
-
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $siren = null;
 
@@ -93,17 +90,8 @@ class Prospect
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTime $datePremierContact = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $quali = null;
-
-    #[ORM\Column(nullable: true)]
-    private ?bool $qualifie = null;
-
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
-
-    #[ORM\Column(nullable: true)]
-    private ?float $montantDevis = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $logo = null;
@@ -115,13 +103,23 @@ class Prospect
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Campagne $campagne = null;
 
-    /**
-     * Vagues de traitement concernant ce prospect (0..n).
-     *
-     * @var Collection<int, ProspectSprint>
-     */
+/**
+ * Prospect (entreprise BtoB ayant manifesté un intérêt pour les services Nine).
+ *
+ * @author Nine Marsal <developpeurs@ninecien.fr>
+ *
+ * (campagne, vagues de traitement, affectation).
+ */
     #[ORM\OneToMany(targetEntity: ProspectSprint::class, mappedBy: 'prospect', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $sprints;
+
+    /**
+     * Cibles du prospect (0..n).
+     *
+     * @var Collection<int, ProspectCible>
+     */
+    #[ORM\OneToMany(targetEntity: ProspectCible::class, mappedBy: 'prospect', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $prospectCibles;
 
     /**
      * @var Collection<int, Contact>
@@ -158,6 +156,7 @@ class Prospect
         $this->actions = new ArrayCollection();
         $this->users = new ArrayCollection();
         $this->sprints = new ArrayCollection();
+        $this->prospectCibles = new ArrayCollection();
         $this->createdAt = new \DateTime();
     }
 
@@ -222,18 +221,6 @@ class Prospect
     public function setDepartement(?Departement $departement): static
     {
         $this->departement = $departement;
-
-        return $this;
-    }
-
-    public function getBureauEtudeInterne(): ?bool
-    {
-        return $this->bureauEtudeInterne;
-    }
-
-    public function setBureauEtudeInterne(?bool $bureauEtudeInterne): static
-    {
-        $this->bureauEtudeInterne = $bureauEtudeInterne;
 
         return $this;
     }
@@ -455,30 +442,6 @@ class Prospect
         return $this;
     }
 
-    public function getQuali(): ?string
-    {
-        return $this->quali;
-    }
-
-    public function setQuali(?string $quali): static
-    {
-        $this->quali = $quali;
-
-        return $this;
-    }
-
-    public function getQualifie(): ?bool
-    {
-        return $this->qualifie;
-    }
-
-    public function setQualifie(?bool $qualifie): static
-    {
-        $this->qualifie = $qualifie;
-
-        return $this;
-    }
-
     public function getNotes(): ?string
     {
         return $this->notes;
@@ -487,18 +450,6 @@ class Prospect
     public function setNotes(?string $notes): static
     {
         $this->notes = $notes;
-
-        return $this;
-    }
-
-    public function getMontantDevis(): ?float
-    {
-        return $this->montantDevis;
-    }
-
-    public function setMontantDevis(?float $montantDevis): static
-    {
-        $this->montantDevis = $montantDevis;
 
         return $this;
     }
@@ -538,6 +489,14 @@ class Prospect
         $this->sprints->removeElement($lien);
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, ProspectCible>
+     */
+    public function getProspectCibles(): Collection
+    {
+        return $this->prospectCibles;
     }
 
     /**

@@ -27,6 +27,7 @@ parameters:
   aiApiKey: "%env(resolve:AI_API_KEY)%"
   aiBaseUrl: "%env(resolve:AI_BASE_URL)%"
   mapboxPublicToken: "%env(string:MAPBOX_PUBLIC_TOKEN)%"
+  altchaHmacKey: "%env(ALTCHA_HMAC_KEY)%"
 
 services:
   _defaults:
@@ -44,4 +45,8 @@ services:
     arguments:
       $storage: '@app_storage'
       $s3: '%env(bool:STORAGE_S3)%'
+
+  App\Service\AltchaService:
+    arguments:
+      $altchaHmacKey: '%altchaHmacKey%'
 

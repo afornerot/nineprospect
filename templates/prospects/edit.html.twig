@@ -118,14 +118,76 @@
                         <div class="row">
                             <div class="col-md-12">{{ form_row(form.contacte) }}</div>
                             <div class="col-md-12">{{ form_row(form.datePremierContact) }}</div>
-                            <div class="col-md-12">{{ form_row(form.qualifie) }}</div>
-                            <div class="col-md-12">{{ form_row(form.quali) }}</div>
                             <div class="col-md-6">{{ form_row(form.campagne) }}</div>
                             <div class="col-md-6">{{ form_row(form.sprints) }}</div>
-                            <div class="col-md-12">{{ form_row(form.montantDevis) }}</div>
-                            <div class="col-md-12">{{ form_row(form.bureauEtudeInterne) }}</div>
                             <div class="col-md-12">{{ form_row(form.users) }}</div>
                             <div class="col-md-12">{{ form_row(form.notes) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{ form_end(form) }}
+
+            <div class="col-md-12">
+                <div class="card mt-3">
+                    <div class="card-header">Cibles</div>
+                    <div class="card-body">
+                        {% if formCibles %}
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25%">Cible</th>
+                                        <th style="width: 65%">Qualification</th>
+                                        <th style="width: 10%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for linkId, formCible in formCibles %}
+                                        <tr>
+                                            <td style="vertical-align: middle">{{ formCible.vars.data.cible|default('—') }}</td>
+                                            <td style="vertical-align: middle">
+                                                <form method="post" action="{{ path('app_user_prospects_cibles_update', {prospectId: prospect.id, linkId: linkId}) }}" class="d-inline mb-0">
+                                                    <div class="d-flex gap-2 align-items-center">
+                                                        <div style="width: 30%">{{ form_widget(formCible.qualifie, {'attr': {'class': 'form-select form-select-sm'}}) }}</div>
+                                                        <div style="width: 60%">{{ form_widget(formCible.qualification, {'attr': {'class': 'form-control form-control-sm'}}) }}</div>
+                                                        <div style="width: 10%">
+                                                            <button type="submit" class="btn btn-sm btn-primary w-100" title="Enregistrer"><i class="fa-solid fa-floppy-disk"></i></button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </td>
+                                            <td style="vertical-align: middle">
+                                                <form method="post" action="{{ path('app_user_prospects_cibles_delete', {prospectId: prospect.id, linkId: linkId}) }}" class="d-inline mb-0" onsubmit="return confirm('Confirmez-vous la suppression de cette cible ?')">
+                                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('prospect-cible' ~ linkId) }}">
+                                                    <button type="submit" class="btn btn-sm btn-danger" title="Supprimer"><i class="fa-solid fa-trash-can"></i></button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endif %}
+
+                        <hr>
+
+                        <div class="row g-2 align-items-end">
+                            <div class="col">
+                                {{ form_start(formAjoutCible) }}
+                                <div class="d-flex gap-2">
+                                    <div style="width: 25%">{{ form_widget(formAjoutCible.cible) }}</div>
+                                    <div style="width: 65%">
+                                        <div class="d-flex gap-2">
+                                            <div style="width: 30%">{{ form_widget(formAjoutCible.qualifie, {'attr': {'class': 'form-select form-select-sm'}}) }}</div>
+                                            <div style="width: 60%">{{ form_widget(formAjoutCible.qualification, {'attr': {'class': 'form-control form-control-sm'}}) }}</div>
+                                            <div style="width: 10%">
+                                                <button type="submit" class="btn btn-success w-100" title="Ajouter"><i class="fa-solid fa-plus me-1"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {{ form_end(formAjoutCible) }}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -140,7 +202,6 @@
                 </div>
             {% endif %}
         </div>
-        {{ form_end(form) }}
     </div>
 {% endblock %}
 

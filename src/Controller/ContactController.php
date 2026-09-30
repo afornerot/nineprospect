@@ -116,8 +116,7 @@ class ContactController extends AbstractController
     /**
      * Détermine l'URL de retour :
      *  - priorité à ?redirect= si présent (URL encodée ou chemin relatif interne)
-     *  - sinon, fallback fiche prospect si on a un prospectId
-     *  - sinon, liste des contacts.
+     *  - sinon, liste des prospects.
      */
     private function resolveRedirect(Request $request, ?Contact $contact): string
     {
@@ -126,12 +125,7 @@ class ContactController extends AbstractController
             return $requested;
         }
 
-        $prospectId = $contact?->getProspect()?->getId();
-        if (null !== $prospectId) {
-            return $this->generateUrl('app_user_prospects_show', ['id' => $prospectId]);
-        }
-
-        return $this->generateUrl('app_user_contacts');
+        return $this->generateUrl('app_user_prospects');
     }
 
     /**

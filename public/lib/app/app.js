@@ -178,20 +178,22 @@ $(document).ready(function () {
 	});
 });
 
-// Cycle du statut Qualifié (badge cliquable, comme le pipeline) :
+// Cycle du statut Cible sur les badges cliquables dans la liste prospects.
 // null → true → false → null (Non → Oui → Hors cible → Non).
 $(document).ready(function () {
-	$(document).on('click', '.js-cycle-qualifie', function (e) {
+	$(document).on('click', '.js-cycle-cible', function (e) {
 		e.preventDefault();
+		e.stopPropagation();
 		const $btn = $(this);
 		if ($btn.prop('disabled')) return;
 
 		const prospectId = $btn.data('prospect');
+		const cibleId = $btn.data('cible');
 		const csrf = $btn.data('csrf');
-		if (!prospectId || !csrf) return;
+		if (!prospectId || !cibleId || !csrf) return;
 
 		$btn.prop('disabled', true);
-		const url = '/user/prospects/toggle-qualifie/' + prospectId;
+		const url = '/user/prospects/toggle-cible/' + prospectId + '/' + cibleId;
 		const body = new URLSearchParams();
 		body.set('_csrf_token', csrf);
 
@@ -212,11 +214,10 @@ $(document).ready(function () {
 				alert(msg);
 				return;
 			}
-			// Mise à jour visuelle : on reconstruit le badge avec la nouvelle classe et le label.
-			const newClass = 'badge text-bg-' + r.data.color + ' js-cycle-qualifie';
+			const newClass = 'badge text-bg-' + r.data.color + ' js-cycle-cible';
 			$btn.attr('class', newClass);
 			$btn.attr('title', r.data.label);
-			$btn.text(r.data.label);
+			location.reload();
 		}).catch(function () {
 			alert('Erreur réseau. Veuillez réessayer.');
 		}).finally(function () {
@@ -225,18 +226,18 @@ $(document).ready(function () {
 	});
 });
 
-// Switch « Qualifié » sur la liste prospects (mêmes principes que Contacté,
-// cycle null → true → false → null).
+// Ajout d'une cible à un prospect via le dropdown.
 $(document).ready(function () {
-	$(document).on('change', '.js-toggle-qualifie', function () {
-		const $checkbox = $(this);
-		const $wrapper = $checkbox.closest('.js-toggle-qualifie-wrapper');
-		const actionId = $wrapper.data('action-id');
-		const csrf = $wrapper.data('csrf');
-		if (!actionId || !csrf) return;
+	$(document).on('click', '.js-link-cible', function (e) {
+		e.preventDefault();
+		e.stopPropagation();
+		const $link = $(this);
+		const prospectId = $link.data('prospect');
+		const cibleId = $link.data('cible');
+		const csrf = $link.data('csrf');
+		if (!prospectId || !cibleId || !csrf) return;
 
-		$checkbox.prop('disabled', true);
-		const url = '/user/prospects/toggle-qualifie/' + actionId;
+		const url = '/user/prospects/add-cible/' + prospectId + '/' + cibleId;
 		const body = new URLSearchParams();
 		body.set('_csrf_token', csrf);
 
@@ -253,17 +254,13 @@ $(document).ready(function () {
 			return resp.json().then(function (data) { return { ok: resp.ok, status: resp.status, data: data }; });
 		}).then(function (r) {
 			if (!r.ok || !r.data.ok) {
-				$checkbox.prop('checked', !$checkbox.prop('checked'));
 				const msg = (r.data && r.data.error) ? r.data.error : ('Erreur ' + r.status);
 				alert(msg);
-			} else {
-				$checkbox.prop('checked', r.data.qualifie === true);
+				return;
 			}
+			location.reload();
 		}).catch(function () {
-			$checkbox.prop('checked', !$checkbox.prop('checked'));
 			alert('Erreur réseau. Veuillez réessayer.');
-		}).finally(function () {
-			$checkbox.prop('disabled', false);
 		});
 	});
 });
