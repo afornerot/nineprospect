@@ -60,10 +60,16 @@ class PublicProspectController extends AbstractController
         }
     }
 
-    #[Route('/altcha/verify', name: 'app_altcha_verify', methods: ['POST'])]
-    public function altchaVerify(Request $request): JsonResponse
+    #[Route('/altcha/verify', name: 'app_altcha_verify', methods: ['POST', 'OPTIONS'])]
+    public function altchaVerify(Request $request): Response
     {
-        $start = microtime(true);
+        if ($request->isMethod('OPTIONS')) {
+            return new Response('', 204, [
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'POST, OPTIONS',
+                'Access-Control-Allow-Headers' => 'Content-Type, *',
+            ]);
+        }
 
         try {
             $content = $request->getContent();
@@ -75,11 +81,8 @@ class PublicProspectController extends AbstractController
 
             $verified = $this->altcha->verifySolution($payload);
 
-            $elapsed = round((microtime(true) - $start) * 1000);
-
-            return new JsonResponse([
-                'success' => $verified,
-                'elapsed_ms' => $elapsed,
+            return new JsonResponse(['success' => $verified], 200, [
+                'Access-Control-Allow-Origin' => '*',
             ]);
         } catch (\Throwable $e) {
             return new JsonResponse(['error' => $e->getMessage()], 500);
