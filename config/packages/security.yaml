@@ -25,6 +25,14 @@ security:
       pattern: ^/altcha
       security: false
 
+    public_contact:
+      pattern: ^/contact
+      security: false
+
+    public_annuaire:
+      pattern: ^/annuaire
+      security: false
+
     mcp:
       pattern: ^/mcp
       security: true
