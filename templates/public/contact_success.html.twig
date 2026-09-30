@@ -42,8 +42,8 @@
             {% if not prospectCible %}
             <div class="card mb-4">
                 <div class="card-body">
-                    <form method="post" action="{{ path('app_public_link_cible', {campagneSlug: campagne.slug}) }}">
-                        <input type="hidden" name="cibleId" value="{{ cible.id }}">
+                    <form method="post" action="{{ path('app_public_contact_success', {campagneSlug: campagne.slug, cibleSlug: cible.slug}) }}">
+                        <input type="hidden" name="linkCible" value="{{ cible.id }}">
                         <button type="submit" class="btn w-100" style="background-color: #ff974a; color: #0f2f3f; border-radius: 9999px;">
                             <i class="fas fa-link me-2"></i>Afficher les documents
                         </button>

@@ -248,7 +248,7 @@ class PublicProspectController extends AbstractController
         ]);
     }
 
-    #[Route('/contact/{campagneSlug}/{cibleSlug}/success', name: 'app_public_contact_success', methods: ['GET'])]
+    #[Route('/contact/{campagneSlug}/{cibleSlug}/success', name: 'app_public_contact_success', methods: ['GET', 'POST'])]
     public function success(string $campagneSlug, string $cibleSlug, Request $request): Response
     {
         $session = $request->getSession();
@@ -270,13 +270,33 @@ class PublicProspectController extends AbstractController
             ]);
         }
 
-        $campagne = $this->findCampagne($campagneSlug);
         $cible = $this->findCible($cibleSlug);
-
-        if (!$campagne || !$cible) {
+        if (!$cible) {
             return $this->render('public/error.html.twig', [
-                'message' => 'La page demandée est introuvable.',
+                'message' => 'Cible non trouvée.',
             ]);
+        }
+
+        // Handle POST: link prospect to cible
+        if ($request->isMethod('POST') && $request->request->has('linkCible')) {
+            $existingLink = $this->prospectCibles->findOneBy([
+                'prospect' => $prospect,
+                'cible' => $cible,
+            ]);
+
+            if (!$existingLink) {
+                $prospectCible = new ProspectCible();
+                $prospectCible->setProspect($prospect);
+                $prospectCible->setCible($cible);
+                $prospectCible->setQualifie(null);
+                $this->em->persist($prospectCible);
+                $this->em->flush();
+            }
+
+            return $this->redirectToRoute('app_public_contact_success', [
+                'campagneSlug' => $campagneSlug,
+                'cibleSlug' => $cibleSlug,
+            ] + ['show_docs' => true]);
         }
 
         $prospectCible = $this->prospectCibles->findOneBy([
@@ -285,21 +305,15 @@ class PublicProspectController extends AbstractController
         ]);
 
         $allCibles = $this->cibles->findBy([], ['titre' => 'ASC']);
-        $selectedCibleIds = array_map(
-            fn($pc) => $pc->getCible()?->getId(),
-            $prospect->getProspectCibles()->toArray()
-        );
-        $availableCibles = array_filter($allCibles, fn($c) => !in_array($c->getId(), $selectedCibleIds));
 
         return $this->render('public/contact_success.html.twig', [
             'prospect' => $prospect,
             'prospectCible' => $prospectCible,
-            'campagne' => $campagne,
+            'campagne' => $this->findCampagne($campagneSlug),
             'cible' => $cible,
             'allCibles' => $allCibles,
-            'availableCibles' => $availableCibles,
             'redirectUrl' => 'https://www.cadoles.com',
-            'show_docs' => $request->query->getBoolean('show_docs'),
+            'show_docs' => $request->query->getBoolean('show_docs') || $prospectCible !== null,
         ]);
     }
 
@@ -382,68 +396,6 @@ class PublicProspectController extends AbstractController
             'campagneSlug' => $campagneSlug,
             'cibleSlug' => $cible->getSlug() ?? (string) $cible->getId(),
         ]);
-    }
-
-    #[Route('/contact/check-link/{prospectId}/{cibleId}', name: 'app_public_check_link', methods: ['GET'])]
-    public function checkLink(int $prospectId, int $cibleId): JsonResponse
-    {
-        $prospectCible = $this->prospectCibles->findOneBy([
-            'prospect' => $prospectId,
-            'cible' => $cibleId,
-        ]);
-
-        return new JsonResponse(['linked' => $prospectCible !== null]);
-    }
-
-    #[Route('/contact/{campagneSlug}/link-cible', name: 'app_public_link_cible', methods: ['POST'])]
-    public function linkCible(string $campagneSlug, Request $request): Response
-    {
-        $session = $request->getSession();
-        $prospectId = $session->get('prospect_id');
-
-        if (!$prospectId) {
-            return $this->redirectToRoute('app_public_contact', [
-                'campagneSlug' => $campagneSlug,
-                'cibleSlug' => '',
-            ]);
-        }
-
-        $cibleId = $request->request->get('cibleId');
-        $cible = $this->cibles->find($cibleId);
-
-        if (!$cible) {
-            return $this->redirectToRoute('app_public_contact_success', [
-                'campagneSlug' => $campagneSlug,
-                'cibleSlug' => '',
-            ]);
-        }
-
-        $prospect = $this->prospects->find($prospectId);
-        if (!$prospect) {
-            return $this->redirectToRoute('app_public_contact', [
-                'campagneSlug' => $campagneSlug,
-                'cibleSlug' => '',
-            ]);
-        }
-
-        $existingLink = $this->prospectCibles->findOneBy([
-            'prospect' => $prospect,
-            'cible' => $cible,
-        ]);
-
-        if (!$existingLink) {
-            $prospectCible = new ProspectCible();
-            $prospectCible->setProspect($prospect);
-            $prospectCible->setCible($cible);
-            $prospectCible->setQualifie(null);
-            $this->em->persist($prospectCible);
-            $this->em->flush();
-        }
-
-        return $this->redirectToRoute('app_public_contact_success', [
-            'campagneSlug' => $campagneSlug,
-            'cibleSlug' => $cible->getSlug() ?? (string) $cible->getId(),
-        ] + ['show_docs' => true]);
     }
 
     #[Route('/annuaire/search-by-name', name: 'app_public_annuaire_search_by_name', methods: ['GET'])]
