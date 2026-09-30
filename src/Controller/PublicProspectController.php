@@ -81,7 +81,14 @@ class PublicProspectController extends AbstractController
 
             $verified = $this->altcha->verifySolution($payload);
 
-            return new JsonResponse(['success' => $verified], 200, [
+            $responseData = [
+                'success' => $verified,
+            ];
+            if ($verified) {
+                $responseData['data'] = $payload;
+            }
+
+            return new JsonResponse($responseData, 200, [
                 'Access-Control-Allow-Origin' => '*',
             ]);
         } catch (\Throwable $e) {
