@@ -59,13 +59,11 @@
     
     .site-header {
         width: 100%;
+        height: 300px;
+        background-image: url('{{ asset('medias/logo/header.jpg') }}');
+        background-size: cover;
+        background-position: center;
         margin-bottom: 2rem;
-    }
-    
-    .site-header img {
-        width: 100%;
-        height: auto;
-        display: block;
     }
     
     .public-contact .card {
@@ -166,9 +164,7 @@
 
 {% block body %}
 <body class="public-contact">
-    <header>
-        <img src="{{ asset('medias/logo/header.jpg') }}" alt="Cadoles" class="img-fluid">
-    </header>
+    <header class="site-header"></header>
 
     <main class="container py-5">
         <div class="row mb-4">
