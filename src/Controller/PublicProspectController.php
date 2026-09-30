@@ -301,6 +301,35 @@ class PublicProspectController extends AbstractController
         ]);
     }
 
+    #[Route('/contact/{campagneSlug}/{cibleSlug}/select-cible', name: 'app_public_select_cible', methods: ['POST'])]
+    public function selectCible(string $campagneSlug, Request $request): Response
+    {
+        $session = $request->getSession();
+        $prospectId = $session->get('prospect_id');
+
+        if (!$prospectId) {
+            return $this->redirectToRoute('app_public_contact', [
+                'campagneSlug' => $campagneSlug,
+                'cibleSlug' => '',
+            ]);
+        }
+
+        $cibleId = $request->request->get('cibleId');
+        $cible = $this->cibles->find($cibleId);
+
+        if (!$cible) {
+            return $this->redirectToRoute('app_public_contact', [
+                'campagneSlug' => $campagneSlug,
+                'cibleSlug' => '',
+            ]);
+        }
+
+        return $this->redirectToRoute('app_public_contact_success', [
+            'campagneSlug' => $campagneSlug,
+            'cibleSlug' => $cible->getSlug() ?? (string) $cible->getId(),
+        ]);
+    }
+
     #[Route('/contact/{campagneSlug}/{cibleSlug}/add-cible', name: 'app_public_add_cible', methods: ['POST'])]
     public function addCible(string $campagneSlug, string $cibleSlug, Request $request): Response
     {

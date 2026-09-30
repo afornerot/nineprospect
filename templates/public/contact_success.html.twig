@@ -21,18 +21,19 @@
 
     <div class="row g-4">
         <div class="col-lg-6">
-            <div id="cible-selector-card" class="card mb-4">
+            {% if availableCibles|length > 0 %}
+            <div class="card mb-4">
                 <div class="card-header" style="background-color: rgba(111, 199, 226, 0.2); border-bottom: 1px solid rgba(111, 199, 226, 0.3);">
                     <h2 class="h5 mb-0" style="color: #6fc7e2;">Choisir une cible</h2>
                 </div>
                 <div class="card-body">
-                    <form id="cible-form" method="post" action="{{ path('app_public_add_cible', {campagneSlug: campagne.slug, cibleSlug: cible.slug}) }}">
+                    <form id="cible-form" method="post" action="{{ path('app_public_select_cible', {campagneSlug: campagne.slug}) }}">
                         <div class="mb-3">
                             <label for="autre-cible" class="form-label">Sélectionnez une cible</label>
-                            <select class="form-control" id="autre-cible" name="cible" required>
+                            <select class="form-control" id="autre-cible" name="cibleId" required>
                                 <option value="">Choisir une cible...</option>
                                 {% for c in availableCibles %}
-                                    <option value="{{ c.id }}" data-slug="{{ c.slug }}">{{ c.titre }}</option>
+                                    <option value="{{ c.id }}">{{ c.titre }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -44,13 +45,18 @@
                     </form>
                 </div>
             </div>
+            {% endif %}
 
-            <div id="documents-card" class="card mb-4" style="display: none;">
+            <div class="card mb-4">
                 <div class="card-header" style="background-color: rgba(255, 151, 74, 0.2); border-bottom: 1px solid rgba(255, 151, 74, 0.3);">
                     <h2 class="h5 mb-0" style="color: #ff974a;">Documents disponibles</h2>
                 </div>
-                <div class="card-body" id="documents-container">
-                    {# Contenu chargé dynamiquement #}
+                <div class="card-body">
+                    {{ render(path('bninefiles_files', {
+                        domain: 'cible',
+                        id: cible.id,
+                        editable: 0
+                    })) }}
                 </div>
             </div>
 
@@ -80,84 +86,4 @@
     </div>
 </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const cibleForm = document.getElementById('cible-form');
-    const cibleSelect = document.getElementById('autre-cible');
-    const cibleTitre = document.getElementById('cible-titre');
-    const cibleDescription = document.getElementById('cible-description');
-    const documentsCard = document.getElementById('documents-card');
-    const documentsContainer = document.getElementById('documents-container');
-
-    // Charger la description de la cible via AJAX
-    async function loadCibleDescription(cibleId) {
-        try {
-            const response = await fetch('/annuaire/cible/' + cibleId);
-            const data = await response.json();
-            cibleTitre.textContent = data.titre;
-            cibleDescription.innerHTML = data.description ? 
-                '<div class="cible-description">' + data.description + '</div>' : 
-                '<p class="text-white-50">Pas de description disponible.</p>';
-        } catch (e) {
-            console.error('Erreur chargement cible:', e);
-        }
-    }
-
-    // Charger les documents via AJAX
-    async function loadDocuments(cibleId, isNew) {
-        documentsContainer.innerHTML = '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Chargement...</p>';
-        documentsCard.style.display = 'block';
-        documentsCard.scrollIntoView({ behavior: 'smooth' });
-
-        try {
-            const response = await fetch('/bninefiles/cible/' + cibleId);
-            const html = await response.text();
-            documentsContainer.innerHTML = html;
-        } catch (e) {
-            documentsContainer.innerHTML = '<p class="text-danger">Erreur chargement documents</p>';
-        }
-    }
-
-    cibleSelect.addEventListener('change', function() {
-        if (this.value) {
-            loadCibleDescription(this.value);
-        }
-    });
-
-    cibleForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const selectedOption = cibleSelect.options[cibleSelect.selectedIndex];
-        const cibleId = cibleSelect.value;
-
-        if (!cibleId) return;
-
-        // Si déjà associé via availableCibles, on montre juste les docs
-        // Sinon, on ajoute d'abord la cible
-        const isNew = selectedOption.dataset.isNew !== 'false';
-
-        await loadDocuments(cibleId, !isNew);
-
-        if (!isNew) {
-            // Ajouter la cible au prospect via AJAX
-            const formData = new FormData();
-            formData.append('cible', cibleId);
-
-            try {
-                await fetch(this.action, {
-                    method: 'POST',
-                    body: formData
-                });
-            } catch (e) {
-                console.error('Erreur ajout cible:', e);
-            }
-        }
-    });
-
-    // Afficher les documents de la cible courante directement si prospect y est associé
-    {% if prospectCible %}
-    loadDocuments({{ cible.id }}, false);
-    {% endif %}
-});
-</script>
 {% endblock %}
