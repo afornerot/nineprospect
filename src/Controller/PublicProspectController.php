@@ -4,10 +4,12 @@ namespace App\Controller;
 
 use App\Entity\Campagne;
 use App\Entity\Cible;
+use App\Entity\Contact;
 use App\Entity\Prospect;
 use App\Entity\ProspectCible;
 use App\Repository\CampagneRepository;
 use App\Repository\CibleRepository;
+use App\Repository\ContactRepository;
 use App\Repository\ProspectCibleRepository;
 use App\Repository\ProspectRepository;
 use App\Service\AltchaService;
@@ -28,6 +30,7 @@ class PublicProspectController extends AbstractController
         private CibleRepository $cibles,
         private ProspectRepository $prospects,
         private ProspectCibleRepository $prospectCibles,
+        private ContactRepository $contacts,
         private EntityManagerInterface $em,
         private AltchaService $altcha,
         private AnnuaireEntreprises $annuaire,
@@ -170,6 +173,7 @@ class PublicProspectController extends AbstractController
 
             if ('morale' === $typePersonne) {
                 $siren = $request->request->get('siren');
+                $nom = $request->request->get('raisonSociale') ?: 'Entreprise ' . $siren;
                 $prospect->setNom($nom);
                 $prospect->setSiren($siren);
                 $prospect->setSiret($request->request->get('siret'));
@@ -177,14 +181,36 @@ class PublicProspectController extends AbstractController
                 $prospect->setAdresse($request->request->get('adresse'));
                 $prospect->setCodePostal($request->request->get('codePostal'));
                 $prospect->setVille($request->request->get('ville'));
+
+                $contactNom = $request->request->get('contactNom');
+                $contactPrenom = $request->request->get('contactPrenom');
             } else {
+                $nom = trim($request->request->get('nom') . ' ' . $request->request->get('prenom'));
                 $prospect->setNom($nom);
+
+                $contactNom = $request->request->get('nom');
+                $contactPrenom = $request->request->get('prenom');
             }
 
             $prospect->setEmail($email);
             $prospect->setTelephone($telephone);
 
             $this->em->persist($prospect);
+            $this->em->flush();
+
+            $contact = $this->contacts->findOneBy(['prospect' => $prospect, 'email' => $email]);
+            if (!$contact) {
+                $contact = new Contact();
+                $contact->setProspect($prospect);
+                $contact->setEmail($email);
+                $contact->setEstPrincipal(true);
+            }
+            $contact->setNom($contactNom);
+            $contact->setPrenom($contactPrenom);
+            $contact->setNomComplet(trim(($contactPrenom ?: '') . ' ' . ($contactNom ?: '')));
+            $contact->setTelephone($telephone);
+
+            $this->em->persist($contact);
             $this->em->flush();
 
             $session->set('prospect_id', $prospect->getId());
