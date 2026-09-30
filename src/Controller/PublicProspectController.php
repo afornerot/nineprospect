@@ -68,14 +68,20 @@ class PublicProspectController extends AbstractController
             $payload = json_decode($content, true);
 
             if (!$payload) {
-                return new JsonResponse(['error' => 'Invalid JSON'], 400);
+                return new JsonResponse(['error' => 'Invalid JSON', 'raw' => substr($content, 0, 200)], 400);
             }
 
             $verified = $this->altcha->verifySolution($payload);
 
-            return new JsonResponse(['success' => $verified]);
+            return new JsonResponse([
+                'success' => $verified,
+                'debug' => [
+                    'received_payload' => $payload,
+                    'verification_result' => $verified,
+                ]
+            ]);
         } catch (\Throwable $e) {
-            return new JsonResponse(['error' => $e->getMessage()], 500);
+            return new JsonResponse(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
         }
     }
 
