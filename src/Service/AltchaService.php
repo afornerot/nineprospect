@@ -17,7 +17,7 @@ class AltchaService
         return json_decode($response, true);
     }
 
-    public function verifySolution(array $payload): bool
+    public function verifySolution(array $payload): array
     {
         $data = $payload;
 
@@ -52,13 +52,18 @@ class AltchaService
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if (200 !== $httpCode) {
-                return false;
+                return ['success' => false, 'data' => null];
             }
 
             $result = json_decode($response, true);
-            return isset($result['success']) && $result['success'] === true;
+            $success = isset($result['success']) && $result['success'] === true;
+
+            return [
+                'success' => $success,
+                'data' => $success ? $data : null,
+            ];
         } catch (\Exception $e) {
-            return false;
+            return ['success' => false, 'data' => null];
         }
     }
 }
