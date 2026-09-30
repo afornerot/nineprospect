@@ -4,103 +4,91 @@
 
 {% block localstyle %}
 <style>
-    :root {
-        --cadoles-bg: #0f2f3f;
-        --cadoles-text: #ffffff;
-        --cadoles-accent: #ff974a;
-        --cadoles-accent-light: #6fc7e2;
-    }
-    
     body.public-contact {
-        background-color: var(--cadoles-bg);
-        color: var(--cadoles-text);
-        font-family: 'Open Sans', sans-serif;
+        background-color: #0f2f3f;
+        background-image: url('{{ asset('medias/logo/header.jpg') }}');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        color: #ffffff;
+        font-family: 'Open Sans', Arial, sans-serif;
         font-weight: 300;
         line-height: 1.4;
         margin: 0;
         padding: 0;
+        min-height: 100vh;
     }
     
     .public-contact h1, .public-contact h2, .public-contact h3 {
         font-family: 'Space Mono', monospace;
-        color: var(--cadoles-accent);
+        color: #ff974a;
         font-weight: 400;
+        margin: 0;
     }
     
     .public-contact h1 {
-        font-size: clamp(2rem, 5vw, 3rem);
+        font-size: clamp(1.5rem, 4vw, 2.5rem);
     }
     
     .public-contact h2 {
-        font-size: clamp(1.25rem, 3vw, 1.75rem);
+        font-size: clamp(1rem, 2vw, 1.25rem);
     }
     
     .public-contact a {
-        color: var(--cadoles-accent);
+        color: #ff974a;
     }
     
     .public-contact a:hover {
-        color: var(--cadoles-text);
-    }
-    
-    .public-contact .btn-primary {
-        background-color: var(--cadoles-accent);
-        border: none;
-        color: var(--cadoles-bg);
-        padding: 1rem 2.25rem;
-        font-weight: inherit;
-        text-transform: none;
-        border-radius: 9999px;
-    }
-    
-    .public-contact .btn-primary:hover {
-        background-color: rgba(255,255,255,0.85);
+        color: #6fc7e2;
     }
     
     .public-contact .card {
-        background-color: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.2);
+        background-color: rgba(15, 47, 63, 0.95);
+        border: 1px solid rgba(255, 151, 74, 0.3);
         border-radius: 8px;
+        padding: 2rem;
     }
     
     .public-contact .form-control {
-        background-color: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.3);
-        color: var(--cadoles-text);
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #ffffff;
         border-radius: 4px;
+        padding: 0.5rem 1rem;
     }
     
     .public-contact .form-control:focus {
-        background-color: rgba(255,255,255,0.15);
-        border-color: var(--cadoles-accent);
-        color: var(--cadoles-text);
-        box-shadow: none;
+        background-color: rgba(255, 255, 255, 0.15);
+        border-color: #ff974a;
+        color: #ffffff;
+        box-shadow: 0 0 0 0.2rem rgba(255, 151, 74, 0.25);
     }
     
     .public-contact .form-control::placeholder {
-        color: rgba(255,255,255,0.5);
+        color: rgba(255, 255, 255, 0.5);
     }
     
     .public-contact .form-label {
-        color: rgba(255,255,255,0.8);
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 0.25rem;
     }
     
     .public-contact .form-check-label {
-        color: rgba(255,255,255,0.8);
+        color: rgba(255, 255, 255, 0.8);
     }
     
     .public-contact .form-check-input {
-        background-color: rgba(255,255,255,0.1);
-        border-color: rgba(255,255,255,0.3);
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
     }
     
     .public-contact .form-check-input:checked {
-        background-color: var(--cadoles-accent);
-        border-color: var(--cadoles-accent);
+        background-color: #ff974a;
+        border-color: #ff974a;
     }
     
     .public-contact hr {
-        border-color: rgba(255,255,255,0.2);
+        border-color: rgba(255, 255, 255, 0.2);
     }
     
     #altcha-widget {
@@ -114,6 +102,10 @@
     .cible-description {
         font-size: 1.1rem;
         line-height: 1.6;
+        background-color: rgba(15, 47, 63, 0.95);
+        border: 1px solid rgba(255, 151, 74, 0.3);
+        border-radius: 8px;
+        padding: 2rem;
     }
     
     .cible-description h1, .cible-description h2, .cible-description h3 {
@@ -121,201 +113,256 @@
         margin-bottom: 0.75rem;
     }
     
+    .cible-description h1:first-child,
+    .cible-description h2:first-child,
+    .cible-description h3:first-child {
+        margin-top: 0;
+    }
+    
     .cible-description p {
         margin-bottom: 1rem;
+        color: rgba(255, 255, 255, 0.9);
     }
     
     .cible-description ul, .cible-description ol {
         margin-bottom: 1rem;
         padding-left: 1.5rem;
+        color: rgba(255, 255, 255, 0.9);
     }
     
     .cible-description a {
-        color: var(--cadoles-accent-light);
+        color: #6fc7e2;
     }
     
     .site-footer {
-        background-color: rgba(0,0,0,0.3);
+        background-color: rgba(0, 0, 0, 0.5);
         padding: 2rem 0;
         text-align: center;
         margin-top: 3rem;
     }
     
     .site-footer a {
-        color: var(--cadoles-accent);
+        color: #ff974a;
         text-decoration: none;
     }
     
     .site-footer a:hover {
-        color: var(--cadoles-text);
+        color: #6fc7e2;
         text-decoration: underline;
+    }
+    
+    .site-footer p {
+        color: rgba(255, 255, 255, 0.7);
+        margin: 0;
+    }
+    
+    .btn-submit {
+        background-color: #ff974a;
+        border: none;
+        color: #0f2f3f;
+        padding: 1rem 2rem;
+        border-radius: 9999px;
+        font-weight: 400;
+        width: 100%;
+    }
+    
+    .btn-submit:hover {
+        background-color: rgba(255, 255, 255, 0.9);
+        color: #0f2f3f;
+    }
+    
+    .form-text {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+    
+    .list-group-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        max-height: 200px;
+        overflow-y: auto;
+        border-radius: 4px;
+        margin-top: 4px;
+    }
+    
+    .list-group-item-suggestion {
+        background-color: rgba(15, 47, 63, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        cursor: pointer;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .list-group-item-suggestion:hover,
+    .list-group-item-suggestion.active {
+        background-color: rgba(255, 151, 74, 0.3);
     }
 </style>
 {% endblock %}
 
 {% block body %}
-<body class="public-contact">
-    <main class="container py-5" style="background-image: url('{{ asset('medias/logo/header.jpg') }}'); background-size: cover; background-position: center; min-height: 100vh;">
-        <div class="row mb-4">
-            <div class="col-12 text-center">
-                <h1>{{ cible.titre }}</h1>
+<body class="public-contact" style="padding-bottom: 0;">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+        <main>
+            <div class="row mb-4">
+                <div class="col-12 text-center">
+                    <h1>{{ cible.titre }}</h1>
+                </div>
             </div>
-        </div>
 
-        <div class="row g-4">
-            <div class="col-lg-6">
-                <div class="card p-4">
-                    <h2 class="h5 mb-4">Vos coordonnées</h2>
-                    
-                    <div id="altcha-message" class="text-center py-3">
-                        <p class="mb-3">Si vous êtes intéressé, merci de laisser vos coordonnées après avoir validé que vous n'êtes pas un robot.</p>
-                        <altcha-widget id="altcha-widget" challenge="/altcha/request?_=4" verifyurl="/altcha/verify" hidefooter language="fr-fr" class="mx-auto" debug></altcha-widget>
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <h2 class="h5 mb-4">Vos coordonnées</h2>
+                        
+                        <div id="altcha-message" class="text-center py-3">
+                            <p class="mb-3">Si vous êtes intéressé, merci de laisser vos coordonnées après avoir validé que vous n'êtes pas un robot.</p>
+                            <altcha-widget id="altcha-widget" challenge="/altcha/request?_=5" verifyurl="/altcha/verify" hidefooter language="fr-fr" class="mx-auto" debug></altcha-widget>
+                        </div>
+
+                        <form method="post" id="contact-form" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Vous êtes</label>
+                                <div class="d-flex gap-4 mt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="typePersonne" id="typeMorale" value="morale" checked>
+                                        <label class="form-check-label" for="typeMorale">Personne morale (entreprise)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="typePersonne" id="typePhysique" value="physique">
+                                        <label class="form-check-label" for="typePhysique">Personne physique (particulier)</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="form-morale">
+                                <div class="mb-3 position-relative">
+                                    <label for="raisonSociale" class="form-label">Raison sociale *</label>
+                                    <input type="text" class="form-control" id="raisonSociale" name="raisonSociale" autocomplete="off" required>
+                                    <div class="form-text">Tapez pour rechercher une société dans l'annuaire</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="siren" class="form-label">SIREN</label>
+                                    <input type="text" class="form-control" id="siren" name="siren" maxlength="9" pattern="[0-9]{9}" placeholder="123456789">
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-8">
+                                        <label for="adresse" class="form-label">Adresse</label>
+                                        <input type="text" class="form-control" id="adresse" name="adresse">
+                                    </div>
+                                    <div class="col-4">
+                                        <label for="codePostal" class="form-label">Code postal</label>
+                                        <input type="text" class="form-control" id="codePostal" name="codePostal">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <label for="ville" class="form-label">Ville</label>
+                                        <input type="text" class="form-control" id="ville" name="ville">
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="naf" class="form-label">Code NAF</label>
+                                        <input type="text" class="form-control" id="naf" name="naf">
+                                    </div>
+                                </div>
+
+                                <hr>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <label for="contactNom" class="form-label">Nom du contact *</label>
+                                        <input type="text" class="form-control" id="contactNom" name="contactNom" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="contactPrenom" class="form-label">Prénom du contact *</label>
+                                        <input type="text" class="form-control" id="contactPrenom" name="contactPrenom" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="form-physique" style="display: none;">
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <label for="nom" class="form-label">Nom *</label>
+                                        <input type="text" class="form-control" id="nom" name="nom">
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="prenom" class="form-label">Prénom *</label>
+                                        <input type="text" class="form-control" id="prenom" name="prenom">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="adressePhys" class="form-label">Adresse</label>
+                                    <input type="text" class="form-control" id="adressePhys" name="adressePhys">
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-4">
+                                        <label for="codePostalPhys" class="form-label">Code postal</label>
+                                        <input type="text" class="form-control" id="codePostalPhys" name="codePostalPhys">
+                                    </div>
+                                    <div class="col-8">
+                                        <label for="villePhys" class="form-label">Ville</label>
+                                        <input type="text" class="form-control" id="villePhys" name="villePhys">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label for="email" class="form-label">Email *</label>
+                                    <input type="email" class="form-control" id="email" name="email" placeholder="contact@exemple.fr" required>
+                                </div>
+                                <div class="col-6">
+                                    <label for="telephone" class="form-label">Téléphone *</label>
+                                    <input type="tel" class="form-control" id="telephone" name="telephone" placeholder="06 12 34 56 78" required>
+                                </div>
+                            </div>
+
+                            <input type="hidden" id="cible" name="cible" value="{{ cible.id }}">
+                            <input type="hidden" id="altcha-challenge" name="altcha-challenge">
+                            <input type="hidden" id="altcha-salt" name="altcha-salt">
+                            <input type="hidden" id="altcha-signature" name="altcha-signature">
+                            <input type="hidden" id="altcha-solution" name="altcha-solution">
+
+                            <div class="mt-4">
+                                <button type="submit" class="btn btn-submit">
+                                    <i class="fas fa-paper-plane me-2"></i>Envoyer
+                                </button>
+                            </div>
+                        </form>
                     </div>
+                </div>
 
-                    <form method="post" id="contact-form" style="display: none;">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold mb-0">Vous êtes</label>
-                            <div class="d-flex gap-4 mt-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="typePersonne" id="typeMorale" value="morale" checked>
-                                    <label class="form-check-label" for="typeMorale">
-                                        Personne morale (entreprise)
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="typePersonne" id="typePhysique" value="physique">
-                                    <label class="form-check-label" for="typePhysique">
-                                        Personne physique (particulier)
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="form-morale">
-                            <div class="mb-3">
-                                <label for="raisonSociale" class="form-label">Raison sociale *</label>
-                                <input type="text" class="form-control" id="raisonSociale" name="raisonSociale" autocomplete="off" required>
-                                <div class="form-text">Tapez pour rechercher une société dans l'annuaire</div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="siren" class="form-label">SIREN</label>
-                                <input type="text" class="form-control" id="siren" name="siren" maxlength="9" pattern="[0-9]{9}" placeholder="123456789">
-                                <div class="invalid-feedback" id="siren-error"></div>
-                            </div>
-
-                            <div class="row mb-3">
-                                <div class="col-8">
-                                    <label for="adresse" class="form-label">Adresse</label>
-                                    <input type="text" class="form-control" id="adresse" name="adresse">
-                                </div>
-                                <div class="col-4">
-                                    <label for="codePostal" class="form-label">Code postal</label>
-                                    <input type="text" class="form-control" id="codePostal" name="codePostal">
-                                </div>
-                            </div>
-
-                            <div class="row mb-3">
-                                <div class="col-6">
-                                    <label for="ville" class="form-label">Ville</label>
-                                    <input type="text" class="form-control" id="ville" name="ville">
-                                </div>
-                                <div class="col-6">
-                                    <label for="naf" class="form-label">Code NAF</label>
-                                    <input type="text" class="form-control" id="naf" name="naf">
-                                </div>
-                            </div>
-
-                            <hr>
-
-                            <div class="row mb-3">
-                                <div class="col-6">
-                                    <label for="contactNom" class="form-label">Nom du contact *</label>
-                                    <input type="text" class="form-control" id="contactNom" name="contactNom" required>
-                                </div>
-                                <div class="col-6">
-                                    <label for="contactPrenom" class="form-label">Prénom du contact *</label>
-                                    <input type="text" class="form-control" id="contactPrenom" name="contactPrenom" required>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="form-physique" style="display: none;">
-                            <div class="row mb-3">
-                                <div class="col-6">
-                                    <label for="nom" class="form-label">Nom *</label>
-                                    <input type="text" class="form-control" id="nom" name="nom">
-                                </div>
-                                <div class="col-6">
-                                    <label for="prenom" class="form-label">Prénom *</label>
-                                    <input type="text" class="form-control" id="prenom" name="prenom">
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="adressePhys" class="form-label">Adresse</label>
-                                <input type="text" class="form-control" id="adressePhys" name="adressePhys">
-                            </div>
-
-                            <div class="row mb-3">
-                                <div class="col-4">
-                                    <label for="codePostalPhys" class="form-label">Code postal</label>
-                                    <input type="text" class="form-control" id="codePostalPhys" name="codePostalPhys">
-                                </div>
-                                <div class="col-8">
-                                    <label for="villePhys" class="form-label">Ville</label>
-                                    <input type="text" class="form-control" id="villePhys" name="villePhys">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label for="email" class="form-label">Email *</label>
-                                <input type="email" class="form-control" id="email" name="email" placeholder="contact@exemple.fr" required>
-                            </div>
-                            <div class="col-6">
-                                <label for="telephone" class="form-label">Téléphone *</label>
-                                <input type="tel" class="form-control" id="telephone" name="telephone" placeholder="06 12 34 56 78" required>
-                            </div>
-                        </div>
-
-                        <input type="hidden" id="cible" name="cible" value="{{ cible.id }}">
-                        <input type="hidden" id="altcha-challenge" name="altcha-challenge">
-                        <input type="hidden" id="altcha-salt" name="altcha-salt">
-                        <input type="hidden" id="altcha-signature" name="altcha-signature">
-                        <input type="hidden" id="altcha-solution" name="altcha-solution">
-
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-paper-plane me-2"></i>Envoyer
-                            </button>
-                        </div>
-                    </form>
+                <div class="col-lg-6">
+                    <div class="cible-description">
+                        {% if cible.description %}
+                            {{ cible.description|markdown_to_html }}
+                        {% else %}
+                            <p style="color: rgba(255,255,255,0.5);">Pas de description disponible.</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
+        </main>
 
-            <div class="col-lg-6">
-                <div class="cible-description">
-                    {% if cible.description %}
-                        {{ cible.description|markdown_to_html }}
-                    {% else %}
-                        <p class="text-white-50">Pas de description disponible.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <footer class="site-footer">
-        <div class="container">
+        <footer class="site-footer">
             <p>
                 <a href="https://www.cadoles.com">Cadoles</a> — 
                 <a href="https://www.cadoles.com/mentions-legales/">Mentions légales</a> — 
                 <a href="https://www.cadoles.com/politique-de-confidentialite/">Politique de confidentialité</a>
             </p>
-        </div>
-    </footer>
+        </footer>
+    </div>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400&family=Space+Mono&display=swap">
     <script src="/lib/altcha/dist_i18n/fr-fr.js?v=2"></script>
@@ -380,12 +427,24 @@
 
         const raisonSocialeInput = document.getElementById('raisonSociale');
         let searchTimeout = null;
+        let suggestionsList = null;
+        let selectedIndex = -1;
+        let suggestions = [];
+
+        function createSuggestionsList() {
+            suggestionsList = document.createElement('ul');
+            suggestionsList.className = 'list-group-suggestions';
+            suggestionsList.style.display = 'none';
+            raisonSocialeInput.parentElement.appendChild(suggestionsList);
+        }
+        createSuggestionsList();
 
         raisonSocialeInput.addEventListener('input', function() {
             const query = this.value.trim();
             clearTimeout(searchTimeout);
 
             if (query.length < 3) {
+                suggestionsList.style.display = 'none';
                 return;
             }
 
@@ -396,20 +455,6 @@
                     .catch(function() {});
             }, 300);
         });
-
-        const suggestionsList = document.createElement('ul');
-        suggestionsList.className = 'list-group position-absolute w-100';
-        suggestionsList.style.zIndex = '1000';
-        suggestionsList.style.maxHeight = '200px';
-        suggestionsList.style.overflowY = 'auto';
-        suggestionsList.style.display = 'none';
-        suggestionsList.style.backgroundColor = '#0f2f3f';
-        suggestionsList.style.border = '1px solid rgba(255,255,255,0.2)';
-        raisonSocialeInput.parentElement.style.position = 'relative';
-        raisonSocialeInput.parentElement.appendChild(suggestionsList);
-
-        let selectedIndex = -1;
-        let suggestions = [];
 
         function showSuggestions(data) {
             suggestions = data;
@@ -423,19 +468,14 @@
 
             suggestions.forEach(function(item, index) {
                 const li = document.createElement('li');
-                li.className = 'list-group-item list-group-item-action';
-                li.style.cursor = 'pointer';
-                li.style.fontSize = '0.9rem';
-                li.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                li.style.color = '#ffffff';
-                li.style.borderColor = 'rgba(255,255,255,0.2)';
+                li.className = 'list-group-item-suggestion';
                 li.dataset.index = index;
                 li.innerHTML = '<strong>' + item.nom + '</strong>';
                 if (item.siren) {
-                    li.innerHTML += ' <span class="text-white-50">(' + item.siren + ')</span>';
+                    li.innerHTML += ' <span style="opacity: 0.6;">(' + item.siren + ')</span>';
                 }
                 if (item.adresse) {
-                    li.innerHTML += '<br><small class="text-white-50">' + item.adresse + ', ' + item.codePostal + ' ' + item.ville + '</small>';
+                    li.innerHTML += '<br><small style="opacity: 0.6;">' + item.adresse + ', ' + item.codePostal + ' ' + item.ville + '</small>';
                 }
                 li.addEventListener('click', function() {
                     selectSociete(item);
@@ -453,11 +493,6 @@
             const items = suggestionsList.querySelectorAll('li');
             items.forEach(function(item, i) {
                 item.classList.toggle('active', i === index);
-                if (i === index) {
-                    item.style.backgroundColor = 'rgba(255,151,74,0.3)';
-                } else {
-                    item.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                }
             });
             selectedIndex = index;
         }
@@ -472,14 +507,11 @@
             suggestionsList.style.display = 'none';
             suggestions = [];
             selectedIndex = -1;
-
             document.getElementById('contactNom').focus();
         }
 
         raisonSocialeInput.addEventListener('keydown', function(e) {
-            if (suggestions.length === 0) {
-                return;
-            }
+            if (suggestions.length === 0) return;
 
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -503,12 +535,6 @@
             if (!raisonSocialeInput.contains(e.target) && !suggestionsList.contains(e.target)) {
                 suggestionsList.style.display = 'none';
             }
-        });
-
-        raisonSocialeInput.addEventListener('blur', function() {
-            setTimeout(function() {
-                suggestionsList.style.display = 'none';
-            }, 200);
         });
     });
     </script>
