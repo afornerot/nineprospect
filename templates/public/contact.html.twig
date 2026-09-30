@@ -198,7 +198,11 @@
 </style>
 
 <script src="/lib/altcha/dist_i18n/fr-fr.js?v=2"></script>
-<script type="module" src="/lib/altcha/altcha.min.js?v=2"></script>
+<script type="module">
+    console.log('ALTCHA module loading...');
+    import '/lib/altcha/altcha.min.js?v=2';
+    console.log('ALTCHA module loaded');
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('raisonSociale').focus();
@@ -207,7 +211,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const altchaMessage = document.getElementById('altcha-message');
     const contactForm = document.getElementById('contact-form');
 
+    console.log('altchaWidget:', altchaWidget);
+    console.log('altchaWidget tagName:', altchaWidget?.tagName);
+
     customElements.whenDefined('altcha-widget').then(function() {
+        console.log('altcha-widget custom element defined');
         function showForm() {
             altchaMessage.style.display = 'none';
             contactForm.style.display = 'block';
