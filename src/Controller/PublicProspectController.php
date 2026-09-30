@@ -139,9 +139,13 @@ class PublicProspectController extends AbstractController
                 return new Response('Cible invalide', 400);
             }
 
-            $prospect = new Prospect();
-            $prospect->setCampagne($campagne);
-            $prospect->setContacte(false);
+            $prospect = $this->prospects->findOneBy(['email' => $email]);
+
+            if (!$prospect) {
+                $prospect = new Prospect();
+                $prospect->setCampagne($campagne);
+                $prospect->setContacte(false);
+            }
 
             if ('morale' === $typePersonne) {
                 $siren = $request->request->get('siren');
