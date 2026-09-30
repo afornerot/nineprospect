@@ -298,6 +298,7 @@ class PublicProspectController extends AbstractController
             'cible' => $cible,
             'availableCibles' => $availableCibles,
             'redirectUrl' => 'https://www.cadoles.com',
+            'show_docs' => $request->query->getBoolean('show_docs'),
         ]);
     }
 
@@ -382,54 +383,54 @@ class PublicProspectController extends AbstractController
         ]);
     }
 
-    #[Route('/annuaire/search', name: 'app_public_annuaire_search', methods: ['GET'])]
-    public function searchAnnuaire(Request $request): JsonResponse
+    #[Route('/contact/check-link/{prospectId}/{cibleId}', name: 'app_public_check_link', methods: ['GET'])]
+    public function checkLink(int $prospectId, int $cibleId): JsonResponse
     {
-        $siren = $request->query->get('siren', '');
-        $siren = preg_replace('/\D+/', '', $siren) ?? '';
-
-        if (9 !== \strlen($siren)) {
-            return new JsonResponse(['error' => 'SIREN invalide'], 400);
-        }
-
-        $result = $this->annuaire->searchBySiren($siren);
-
-        if (null === $result) {
-            return new JsonResponse(['error' => 'Entreprise non trouvée'], 404);
-        }
-
-        $normalized = $this->annuaire->normalize($result);
-
-        return new JsonResponse([
-            'ok' => true,
-            'data' => $normalized,
+        $prospectCible = $this->prospectCibles->findOneBy([
+            'prospect' => $prospectId,
+            'cible' => $cibleId,
         ]);
+
+        return new JsonResponse(['linked' => $prospectCible !== null]);
     }
 
-    #[Route('/annuaire/search-by-name', name: 'app_public_annuaire_search_by_name', methods: ['GET'])]
-    public function searchByName(Request $request): JsonResponse
+    #[Route('/contact/{campagneSlug}/link-cible', name: 'app_public_link_cible', methods: ['POST'])]
+    public function linkCible(string $campagneSlug, Request $request): JsonResponse
     {
-        $query = $request->query->get('q', '');
+        $session = $request->getSession();
+        $prospectId = $session->get('prospect_id');
 
-        if (\strlen($query) < 3) {
-            return new JsonResponse([]);
+        if (!$prospectId) {
+            return new JsonResponse(['error' => 'Not authenticated'], 401);
         }
 
-        $response = $this->annuaire->search($query);
-        $results = [];
-        foreach ($response['results'] as $row) {
-            $data = $this->annuaire->normalize($row);
-            $results[] = [
-                'nom' => $data['nom'],
-                'siren' => $data['siren'],
-                'adresse' => $data['adresse'],
-                'codePostal' => $data['code_postal'],
-                'ville' => $data['ville'],
-                'naf' => $data['naf'],
-            ];
+        $cibleId = $request->request->get('cibleId');
+        $cible = $this->cibles->find($cibleId);
+
+        if (!$cible) {
+            return new JsonResponse(['error' => 'Cible not found'], 404);
         }
 
-        return new JsonResponse($results);
+        $prospect = $this->prospects->find($prospectId);
+        if (!$prospect) {
+            return new JsonResponse(['error' => 'Prospect not found'], 404);
+        }
+
+        $existingLink = $this->prospectCibles->findOneBy([
+            'prospect' => $prospect,
+            'cible' => $cible,
+        ]);
+
+        if (!$existingLink) {
+            $prospectCible = new ProspectCible();
+            $prospectCible->setProspect($prospect);
+            $prospectCible->setCible($cible);
+            $prospectCible->setQualifie(null);
+            $this->em->persist($prospectCible);
+            $this->em->flush();
+        }
+
+        return new JsonResponse(['ok' => true]);
     }
 
     #[Route('/annuaire/cible/{id}', name: 'app_public_annuaire_cible', methods: ['GET'])]
