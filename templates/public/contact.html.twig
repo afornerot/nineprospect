@@ -20,7 +20,7 @@
                 <div class="card-body">
                     <div id="altcha-message" class="text-center py-3">
                         <p class="mb-3 fs-5">Si vous êtes intéressé, merci de laisser vos coordonnées après avoir validé que vous n'êtes pas un robot.</p>
-                        <altcha-widget id="altcha-widget" challengeurl="/altcha/request?_=1" verifyurl="/altcha/verify" hidefooter language="fr-fr" class="mx-auto" debug></altcha-widget>
+                        <altcha-widget id="altcha-widget" challenge="/altcha/request?_=3" verifyurl="/altcha/verify" hidefooter language="fr-fr" class="mx-auto" debug></altcha-widget>
                     </div>
 
                     <form method="post" id="contact-form" style="display: none;">
@@ -198,11 +198,7 @@
 </style>
 
 <script src="/lib/altcha/dist_i18n/fr-fr.js?v=2"></script>
-<script type="module">
-    console.log('ALTCHA module loading...');
-    import '/lib/altcha/altcha.min.js?v=2';
-    console.log('ALTCHA module loaded');
-</script>
+<script type="module" src="/lib/altcha/altcha.min.js?v=2"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('raisonSociale').focus();
@@ -211,18 +207,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const altchaMessage = document.getElementById('altcha-message');
     const contactForm = document.getElementById('contact-form');
 
-    console.log('altchaWidget:', altchaWidget);
-    console.log('altchaWidget tagName:', altchaWidget?.tagName);
-
     customElements.whenDefined('altcha-widget').then(function() {
-        console.log('altcha-widget custom element defined');
         function showForm() {
             altchaMessage.style.display = 'none';
             contactForm.style.display = 'block';
         }
 
         altchaWidget.addEventListener('statechange', function(e) {
-            console.log('ALTCHA statechange', e.detail);
             if (e.detail.state === 'verified') {
                 showForm();
             }
