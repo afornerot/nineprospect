@@ -2,31 +2,195 @@
 
 {% block title %}{{ cible.titre }} - Nous contacter{% endblock %}
 
-{% block body %}
-<div class="app-content">
-<div class="container py-5">
-    <div class="row mb-4">
-        <div class="col-12 text-center">
-            <h1>{{ cible.titre }}</h1>
-        </div>
-    </div>
+{% block localstyle %}
+<style>
+    :root {
+        --cadoles-bg: #0f2f3f;
+        --cadoles-text: #ffffff;
+        --cadoles-accent: #ff974a;
+        --cadoles-accent-light: #6fc7e2;
+    }
+    
+    body.public-contact {
+        background-color: var(--cadoles-bg);
+        color: var(--cadoles-text);
+        font-family: 'Open Sans', sans-serif;
+        font-weight: 300;
+        line-height: 1.4;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .public-contact h1, .public-contact h2, .public-contact h3 {
+        font-family: 'Space Mono', monospace;
+        color: var(--cadoles-accent);
+        font-weight: 400;
+    }
+    
+    .public-contact h1 {
+        font-size: clamp(2rem, 5vw, 3rem);
+    }
+    
+    .public-contact h2 {
+        font-size: clamp(1.25rem, 3vw, 1.75rem);
+    }
+    
+    .public-contact a {
+        color: var(--cadoles-accent);
+    }
+    
+    .public-contact a:hover {
+        color: var(--cadoles-text);
+    }
+    
+    .public-contact .btn-primary {
+        background-color: var(--cadoles-accent);
+        border: none;
+        color: var(--cadoles-bg);
+        padding: 1rem 2.25rem;
+        font-weight: inherit;
+        text-transform: none;
+        border-radius: 9999px;
+    }
+    
+    .public-contact .btn-primary:hover {
+        background-color: rgba(255,255,255,0.85);
+    }
+    
+    .site-header {
+        width: 100%;
+        margin-bottom: 2rem;
+    }
+    
+    .site-header img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+    
+    .public-contact .card {
+        background-color: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+    }
+    
+    .public-contact .form-control {
+        background-color: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: var(--cadoles-text);
+        border-radius: 4px;
+    }
+    
+    .public-contact .form-control:focus {
+        background-color: rgba(255,255,255,0.15);
+        border-color: var(--cadoles-accent);
+        color: var(--cadoles-text);
+        box-shadow: none;
+    }
+    
+    .public-contact .form-control::placeholder {
+        color: rgba(255,255,255,0.5);
+    }
+    
+    .public-contact .form-label {
+        color: rgba(255,255,255,0.8);
+    }
+    
+    .public-contact .form-check-label {
+        color: rgba(255,255,255,0.8);
+    }
+    
+    .public-contact .form-check-input {
+        background-color: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.3);
+    }
+    
+    .public-contact .form-check-input:checked {
+        background-color: var(--cadoles-accent);
+        border-color: var(--cadoles-accent);
+    }
+    
+    .public-contact hr {
+        border-color: rgba(255,255,255,0.2);
+    }
+    
+    #altcha-widget {
+        display: inline-block;
+    }
+    
+    #altcha-widget .altcha-logo {
+        display: none !important;
+    }
+    
+    .cible-description {
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+    
+    .cible-description h1, .cible-description h2, .cible-description h3 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .cible-description p {
+        margin-bottom: 1rem;
+    }
+    
+    .cible-description ul, .cible-description ol {
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+    }
+    
+    .cible-description a {
+        color: var(--cadoles-accent-light);
+    }
+    
+    .site-footer {
+        background-color: rgba(0,0,0,0.3);
+        padding: 2rem 0;
+        text-align: center;
+        margin-top: 3rem;
+    }
+    
+    .site-footer a {
+        color: var(--cadoles-accent);
+        text-decoration: none;
+    }
+    
+    .site-footer a:hover {
+        color: var(--cadoles-text);
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
 
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="h5 mb-0">Vos coordonnées</h2>
-                </div>
-                <div class="card-body">
+{% block body %}
+<body class="public-contact">
+    <header>
+        <img src="{{ asset('medias/logo/header.jpg') }}" alt="Cadoles" class="img-fluid">
+    </header>
+
+    <main class="container py-5">
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h1>{{ cible.titre }}</h1>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card p-4">
+                    <h2 class="h5 mb-4">Vos coordonnées</h2>
+                    
                     <div id="altcha-message" class="text-center py-3">
-                        <p class="mb-3 fs-5">Si vous êtes intéressé, merci de laisser vos coordonnées après avoir validé que vous n'êtes pas un robot.</p>
-                        <altcha-widget id="altcha-widget" challenge="/altcha/request?_=3" verifyurl="/altcha/verify" hidefooter language="fr-fr" class="mx-auto" debug></altcha-widget>
+                        <p class="mb-3">Si vous êtes intéressé, merci de laisser vos coordonnées après avoir validé que vous n'êtes pas un robot.</p>
+                        <altcha-widget id="altcha-widget" challenge="/altcha/request?_=4" verifyurl="/altcha/verify" hidefooter language="fr-fr" class="mx-auto" debug></altcha-widget>
                     </div>
 
                     <form method="post" id="contact-form" style="display: none;">
-                        <div class="mb-1">
+                        <div class="mb-3">
                             <label class="form-label fw-bold mb-0">Vous êtes</label>
-                            <div class="d-flex gap-4">
+                            <div class="d-flex gap-4 mt-2">
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="typePersonne" id="typeMorale" value="morale" checked>
                                     <label class="form-check-label" for="typeMorale">
@@ -43,19 +207,19 @@
                         </div>
 
                         <div id="form-morale">
-                            <div class="mb-1">
+                            <div class="mb-3">
                                 <label for="raisonSociale" class="form-label">Raison sociale *</label>
                                 <input type="text" class="form-control" id="raisonSociale" name="raisonSociale" autocomplete="off" required>
                                 <div class="form-text">Tapez pour rechercher une société dans l'annuaire</div>
                             </div>
 
-                            <div class="mb-1">
+                            <div class="mb-3">
                                 <label for="siren" class="form-label">SIREN</label>
                                 <input type="text" class="form-control" id="siren" name="siren" maxlength="9" pattern="[0-9]{9}" placeholder="123456789">
                                 <div class="invalid-feedback" id="siren-error"></div>
                             </div>
 
-                            <div class="row mb-1">
+                            <div class="row mb-3">
                                 <div class="col-8">
                                     <label for="adresse" class="form-label">Adresse</label>
                                     <input type="text" class="form-control" id="adresse" name="adresse">
@@ -66,7 +230,7 @@
                                 </div>
                             </div>
 
-                            <div class="row mb-1">
+                            <div class="row mb-3">
                                 <div class="col-6">
                                     <label for="ville" class="form-label">Ville</label>
                                     <input type="text" class="form-control" id="ville" name="ville">
@@ -79,7 +243,7 @@
 
                             <hr>
 
-                            <div class="row mb-1">
+                            <div class="row mb-3">
                                 <div class="col-6">
                                     <label for="contactNom" class="form-label">Nom du contact *</label>
                                     <input type="text" class="form-control" id="contactNom" name="contactNom" required>
@@ -92,7 +256,7 @@
                         </div>
 
                         <div id="form-physique" style="display: none;">
-                            <div class="row mb-1">
+                            <div class="row mb-3">
                                 <div class="col-6">
                                     <label for="nom" class="form-label">Nom *</label>
                                     <input type="text" class="form-control" id="nom" name="nom">
@@ -103,24 +267,24 @@
                                 </div>
                             </div>
 
-                            <div class="mb-1">
-                                <label for="adresse" class="form-label">Adresse</label>
-                                <input type="text" class="form-control" id="adresse" name="adresse">
+                            <div class="mb-3">
+                                <label for="adressePhys" class="form-label">Adresse</label>
+                                <input type="text" class="form-control" id="adressePhys" name="adressePhys">
                             </div>
 
-                            <div class="row mb-1">
+                            <div class="row mb-3">
                                 <div class="col-4">
-                                    <label for="codePostal" class="form-label">Code postal</label>
-                                    <input type="text" class="form-control" id="codePostal" name="codePostal">
+                                    <label for="codePostalPhys" class="form-label">Code postal</label>
+                                    <input type="text" class="form-control" id="codePostalPhys" name="codePostalPhys">
                                 </div>
                                 <div class="col-8">
-                                    <label for="ville" class="form-label">Ville</label>
-                                    <input type="text" class="form-control" id="ville" name="ville">
+                                    <label for="villePhys" class="form-label">Ville</label>
+                                    <input type="text" class="form-control" id="villePhys" name="villePhys">
                                 </div>
                             </div>
                         </div>
 
-                        <div class="row mb-1">
+                        <div class="row mb-3">
                             <div class="col-6">
                                 <label for="email" class="form-label">Email *</label>
                                 <input type="email" class="form-control" id="email" name="email" placeholder="contact@exemple.fr" required>
@@ -137,7 +301,7 @@
                         <input type="hidden" id="altcha-signature" name="altcha-signature">
                         <input type="hidden" id="altcha-solution" name="altcha-solution">
 
-                        <div class="d-grid mt-3">
+                        <div class="d-grid mt-4">
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="fas fa-paper-plane me-2"></i>Envoyer
                             </button>
@@ -145,245 +309,223 @@
                     </form>
                 </div>
             </div>
-        </div>
 
-        <div class="col-lg-6">
-            <div class="cible-description">
-                {% if cible.description %}
-                    {{ cible.description|markdown_to_html }}
-                {% else %}
-                    <p class="text-muted">Pas de description disponible.</p>
-                {% endif %}
+            <div class="col-lg-6">
+                <div class="cible-description">
+                    {% if cible.description %}
+                        {{ cible.description|markdown_to_html }}
+                    {% else %}
+                        <p class="text-white-50">Pas de description disponible.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
-    </div>
-</div>
+    </main>
 
-<style>
-.cible-description {
-    font-size: 1.1rem;
-    line-height: 1.5;
-}
-.cible-description h1, .cible-description h2, .cible-description h3 {
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-}
-.cible-description h1:first-child,
-.cible-description h2:first-child,
-.cible-description h3:first-child {
-    margin-top: 0;
-}
-.cible-description p {
-    margin-bottom: 0;
-}
-.cible-description ul, .cible-description ol {
-    margin-bottom: 1rem;
-    padding-left: 1.5rem;
-}
-#altcha-message altcha-widget,
-#altcha-widget {
-    display: inline-block;
-}
-#altcha-widget .altcha-logo {
-    display: none !important;
-}
-#contact-form .form-label {
-    margin-bottom: 0;
-}
-#contact-form .form-text {
-    margin-top: 0;
-    font-size: 0.75rem;
-    font-style: italic;
-}
-</style>
+    <footer class="site-footer">
+        <div class="container">
+            <p>
+                <a href="https://www.cadoles.com">Cadoles</a> — 
+                <a href="https://www.cadoles.com/mentions-legales/">Mentions légales</a> — 
+                <a href="https://www.cadoles.com/politique-de-confidentialite/">Politique de confidentialité</a>
+            </p>
+        </div>
+    </footer>
 
-<script src="/lib/altcha/dist_i18n/fr-fr.js?v=2"></script>
-<script type="module" src="/lib/altcha/altcha.min.js?v=2"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('raisonSociale').focus();
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400&family=Space+Mono&display=swap">
+    <script src="/lib/altcha/dist_i18n/fr-fr.js?v=2"></script>
+    <script type="module" src="/lib/altcha/altcha.min.js?v=2"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const altchaWidget = document.getElementById('altcha-widget');
+        const altchaMessage = document.getElementById('altcha-message');
+        const contactForm = document.getElementById('contact-form');
 
-    const altchaWidget = document.getElementById('altcha-widget');
-    const altchaMessage = document.getElementById('altcha-message');
-    const contactForm = document.getElementById('contact-form');
-
-    customElements.whenDefined('altcha-widget').then(function() {
-        function showForm() {
-            altchaMessage.style.display = 'none';
-            contactForm.style.display = 'block';
-            document.getElementById('raisonSociale').focus();
-        }
-
-        altchaWidget.addEventListener('statechange', function(e) {
-            if (e.detail.state === 'verified') {
-                showForm();
+        customElements.whenDefined('altcha-widget').then(function() {
+            function showForm() {
+                altchaMessage.style.display = 'none';
+                contactForm.style.display = 'block';
+                document.getElementById('raisonSociale').focus();
             }
+
+            altchaWidget.addEventListener('statechange', function(e) {
+                if (e.detail.state === 'verified') {
+                    showForm();
+                }
+            });
+
+            setTimeout(function checkVerified() {
+                if (altchaWidget.getAttribute('data-state') === 'verified') {
+                    showForm();
+                } else {
+                    setTimeout(checkVerified, 200);
+                }
+            }, 500);
         });
 
-        setTimeout(function checkVerified() {
-            if (altchaWidget.getAttribute('data-state') === 'verified') {
-                showForm();
+        const typeMorale = document.getElementById('typeMorale');
+        const typePhysique = document.getElementById('typePhysique');
+        const formMorale = document.getElementById('form-morale');
+        const formPhysique = document.getElementById('form-physique');
+
+        function toggleForms() {
+            if (typeMorale.checked) {
+                formMorale.style.display = 'block';
+                formPhysique.style.display = 'none';
+                document.getElementById('raisonSociale').required = true;
+                document.getElementById('nom').required = false;
+                document.getElementById('prenom').required = false;
+                document.getElementById('contactNom').required = true;
+                document.getElementById('contactPrenom').required = true;
+                document.getElementById('raisonSociale').focus();
             } else {
-                setTimeout(checkVerified, 200);
+                formMorale.style.display = 'none';
+                formPhysique.style.display = 'block';
+                document.getElementById('raisonSociale').required = false;
+                document.getElementById('nom').required = true;
+                document.getElementById('prenom').required = true;
+                document.getElementById('contactNom').required = false;
+                document.getElementById('contactPrenom').required = false;
+                document.getElementById('nom').focus();
             }
-        }, 500);
-    });
-
-
-
-    const typeMorale = document.getElementById('typeMorale');
-    const typePhysique = document.getElementById('typePhysique');
-    const formMorale = document.getElementById('form-morale');
-    const formPhysique = document.getElementById('form-physique');
-
-    function toggleForms() {
-        if (typeMorale.checked) {
-            formMorale.style.display = 'block';
-            formPhysique.style.display = 'none';
-            document.getElementById('raisonSociale').required = true;
-            document.getElementById('nom').required = false;
-            document.getElementById('prenom').required = false;
-            document.getElementById('contactNom').required = true;
-            document.getElementById('contactPrenom').required = true;
-            document.getElementById('raisonSociale').focus();
-        } else {
-            formMorale.style.display = 'none';
-            formPhysique.style.display = 'block';
-            document.getElementById('raisonSociale').required = false;
-            document.getElementById('nom').required = true;
-            document.getElementById('prenom').required = true;
-            document.getElementById('contactNom').required = false;
-            document.getElementById('contactPrenom').required = false;
-            document.getElementById('nom').focus();
-        }
-    }
-
-    typeMorale.addEventListener('change', toggleForms);
-    typePhysique.addEventListener('change', toggleForms);
-
-    const raisonSocialeInput = document.getElementById('raisonSociale');
-    let searchTimeout = null;
-
-    raisonSocialeInput.addEventListener('input', function() {
-        const query = this.value.trim();
-
-        clearTimeout(searchTimeout);
-
-        if (query.length < 3) {
-            return;
         }
 
-        searchTimeout = setTimeout(function() {
-            fetch('/annuaire/search-by-name?q=' + encodeURIComponent(query))
-                .then(function(resp) { return resp.json(); })
-                .then(showSuggestions)
-                .catch(function() {});
-        }, 300);
-    });
+        typeMorale.addEventListener('change', toggleForms);
+        typePhysique.addEventListener('change', toggleForms);
 
-    const suggestionsList = document.createElement('ul');
-    suggestionsList.className = 'list-group position-absolute w-100';
-    suggestionsList.style.zIndex = '1000';
-    suggestionsList.style.maxHeight = '200px';
-    suggestionsList.style.overflowY = 'auto';
-    suggestionsList.style.display = 'none';
-    raisonSocialeInput.parentElement.style.position = 'relative';
-    raisonSocialeInput.parentElement.appendChild(suggestionsList);
+        const raisonSocialeInput = document.getElementById('raisonSociale');
+        let searchTimeout = null;
 
-    let selectedIndex = -1;
-    let suggestions = [];
+        raisonSocialeInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(searchTimeout);
 
-    function showSuggestions(data) {
-        suggestions = data;
-        suggestionsList.innerHTML = '';
-        selectedIndex = -1;
-
-        if (suggestions.length === 0) {
-            suggestionsList.style.display = 'none';
-            return;
-        }
-
-        suggestions.forEach(function(item, index) {
-            const li = document.createElement('li');
-            li.className = 'list-group-item list-group-item-action';
-            li.style.cursor = 'pointer';
-            li.style.fontSize = '0.9rem';
-            li.dataset.index = index;
-            li.innerHTML = '<strong>' + item.nom + '</strong>';
-            if (item.siren) {
-                li.innerHTML += ' <span class="text-muted">(' + item.siren + ')</span>';
+            if (query.length < 3) {
+                return;
             }
-            if (item.adresse) {
-                li.innerHTML += '<br><small class="text-muted">' + item.adresse + ', ' + item.codePostal + ' ' + item.ville + '</small>';
-            }
-            li.addEventListener('click', function() {
-                selectSociete(item);
-            });
-            li.addEventListener('mouseenter', function() {
-                setSelected(index);
-            });
-            suggestionsList.appendChild(li);
+
+            searchTimeout = setTimeout(function() {
+                fetch('/annuaire/search-by-name?q=' + encodeURIComponent(query))
+                    .then(function(resp) { return resp.json(); })
+                    .then(showSuggestions)
+                    .catch(function() {});
+            }, 300);
         });
 
-        suggestionsList.style.display = 'block';
-    }
-
-    function setSelected(index) {
-        const items = suggestionsList.querySelectorAll('li');
-        items.forEach(function(item, i) {
-            item.classList.toggle('active', i === index);
-        });
-        selectedIndex = index;
-    }
-
-    function selectSociete(societe) {
-        raisonSocialeInput.value = societe.nom || '';
-        document.getElementById('siren').value = societe.siren || '';
-        document.getElementById('adresse').value = societe.adresse || '';
-        document.getElementById('codePostal').value = societe.codePostal || '';
-        document.getElementById('ville').value = societe.ville || '';
-        document.getElementById('naf').value = societe.naf || '';
+        const suggestionsList = document.createElement('ul');
+        suggestionsList.className = 'list-group position-absolute w-100';
+        suggestionsList.style.zIndex = '1000';
+        suggestionsList.style.maxHeight = '200px';
+        suggestionsList.style.overflowY = 'auto';
         suggestionsList.style.display = 'none';
-        suggestions = [];
-        selectedIndex = -1;
+        suggestionsList.style.backgroundColor = '#0f2f3f';
+        suggestionsList.style.border = '1px solid rgba(255,255,255,0.2)';
+        raisonSocialeInput.parentElement.style.position = 'relative';
+        raisonSocialeInput.parentElement.appendChild(suggestionsList);
 
-        document.getElementById('contactNom').focus();
-    }
+        let selectedIndex = -1;
+        let suggestions = [];
 
-    raisonSocialeInput.addEventListener('keydown', function(e) {
-        if (suggestions.length === 0) {
-            return;
+        function showSuggestions(data) {
+            suggestions = data;
+            suggestionsList.innerHTML = '';
+            selectedIndex = -1;
+
+            if (suggestions.length === 0) {
+                suggestionsList.style.display = 'none';
+                return;
+            }
+
+            suggestions.forEach(function(item, index) {
+                const li = document.createElement('li');
+                li.className = 'list-group-item list-group-item-action';
+                li.style.cursor = 'pointer';
+                li.style.fontSize = '0.9rem';
+                li.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                li.style.color = '#ffffff';
+                li.style.borderColor = 'rgba(255,255,255,0.2)';
+                li.dataset.index = index;
+                li.innerHTML = '<strong>' + item.nom + '</strong>';
+                if (item.siren) {
+                    li.innerHTML += ' <span class="text-white-50">(' + item.siren + ')</span>';
+                }
+                if (item.adresse) {
+                    li.innerHTML += '<br><small class="text-white-50">' + item.adresse + ', ' + item.codePostal + ' ' + item.ville + '</small>';
+                }
+                li.addEventListener('click', function() {
+                    selectSociete(item);
+                });
+                li.addEventListener('mouseenter', function() {
+                    setSelected(index);
+                });
+                suggestionsList.appendChild(li);
+            });
+
+            suggestionsList.style.display = 'block';
         }
 
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            const newIndex = selectedIndex < suggestions.length - 1 ? selectedIndex + 1 : 0;
-            setSelected(newIndex);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            const newIndex = selectedIndex > 0 ? selectedIndex - 1 : suggestions.length - 1;
-            setSelected(newIndex);
-        } else if (e.key === 'Enter' && selectedIndex >= 0) {
-            e.preventDefault();
-            selectSociete(suggestions[selectedIndex]);
-        } else if (e.key === 'Escape') {
+        function setSelected(index) {
+            const items = suggestionsList.querySelectorAll('li');
+            items.forEach(function(item, i) {
+                item.classList.toggle('active', i === index);
+                if (i === index) {
+                    item.style.backgroundColor = 'rgba(255,151,74,0.3)';
+                } else {
+                    item.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                }
+            });
+            selectedIndex = index;
+        }
+
+        function selectSociete(societe) {
+            raisonSocialeInput.value = societe.nom || '';
+            document.getElementById('siren').value = societe.siren || '';
+            document.getElementById('adresse').value = societe.adresse || '';
+            document.getElementById('codePostal').value = societe.codePostal || '';
+            document.getElementById('ville').value = societe.ville || '';
+            document.getElementById('naf').value = societe.naf || '';
             suggestionsList.style.display = 'none';
             suggestions = [];
             selectedIndex = -1;
-        }
-    });
 
-    document.addEventListener('click', function(e) {
-        if (!raisonSocialeInput.contains(e.target) && !suggestionsList.contains(e.target)) {
-            suggestionsList.style.display = 'none';
+            document.getElementById('contactNom').focus();
         }
-    });
 
-    raisonSocialeInput.addEventListener('blur', function() {
-        setTimeout(function() {
-            suggestionsList.style.display = 'none';
-        }, 200);
+        raisonSocialeInput.addEventListener('keydown', function(e) {
+            if (suggestions.length === 0) {
+                return;
+            }
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const newIndex = selectedIndex < suggestions.length - 1 ? selectedIndex + 1 : 0;
+                setSelected(newIndex);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const newIndex = selectedIndex > 0 ? selectedIndex - 1 : suggestions.length - 1;
+                setSelected(newIndex);
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                selectSociete(suggestions[selectedIndex]);
+            } else if (e.key === 'Escape') {
+                suggestionsList.style.display = 'none';
+                suggestions = [];
+                selectedIndex = -1;
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!raisonSocialeInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+                suggestionsList.style.display = 'none';
+            }
+        });
+
+        raisonSocialeInput.addEventListener('blur', function() {
+            setTimeout(function() {
+                suggestionsList.style.display = 'none';
+            }, 200);
+        });
     });
-});
-</script>
+    </script>
+</body>
 {% endblock %}
