@@ -11,7 +11,7 @@
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12 text-center">
-            <h1 style="color: #ff974a; font-size: 1.5rem;" id="page-titre">{{ cible.titre }}</h1>
+            <h1 style="color: #ff974a; font-size: 1.5rem;">{{ cible.titre }}</h1>
             <p class="mt-2" style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">
                 <i class="fas fa-check-circle me-1" style="color: #6fc7e2;"></i>
                 Merci pour votre inscription !
@@ -26,29 +26,44 @@
                     <h2 class="h5 mb-0" style="color: #6fc7e2;">Choisir une cible</h2>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label for="autre-cible" class="form-label">Sélectionnez une cible</label>
-                        <select class="form-control" id="autre-cible" name="cibleId">
-                            {% for c in availableCibles %}
-                                <option value="{{ c.id }}" data-titre="{{ c.titre }}" data-description="{{ c.description|escape }}" {% if c.id == cible.id %}selected{% endif %}>{{ c.titre }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="d-grid">
-                        <button type="button" id="btn-afficher-doc" class="btn" style="background-color: #ff974a; color: #0f2f3f; border-radius: 9999px;">
-                            <i class="fas fa-eye me-2"></i>Afficher les documents
-                        </button>
-                    </div>
+                    <form id="cible-form" method="get">
+                        <div class="mb-3">
+                            <label for="autre-cible" class="form-label">Sélectionnez une cible</label>
+                            <select class="form-control" id="autre-cible" name="cibleSlug">
+                                {% for c in allCibles %}
+                                    <option value="{{ c.slug ?: c.id }}" {% if c.id == cible.id %}selected{% endif %}>{{ c.titre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
                 </div>
             </div>
 
-            <div id="documents-card" class="card mb-4" style="display: none;">
+            {% if not prospectCible %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="post" action="{{ path('app_public_link_cible', {campagneSlug: campagne.slug}) }}">
+                        <input type="hidden" name="cibleId" value="{{ cible.id }}">
+                        <div class="d-grid">
+                            <button type="submit" class="btn" style="background-color: #ff974a; color: #0f2f3f; border-radius: 9999px;">
+                                <i class="fas fa-link me-2"></i>Afficher les documents
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if prospectCible or show_docs|default(false) %}
+            <div class="card mb-4">
                 <div class="card-header" style="background-color: rgba(255, 151, 74, 0.2); border-bottom: 1px solid rgba(255, 151, 74, 0.3);">
                     <h2 class="h5 mb-0" style="color: #ff974a;">Documents disponibles</h2>
                 </div>
-                <div class="card-body" id="documents-container">
+                <div class="card-body">
+                    {{ render(path('bninefiles_files', {domain: 'cible', id: cible.id, editable: 0})) }}
                 </div>
             </div>
+            {% endif %}
 
             <div class="mt-4">
                 <a href="{{ redirectUrl }}" class="btn" style="background-color: rgba(255, 255, 255, 0.1); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 9999px;">
@@ -60,9 +75,9 @@
         <div class="col-lg-6">
             <div class="card h-100">
                 <div class="card-header" style="background-color: rgba(255, 151, 74, 0.2); border-bottom: 1px solid rgba(255, 151, 74, 0.3);">
-                    <h2 class="h5 mb-0" style="color: #ff974a;" id="cible-titre">{{ cible.titre }}</h2>
+                    <h2 class="h5 mb-0" style="color: #ff974a;">{{ cible.titre }}</h2>
                 </div>
-                <div class="card-body" id="cible-description">
+                <div class="card-body">
                     {% if cible.description %}
                         <div class="cible-description">
                             {{ cible.description|markdown_to_html }}
@@ -80,96 +95,14 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const cibleSelect = document.getElementById('autre-cible');
-    const cibleTitre = document.getElementById('cible-titre');
-    const pageTitre = document.getElementById('page-titre');
-    const cibleDescription = document.getElementById('cible-description');
-    const documentsCard = document.getElementById('documents-card');
-    const documentsContainer = document.getElementById('documents-container');
-    const btnAfficher = document.getElementById('btn-afficher-doc');
+    const cibleForm = document.getElementById('cible-form');
     
-    const prospectId = {{ prospect.id }};
-    const campagneSlug = '{{ campagne.slug }}';
-    
-    // Charger la description via AJAX
-    async function loadCibleDescription(cibleId) {
-        try {
-            const response = await fetch('/annuaire/cible/' + cibleId);
-            const data = await response.json();
-            cibleTitre.textContent = data.titre;
-            pageTitre.textContent = data.titre;
-            if (data.description) {
-                cibleDescription.innerHTML = '<div class="cible-description">' + data.description + '</div>';
-            } else {
-                cibleDescription.innerHTML = '<p class="text-white-50">Pas de description disponible.</p>';
-            }
-        } catch (e) {
-            console.error('Erreur chargement cible:', e);
-        }
-    }
-    
-    // Vérifier si prospect est lié à la cible
-    async function checkLinked(cibleId) {
-        try {
-            const response = await fetch('/contact/check-link/' + prospectId + '/' + cibleId);
-            return await response.json();
-        } catch (e) {
-            return { linked: false };
-        }
-    }
-    
-    // Ajouter le lien prospect-cible
-    async function addLink(cibleId) {
-        try {
-            const formData = new FormData();
-            formData.append('cibleId', cibleId);
-            await fetch('/contact/' + campagneSlug + '/link-cible', {
-                method: 'POST',
-                body: formData
-            });
-            return true;
-        } catch (e) {
-            console.error('Erreur ajout lien:', e);
-            return false;
-        }
-    }
-    
-    // Charger les documents via render Symfony
-    async function loadDocuments(cibleId) {
-        // Recharger la page avec la cible sélectionnée et affichage des docs
-        window.location.href = '/contact/' + campagneSlug + '/' + cibleId + '/success?show_docs=1';
-    }
-    
-    // Cible change
     cibleSelect.addEventListener('change', function() {
-        const cibleId = this.value;
-        
-        if (cibleId) {
-            loadCibleDescription(cibleId);
-            documentsCard.style.display = 'none';
+        const cibleSlug = this.value;
+        if (cibleSlug) {
+            window.location.href = '/contact/{{ campagne.slug }}/' + cibleSlug + '/success';
         }
     });
-    
-    // Bouton afficher documents
-    btnAfficher.addEventListener('click', async function() {
-        const cibleId = cibleSelect.value;
-        if (!cibleId) return;
-        
-        btnAfficher.disabled = true;
-        btnAfficher.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Chargement...';
-        
-        const check = await checkLinked(cibleId);
-        
-        if (!check.linked) {
-            await addLink(cibleId);
-        }
-        
-        await loadDocuments(cibleId);
-    });
-    
-    // Afficher docs si prospect déjà lié à la cible courante ou si param show_docs
-    {% if prospectCible or show_docs|default(false) %}
-    documentsCard.style.display = 'block';
-    {% endif %}
 });
 </script>
 {% endblock %}

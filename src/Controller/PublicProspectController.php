@@ -296,6 +296,7 @@ class PublicProspectController extends AbstractController
             'prospectCible' => $prospectCible,
             'campagne' => $campagne,
             'cible' => $cible,
+            'allCibles' => $allCibles,
             'availableCibles' => $availableCibles,
             'redirectUrl' => 'https://www.cadoles.com',
             'show_docs' => $request->query->getBoolean('show_docs'),
@@ -395,25 +396,34 @@ class PublicProspectController extends AbstractController
     }
 
     #[Route('/contact/{campagneSlug}/link-cible', name: 'app_public_link_cible', methods: ['POST'])]
-    public function linkCible(string $campagneSlug, Request $request): JsonResponse
+    public function linkCible(string $campagneSlug, Request $request): Response
     {
         $session = $request->getSession();
         $prospectId = $session->get('prospect_id');
 
         if (!$prospectId) {
-            return new JsonResponse(['error' => 'Not authenticated'], 401);
+            return $this->redirectToRoute('app_public_contact', [
+                'campagneSlug' => $campagneSlug,
+                'cibleSlug' => '',
+            ]);
         }
 
         $cibleId = $request->request->get('cibleId');
         $cible = $this->cibles->find($cibleId);
 
         if (!$cible) {
-            return new JsonResponse(['error' => 'Cible not found'], 404);
+            return $this->redirectToRoute('app_public_contact', [
+                'campagneSlug' => $campagneSlug,
+                'cibleSlug' => '',
+            ]);
         }
 
         $prospect = $this->prospects->find($prospectId);
         if (!$prospect) {
-            return new JsonResponse(['error' => 'Prospect not found'], 404);
+            return $this->redirectToRoute('app_public_contact', [
+                'campagneSlug' => $campagneSlug,
+                'cibleSlug' => '',
+            ]);
         }
 
         $existingLink = $this->prospectCibles->findOneBy([
@@ -430,7 +440,10 @@ class PublicProspectController extends AbstractController
             $this->em->flush();
         }
 
-        return new JsonResponse(['ok' => true]);
+        return $this->redirectToRoute('app_public_contact_success', [
+            'campagneSlug' => $campagneSlug,
+            'cibleSlug' => $cible->getSlug() ?? (string) $cible->getId(),
+        ] + ['show_docs' => true]);
     }
 
     #[Route('/annuaire/search-by-name', name: 'app_public_annuaire_search_by_name', methods: ['GET'])]
