@@ -40,22 +40,17 @@
             </div>
 
             {% if not prospectCible %}
-            <div class="card mb-4">
+            <div class="card mb-4" id="link-card">
                 <div class="card-body">
-                    <form method="post" action="{{ path('app_public_link_cible', {campagneSlug: campagne.slug}) }}">
-                        <input type="hidden" name="cibleId" value="{{ cible.id }}">
-                        <div class="d-grid">
-                            <button type="submit" class="btn" style="background-color: #ff974a; color: #0f2f3f; border-radius: 9999px;">
-                                <i class="fas fa-link me-2"></i>Afficher les documents
-                            </button>
-                        </div>
-                    </form>
+                    <button type="button" id="btn-link" class="btn w-100" style="background-color: #ff974a; color: #0f2f3f; border-radius: 9999px;">
+                        <i class="fas fa-link me-2"></i>Afficher les documents
+                    </button>
                 </div>
             </div>
             {% endif %}
 
             {% if prospectCible or show_docs|default(false) %}
-            <div class="card mb-4">
+            <div class="card mb-4" id="documents-card">
                 <div class="card-header" style="background-color: rgba(255, 151, 74, 0.2); border-bottom: 1px solid rgba(255, 151, 74, 0.3);">
                     <h2 class="h5 mb-0" style="color: #ff974a;">Documents disponibles</h2>
                 </div>
@@ -96,6 +91,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     const cibleSelect = document.getElementById('autre-cible');
     const cibleForm = document.getElementById('cible-form');
+    const btnLink = document.getElementById('btn-link');
+    const linkCard = document.getElementById('link-card');
+    const documentsCard = document.getElementById('documents-card');
     
     cibleSelect.addEventListener('change', function() {
         const cibleSlug = this.value;
@@ -103,6 +101,34 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = '/contact/{{ campagne.slug }}/' + cibleSlug + '/success';
         }
     });
+    
+    if (btnLink) {
+        btnLink.addEventListener('click', async function() {
+            btnLink.disabled = true;
+            btnLink.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Chargement...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('cibleId', '{{ cible.id }}');
+                
+                const response = await fetch('/contact/{{ campagne.slug }}/link-cible', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    if (linkCard) linkCard.style.display = 'none';
+                    if (documentsCard) documentsCard.style.display = 'block';
+                } else {
+                    btnLink.disabled = false;
+                    btnLink.innerHTML = '<i class="fas fa-link me-2"></i>Afficher les documents';
+                }
+            } catch (e) {
+                btnLink.disabled = false;
+                btnLink.innerHTML = '<i class="fas fa-link me-2"></i>Afficher les documents';
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

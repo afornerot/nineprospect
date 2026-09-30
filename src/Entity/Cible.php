@@ -64,7 +64,7 @@ class Cible
         $text = strtolower($text);
         $text = preg_replace('/[^a-z0-9]+/', '-', $text);
         $text = trim($text, '-');
-        return $text ?: bin2hex(random_bytes(4));
+        return $text;
     }
 
     public function getDescription(): ?string

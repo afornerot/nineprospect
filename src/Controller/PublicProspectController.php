@@ -396,34 +396,25 @@ class PublicProspectController extends AbstractController
     }
 
     #[Route('/contact/{campagneSlug}/link-cible', name: 'app_public_link_cible', methods: ['POST'])]
-    public function linkCible(string $campagneSlug, Request $request): Response
+    public function linkCible(string $campagneSlug, Request $request): JsonResponse
     {
         $session = $request->getSession();
         $prospectId = $session->get('prospect_id');
 
         if (!$prospectId) {
-            return $this->redirectToRoute('app_public_contact', [
-                'campagneSlug' => $campagneSlug,
-                'cibleSlug' => '',
-            ]);
+            return new JsonResponse(['error' => 'Not authenticated'], 401);
         }
 
         $cibleId = $request->request->get('cibleId');
         $cible = $this->cibles->find($cibleId);
 
         if (!$cible) {
-            return $this->redirectToRoute('app_public_contact', [
-                'campagneSlug' => $campagneSlug,
-                'cibleSlug' => '',
-            ]);
+            return new JsonResponse(['error' => 'Cible not found'], 404);
         }
 
         $prospect = $this->prospects->find($prospectId);
         if (!$prospect) {
-            return $this->redirectToRoute('app_public_contact', [
-                'campagneSlug' => $campagneSlug,
-                'cibleSlug' => '',
-            ]);
+            return new JsonResponse(['error' => 'Prospect not found'], 404);
         }
 
         $existingLink = $this->prospectCibles->findOneBy([
@@ -440,10 +431,7 @@ class PublicProspectController extends AbstractController
             $this->em->flush();
         }
 
-        return $this->redirectToRoute('app_public_contact_success', [
-            'campagneSlug' => $campagneSlug,
-            'cibleSlug' => $cible->getSlug() ?? (string) $cible->getId(),
-        ] + ['show_docs' => true]);
+        return new JsonResponse(['ok' => true]);
     }
 
     #[Route('/annuaire/search-by-name', name: 'app_public_annuaire_search_by_name', methods: ['GET'])]
