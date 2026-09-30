@@ -52,9 +52,29 @@ class PublicProspectController extends AbstractController
     #[Route('/altcha/request', name: 'app_altcha_request', methods: ['GET'])]
     public function altchaRequest(): JsonResponse
     {
-        $challenge = $this->altcha->requestChallenge();
+        try {
+            $challenge = $this->altcha->requestChallenge();
+            return new JsonResponse($challenge);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()], 500);
+        }
+    }
 
-        return new JsonResponse($challenge);
+    #[Route('/altcha/verify', name: 'app_altcha_verify', methods: ['POST'])]
+    public function altchaVerify(Request $request): JsonResponse
+    {
+        $payload = json_decode($request->getContent(), true);
+
+        if (!$payload) {
+            return new JsonResponse(['error' => 'Invalid payload'], 400);
+        }
+
+        try {
+            $verified = $this->altcha->verifySolution($payload);
+            return new JsonResponse(['success' => $verified]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()], 500);
+        }
     }
 
     #[Route('/contact/{campagneSlug}/{cibleSlug}', name: 'app_public_contact', methods: ['GET', 'POST'])]
