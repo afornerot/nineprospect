@@ -11,7 +11,7 @@
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12 text-center">
-            <h1 style="color: #ff974a; font-size: 1.5rem;">{{ cible.titre }}</h1>
+            <h1>{{ cible.titre }}</h1>
             <p class="mt-2" style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">
                 <i class="fas fa-check-circle me-1" style="color: #6fc7e2;"></i>
                 Merci pour votre inscription !
@@ -58,7 +58,7 @@
                     <h2 class="h5 mb-0" style="color: #ff974a;">Documents disponibles</h2>
                 </div>
                 <div class="card-body">
-                    {{ render(path('bninefiles_files', {domain: 'cible', id: cible.id, editable: 0})) }}
+                    {{ render(path('bninefiles_files', {domain: 'cible', id: cible.id, editable: 0,compact: true})) }}
                 </div>
             </div>
             {% endif %}
