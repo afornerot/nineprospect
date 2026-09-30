@@ -6,6 +6,11 @@ class AltchaService
 {
     private const ALTCHA_SERVER_URL = 'http://altcha:3333';
 
+    public function __construct(
+        private string $altchaHmacKey,
+    ) {
+    }
+
     public function requestChallenge(): array
     {
         $response = file_get_contents(self::ALTCHA_SERVER_URL . '/request');
@@ -14,26 +19,31 @@ class AltchaService
 
     public function verifySolution(array $payload): bool
     {
-        $data = [
-            'algorithm' => $payload['algorithm'] ?? 'SHA-256',
-            'challenge' => $payload['challenge'] ?? '',
-            'salt' => $payload['salt'] ?? '',
-            'signature' => $payload['signature'] ?? '',
+        $data = $payload;
+
+        if (isset($payload['payload'])) {
+            $decoded = base64_decode($payload['payload'], true);
+            if ($decoded) {
+                $data = json_decode($decoded, true);
+            }
+        }
+
+        $payloadToVerify = [
+            'algorithm' => $data['algorithm'] ?? 'SHA-256',
+            'challenge' => $data['challenge'] ?? '',
+            'salt' => $data['salt'] ?? '',
+            'signature' => $data['signature'] ?? '',
         ];
 
-        if (isset($payload['solution'])) {
-            if (is_array($payload['solution'])) {
-                $data['number'] = $payload['solution']['number'] ?? 0;
-            } else {
-                $data['number'] = (int) $payload['solution'];
-            }
+        if (isset($data['number'])) {
+            $payloadToVerify['number'] = (int) $data['number'];
         }
 
         try {
             $ch = curl_init(self::ALTCHA_SERVER_URL . '/verify');
             curl_setopt_array($ch, [
                 CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => json_encode($data),
+                CURLOPT_POSTFIELDS => json_encode($payloadToVerify),
                 CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json'],
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT => 10,
