@@ -19,8 +19,8 @@
                 </div>
                 <div class="card-body">
                     <div id="altcha-message" class="text-center py-3">
-                        <p class="mb-3">Si vous êtes intéressé, merci de laisser vos coordonnées après avoir validé que vous n'êtes pas un robot.</p>
-                        <altcha-widget id="altcha-widget" challengeurl="/altcha/request" hidefooter language="fr"></altcha-widget>
+                        <p class="mb-3 fs-5">Si vous êtes intéressé, merci de laisser vos coordonnées après avoir validé que vous n'êtes pas un robot.</p>
+                        <altcha-widget id="altcha-widget" challengeurl="/altcha/request" hidefooter language="fr" class="mx-auto"></altcha-widget>
                     </div>
 
                     <form method="post" id="contact-form" style="display: none;">
@@ -179,6 +179,9 @@
 .cible-description ul, .cible-description ol {
     margin-bottom: 1rem;
     padding-left: 1.5rem;
+}
+#altcha-message altcha-widget {
+    display: inline-block;
 }
 #contact-form .form-label {
     margin-bottom: 0;
