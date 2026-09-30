@@ -29,7 +29,7 @@ class Prospect
     /**
      * Clé de groupement normalisée (dérivée du nom d'entreprise), unique.
      */
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(length: 255, unique: true, nullable: true)]
     private ?string $cleEntreprise = null;
 
     #[ORM\Column(length: 10, nullable: true)]

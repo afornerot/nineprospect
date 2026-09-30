@@ -145,20 +145,17 @@ class PublicProspectController extends AbstractController
 
             if ('morale' === $typePersonne) {
                 $siren = $request->request->get('siren');
-                $nom = $request->request->get('raisonSociale') ?: 'Entreprise ' . $siren;
-                $prospect->setNom($nom);
+                $prospect->setNom($request->request->get('raisonSociale') ?: 'Entreprise ' . $siren);
                 $prospect->setSiren($siren);
                 $prospect->setSiret($request->request->get('siret'));
                 $prospect->setNaf($request->request->get('naf'));
                 $prospect->setAdresse($request->request->get('adresse'));
                 $prospect->setCodePostal($request->request->get('codePostal'));
                 $prospect->setVille($request->request->get('ville'));
-                $prospect->setCleEntreprise(hash('sha256', ($siren ?: $nom) . date('Y-m-d H:i:s')));
             } else {
                 $nom = $request->request->get('nom');
                 $prenom = $request->request->get('prenom');
                 $prospect->setNom($nom . ' ' . $prenom);
-                $prospect->setCleEntreprise(hash('sha256', $nom . $prenom . date('Y-m-d H:i:s')));
             }
 
             $prospect->setEmail($email);
