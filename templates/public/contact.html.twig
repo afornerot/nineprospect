@@ -18,7 +18,12 @@
                     <h2 class="h5 mb-0">Vos coordonnées</h2>
                 </div>
                 <div class="card-body">
-                    <form method="post" id="contact-form">
+                    <div id="altcha-message" class="text-center py-3">
+                        <p class="mb-3">Si vous êtes intéressé, merci de laisser vos coordonnées après avoir validé que vous n'êtes pas un robot.</p>
+                        <altcha-widget id="altcha-widget" challengeurl="/altcha/request" hidefooter language="fr"></altcha-widget>
+                    </div>
+
+                    <form method="post" id="contact-form" style="display: none;">
                         <div class="mb-1">
                             <label class="form-label fw-bold mb-0">Vous êtes</label>
                             <div class="d-flex gap-4">
@@ -132,8 +137,6 @@
                         <input type="hidden" id="altcha-signature" name="altcha-signature">
                         <input type="hidden" id="altcha-solution" name="altcha-solution">
 
-                        <altcha-widget id="altcha-widget" challengeurl="/altcha/request" hidefooter language="fr"></altcha-widget>
-
                         <div class="d-grid mt-3">
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="fas fa-paper-plane me-2"></i>Envoyer
@@ -208,6 +211,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('altcha-salt').value = salt;
         document.getElementById('altcha-signature').value = signature;
         document.getElementById('altcha-solution').value = solution;
+        document.getElementById('altcha-message').style.display = 'none';
+        document.getElementById('contact-form').style.display = 'block';
     });
 
     if (altchaWidget.updateTranslations) {
