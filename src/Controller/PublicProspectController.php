@@ -15,6 +15,7 @@ use App\Repository\ProspectRepository;
 use App\Service\AltchaService;
 use App\Service\AnnuaireEntreprises;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,6 +35,8 @@ class PublicProspectController extends AbstractController
         private EntityManagerInterface $em,
         private AltchaService $altcha,
         private AnnuaireEntreprises $annuaire,
+        #[Autowire(env: 'ALTCHA_ENABLED')]
+        private bool $altchaEnabled,
     ) {
     }
 
@@ -121,15 +124,17 @@ class PublicProspectController extends AbstractController
         $allCibles = $this->cibles->findBy([], ['titre' => 'ASC']);
 
         if ($request->isMethod('POST')) {
-            $altchaPayload = [
-                'challenge' => $request->request->get('altcha-challenge'),
-                'salt' => $request->request->get('altcha-salt'),
-                'signature' => $request->request->get('altcha-signature'),
-                'solution' => $request->request->get('altcha-solution'),
-            ];
+            if ($this->altchaEnabled) {
+                $altchaPayload = [
+                    'challenge' => $request->request->get('altcha-challenge'),
+                    'salt' => $request->request->get('altcha-salt'),
+                    'signature' => $request->request->get('altcha-signature'),
+                    'solution' => $request->request->get('altcha-solution'),
+                ];
 
-            if (!$this->altcha->verifySolution($altchaPayload)) {
-                return new Response('Altcha invalide', 400);
+                if (!$this->altcha->verifySolution($altchaPayload)) {
+                    return new Response('Altcha invalide', 400);
+                }
             }
 
             $typePersonne = $request->request->get('typePersonne');
@@ -239,6 +244,7 @@ class PublicProspectController extends AbstractController
             'campagne' => $campagne,
             'cible' => $cible,
             'cibles' => $allCibles,
+            'altchaEnabled' => $this->altchaEnabled,
         ]);
     }
 

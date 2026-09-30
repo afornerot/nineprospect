@@ -8,7 +8,7 @@
 
 {% block body %}
 <div class="app-content public-contact">
-<div class="container py-5">
+<div class="container">
     <div class="row mb-4">
         <div class="col-12 text-center">
             <h1>{{ cible.titre }}</h1>
@@ -22,12 +22,16 @@
                     <h2 class="h5 mb-0">Vos coordonnées</h2>
                 </div>
                 <div class="card-body">
+                    {% if altchaEnabled %}
                     <div id="altcha-message" class="text-center py-3">
                         <p class="mb-3 fs-5">Si vous êtes intéressé, merci de laisser vos coordonnées après avoir validé que vous n'êtes pas un robot.</p>
                         <altcha-widget id="altcha-widget" challenge="/altcha/request?_=3" verifyurl="/altcha/verify" hidefooter language="fr-fr" class="mx-auto" debug></altcha-widget>
                     </div>
 
                     <form method="post" id="contact-form" style="display: none;">
+                    {% else %}
+                    <form method="post" id="contact-form">
+                    {% endif %}
                         <div class="mb-1">
                             <label class="form-label fw-bold mb-0">Vous êtes</label>
                             <div class="d-flex gap-4">
@@ -173,12 +177,15 @@
 
 
 
+{% if altchaEnabled %}
 <script src="/lib/altcha/dist_i18n/fr-fr.js?v=2"></script>
 <script type="module" src="/lib/altcha/altcha.min.js?v=2"></script>
+{% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('raisonSociale').focus();
 
+    {% if altchaEnabled %}
     const altchaWidget = document.getElementById('altcha-widget');
     const altchaMessage = document.getElementById('altcha-message');
     const contactForm = document.getElementById('contact-form');
@@ -204,6 +211,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 500);
     });
+    {% else %}
+    {% endif %}
 
 
 
