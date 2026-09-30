@@ -2,23 +2,14 @@
 
 namespace App\Service;
 
-use Symfony\Contracts\HttpClient\HttpClientInterface;
-
 class AltchaService
 {
     private const ALTCHA_SERVER_URL = 'http://altcha:3333';
 
-    public function __construct(
-        private HttpClientInterface $http,
-        private string $altchaHmacKey,
-    ) {
-    }
-
     public function requestChallenge(): array
     {
-        $response = $this->http->request('GET', self::ALTCHA_SERVER_URL . '/request');
-
-        return $response->toArray();
+        $response = file_get_contents(self::ALTCHA_SERVER_URL . '/request');
+        return json_decode($response, true);
     }
 
     public function verifySolution(array $payload): bool
@@ -49,14 +40,13 @@ class AltchaService
             ]);
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
 
-            $result = json_decode($response, true);
-            if (isset($result['success']) && $result['success'] === true) {
-                return true;
+            if (200 !== $httpCode) {
+                return false;
             }
 
-            return false;
+            $result = json_decode($response, true);
+            return isset($result['success']) && $result['success'] === true;
         } catch (\Exception $e) {
             return false;
         }
