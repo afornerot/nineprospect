@@ -206,6 +206,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const altchaWidget = document.getElementById('altcha-widget');
 
     customElements.whenDefined('altcha-widget').then(function() {
+        altchaWidget.addEventListener('verified', function(e) {
+            document.getElementById('altcha-message').style.display = 'none';
+            document.getElementById('contact-form').style.display = 'block';
+        });
+
         altchaWidget.addEventListener('altcha_done', function(e) {
             const { challenge, salt, signature, solution } = e.detail;
             document.getElementById('altcha-challenge').value = challenge;
