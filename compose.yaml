@@ -19,6 +19,7 @@ services:
       ALTCHA_HMAC_KEY: "${ALTCHA_HMAC_KEY}"
       ALTCHA_PORT: "3333"
       ALTCHA_EXPIRE: "1800"
+      ALTCHA_MAX_NUMBER: "10000"
 
   nineprospect:
     build:
