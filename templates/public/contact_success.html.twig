@@ -2,12 +2,17 @@
 
 {% block title %}Inscription réussie - {{ campagne.nom }}{% endblock %}
 
+{% block localstyle %}
+{% include 'public/style.html.twig' %}
+{% endblock %}
+
 {% block body %}
+<div class="app-content public-contact">
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12 text-center">
-            <div class="alert alert-success">
-                <h1 class="h3 mb-0">
+            <div class="alert" style="background-color: rgba(255, 151, 74, 0.2); border: 1px solid rgba(255, 151, 74, 0.4); border-radius: 8px;">
+                <h1 class="h3 mb-0" style="color: #ff974a;">
                     <i class="fas fa-check-circle me-2"></i>
                     Merci pour votre inscription !
                 </h1>
@@ -17,26 +22,9 @@
 
     <div class="row g-4">
         <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="h5 mb-0">{{ cible.titre }}</h2>
-                </div>
-                <div class="card-body">
-                    {% if cible.description %}
-                        <div class="cible-description">
-                            {{ cible.description|markdown_to_html }}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">Pas de description disponible.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
             <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="h5 mb-0">Documents disponibles</h2>
+                <div class="card-header" style="background-color: rgba(255, 151, 74, 0.2); border-bottom: 1px solid rgba(255, 151, 74, 0.3);">
+                    <h2 class="h5 mb-0" style="color: #ff974a;">Documents disponibles</h2>
                 </div>
                 <div class="card-body">
                     {{ render(path('bninefiles_files', {
@@ -49,8 +37,8 @@
 
             {% if availableCibles|length > 0 %}
                 <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <h2 class="h5 mb-0">Intéressé par d'autres cibles ?</h2>
+                    <div class="card-header" style="background-color: rgba(111, 199, 226, 0.2); border-bottom: 1px solid rgba(111, 199, 226, 0.3);">
+                        <h2 class="h5 mb-0" style="color: #6fc7e2;">Intéressé par d'autres cibles ?</h2>
                     </div>
                     <div class="card-body">
                         <form method="post" action="{{ path('app_public_add_cible', {campagneSlug: campagne.slug, cibleSlug: cible.slug}) }}">
@@ -64,7 +52,7 @@
                                 </select>
                             </div>
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-outline-primary">
+                                <button type="submit" class="btn" style="background-color: #ff974a; color: #0f2f3f; border-radius: 9999px;">
                                     <i class="fas fa-plus me-2"></i>Voir les documents
                                 </button>
                             </div>
@@ -74,28 +62,29 @@
             {% endif %}
 
             <div class="mt-4">
-                <a href="{{ redirectUrl }}" class="btn btn-secondary">
+                <a href="{{ redirectUrl }}" class="btn" style="background-color: rgba(255, 255, 255, 0.1); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 9999px;">
                     <i class="fas fa-home me-2"></i>Retour au site
                 </a>
             </div>
         </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header" style="background-color: rgba(255, 151, 74, 0.2); border-bottom: 1px solid rgba(255, 151, 74, 0.3);">
+                    <h2 class="h5 mb-0" style="color: #ff974a;">{{ cible.titre }}</h2>
+                </div>
+                <div class="card-body">
+                    {% if cible.description %}
+                        <div class="cible-description">
+                            {{ cible.description|markdown_to_html }}
+                        </div>
+                    {% else %}
+                        <p class="text-white-50">Pas de description disponible.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-
-<style>
-.cible-description {
-    line-height: 1.8;
-}
-.cible-description h1, .cible-description h2, .cible-description h3 {
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-}
-.cible-description p {
-    margin-bottom: 1rem;
-}
-.cible-description ul, .cible-description ol {
-    margin-bottom: 1rem;
-    padding-left: 1.5rem;
-}
-</style>
+</div>
 {% endblock %}
