@@ -301,7 +301,7 @@ class PublicProspectController extends AbstractController
         ]);
     }
 
-    #[Route('/contact/{campagneSlug}/{cibleSlug}/select-cible', name: 'app_public_select_cible', methods: ['POST'])]
+    #[Route('/contact/{campagneSlug}/select-cible', name: 'app_public_select_cible', methods: ['POST'])]
     public function selectCible(string $campagneSlug, Request $request): Response
     {
         $session = $request->getSession();
