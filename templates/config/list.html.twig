@@ -1,0 +1,54 @@
+{% extends 'base.html.twig' %}
+
+{% block title %} = {{title}}{% endblock %}
+
+{% block body %}
+    <h1>{{title}}</h1>
+
+    <div class="dataTable_wrapper">
+        <table class="table table-striped table-bordered table-hover" id="dataTables" style="width:100%">
+            <thead>
+                <tr>
+                    <th width="70px" class="no-sort">Action</th>
+                    <th>Code</th>
+                    <th>Libellé</th>
+                    <th>Valeur</th>
+                    <th>Valeur par défaut</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set currentGroup = null %}
+                {% for config in configs %}
+                    {% if config.configGroup != currentGroup %}
+                        <tr>
+                            <td colspan="6" class="fw-bold bg-light">{{ config.configGroup }}</td>
+                        </tr>
+                        {% set currentGroup = config.configGroup %}
+                    {% endif %}
+                    <tr>
+                        <td><a href="{{ path(routeupdate, {id: config.id}) }}"><i class="fas fa-file fa-2x"></i></a></td>
+                        <td><code>{{ config.code }}</code></td>
+                        <td>{{ config.title }}</td>
+                        <td>
+                            {% if config.type == 'logo' %}
+                                {% set logoDisplay = config.value ?: config.defaultValue %}
+                                <img src="{{ bninefile(logoDisplay) ?: asset(config.defaultValue) }}" alt="{{ config.code }}" style="max-height: 50px; max-width: 150px; object-fit: contain;">
+                            {% else %}
+                                {{ config.value }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if config.type == 'logo' %}
+                                <img src="{{ bninefile(config.defaultValue) ?: asset(config.defaultValue) }}" alt="{{ config.code }}" style="max-height: 50px; max-width: 150px; object-fit: contain;">
+                            {% else %}
+                                {{ config.defaultValue }}
+                            {% endif %}
+                        </td>
+                        <td>{{ config.type }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

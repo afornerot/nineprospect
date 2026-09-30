@@ -62,6 +62,21 @@
                 </div>
             </div>
             {% endif %}
+
+            {% set footerLabel = app_config.get('appFooterLinkLabel') %}
+            {% set footerUrl = app_config.get('appFooterLinkUrl') %}
+            {% set footerLogo = app_config.get('appFooterLogoUrl') %}
+            {% if footerLabel and footerUrl %}
+                <small style="text-align: center; display: block; margin-top: 1rem; margin-bottom: 1rem;">
+                    <a href="{{ footerUrl }}" target="_blank" class="text-decoration-none text-white">{{ footerLabel }}</a>
+                </small>
+            {% endif %}
+            {% if footerLogo %}
+                <a href="{{ footerUrl }}" target="_blank" class="text-decoration-none text-white">
+                    <img src="{{ bninefile(footerLogo) }}" alt="Logo" style="height: 50px; margin: auto; display:block; vertical-align: middle;">
+                </a>
+            {% endif %}
+
         </div>
 
         <div class="col-lg-6">

@@ -154,10 +154,19 @@
                 </div>
             </div>
 
-            <small style="text-align: center; display: block; margin-top: 1rem;">
-            Powered by <a href="https://www.cadoles.com" target="_blank" class="text-decoration-none text-white">Cadoles</a>
-            </small><br>
-            <img src="https://www.cadoles.com/wp-content/uploads/2025/09/logo-1.png" alt="Cadoles" style="height: 50px; margin: auto; display:block; vertical-align: middle;">
+            {% set footerLabel = app_config.get('appFooterLinkLabel') %}
+            {% set footerUrl = app_config.get('appFooterLinkUrl') %}
+            {% set footerLogo = app_config.get('appFooterLogoUrl') %}
+            {% if footerLabel and footerUrl %}
+                <small style="text-align: center; display: block; margin-top: 1rem; margin-bottom: 1rem;">
+                    <a href="{{ footerUrl }}" target="_blank" class="text-decoration-none text-white">{{ footerLabel }}</a>
+                </small>
+            {% endif %}
+            {% if footerLogo %}
+                <a href="{{ footerUrl }}" target="_blank" class="text-decoration-none text-white">
+                    <img src="{{ bninefile(footerLogo) }}" alt="Logo" style="height: 50px; margin: auto; display:block; vertical-align: middle;">
+                </a>
+            {% endif %}
 
         </div>
 
