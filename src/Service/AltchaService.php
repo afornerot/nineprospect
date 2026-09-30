@@ -23,12 +23,27 @@ class AltchaService
 
     public function verifySolution(array $payload): bool
     {
+        $data = [
+            'algorithm' => $payload['algorithm'] ?? 'SHA-256',
+            'challenge' => $payload['challenge'] ?? '',
+            'salt' => $payload['salt'] ?? '',
+            'signature' => $payload['signature'] ?? '',
+        ];
+
+        if (isset($payload['solution'])) {
+            if (is_array($payload['solution'])) {
+                $data['number'] = $payload['solution']['number'] ?? 0;
+            } else {
+                $data['number'] = (int) $payload['solution'];
+            }
+        }
+
         $response = $this->http->request('POST', self::ALTCHA_SERVER_URL . '/verify', [
-            'json' => $payload,
+            'json' => $data,
         ]);
 
-        $data = $response->toArray();
+        $result = $response->toArray();
 
-        return $data['success'] ?? false;
+        return $result['success'] ?? false;
     }
 }
