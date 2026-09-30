@@ -21,6 +21,10 @@ security:
       pattern: ^/(_(profiler|wdt)|css|images|js)/
       security: false
 
+    altcha:
+      pattern: ^/altcha
+      security: false
+
     mcp:
       pattern: ^/mcp
       security: true
