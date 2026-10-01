@@ -68,7 +68,7 @@
                             {% if is_granted('ROLE_ADMIN') %}
                                 <a class="nav-link px-2" href="{{path('app_admin')}}" aria-label="Administration"><i class="fa-solid fa-cog fa-2x"></i></a>
                             {% endif %}
-                            <a class="nav-link px-2" href="{{path('app_user_profil')}}" aria-label="Profil"><img src="{{ app.user.avatar ? path('bninefiles_files_image', {domain: 'avatar', id: 0, path: app.user.avatar}) : asset('medias/avatar/noavatar.png') }}" class="avatar" alt="Avatar"></a>
+                            <a class="nav-link px-2" href="{{path('app_user_profil')}}" aria-label="Profil"><img src="{{ app.user.avatar ? bninefile(app.user.avatar) : asset('medias/avatar/noavatar.png') }}" class="avatar" alt="Avatar"></a>
                             <a class="nav-link px-2" href="{{path('app_logout')}}" aria-label="Déconnexion"><i class="fa-solid fa-right-from-bracket fa-2x"></i></a>
                         {% else %}
                             <a class="nav-link px-2" href="{{path('app_login')}}" aria-label="Connexion"><i class="fa-solid fa-right-to-bracket fa-2x"></i></a>

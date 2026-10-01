@@ -33,6 +33,18 @@ security:
       pattern: ^/annuaire
       security: false
 
+    bninefiles:
+      # Routes publiques du bundle bnine-files (image, thumbnail).
+      # On les déclare stateless (sans session, sans firewall) pour que
+      # Symfony ne force pas Cache-Control: no-cache,private et que les
+      # headers poses par le bundle (CachePolicy) soient respectes.
+      # Les routes protegees du bundle (uploadmodal, uploadfile, delete,
+      # mkdir, crop) restent sous le firewall main et gardent leur controle
+      # d'acces (FileVoter).
+      pattern: ^/bninefiles/(image|thumbnail)/
+      security: false
+      stateless: true
+
     mcp:
       pattern: ^/mcp
       security: true

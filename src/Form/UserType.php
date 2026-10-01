@@ -60,6 +60,7 @@ class UserType extends AbstractType
             'crop_ratio' => '1/1',
             'crop_min_size' => 300,
             'preview_max_height' => 100,
+            'img_class' => 'rounded-circle',
         ])
 
         ->add('email', EmailType::class, [
