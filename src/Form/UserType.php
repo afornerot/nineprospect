@@ -65,15 +65,6 @@ class UserType extends AbstractType
 
         ->add('email', EmailType::class, [
             'label' => 'Email',
-        ])
-
-        ->add('groupes', EntityType::class, [
-            'label' => 'Groupes',
-            'class' => Groupe::class,
-            'choice_label' => 'name',
-            'multiple' => true,
-            'required' => false,
-            'attr' => ['class' => 'select2'],
         ]);
 
         if ('profil' != $options['mode']) {
@@ -82,6 +73,15 @@ class UserType extends AbstractType
                 'choices' => ['ROLE_ADMIN' => 'ROLE_ADMIN', 'ROLE_MASTER' => 'ROLE_MASTER', 'ROLE_USER' => 'ROLE_USER'],
                 'multiple' => true,
                 'expanded' => true,
+            ])
+
+            ->add('groupes', EntityType::class, [
+                'label' => 'Groupes',
+                'class' => Groupe::class,
+                'choice_label' => 'name',
+                'multiple' => true,
+                'required' => false,
+                'attr' => ['class' => 'select2'],
             ]);
         }
 
