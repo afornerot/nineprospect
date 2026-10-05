@@ -1,0 +1,90 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <p class="text-muted">
+        Importez une liste de prospects depuis un tableur (<code>.xlsx</code> ou <code>.csv</code>).
+        Vous pourrez vérifier les lignes et les doublons avant de valider.
+    </p>
+
+    {% include('include/error.html.twig') %}
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <i class="fas fa-upload"></i> Déposer le fichier
+        </div>
+        <div class="card-body">
+            {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
+
+            <div class="row">
+                <div class="col-md-12">
+                    {{ form_row(form.cibles) }}
+                    <small class="text-muted d-block mt-1">
+                        Pour créer une nouvelle cible, laissez ce champ vide et remplissez le champ ci-dessous.
+                    </small>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    {{ form_row(form.cible_nouvelle_titre) }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    {{ form_row(form.campagne_id) }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    {{ form_row(form.file) }}
+                    <small class="text-muted">
+                        Formats acceptés : <code>.xlsx</code>, <code>.csv</code> — Taille max : 10 Mo.
+                    </small>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-search"></i> Analyser le fichier
+                </button>
+                <a href="{{ path(routecancel) }}" class="btn btn-secondary ms-1">Annuler</a>
+                <a href="{{ path(routetemplate) }}" class="btn btn-outline-primary ms-1">
+                    <i class="fas fa-download"></i> Télécharger le modèle .xlsx
+                </a>
+            </div>
+
+            {{ form_end(form) }}
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <i class="fas fa-info-circle"></i> Rappel du format attendu
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li><strong>Format</strong> : <code>.xlsx</code> ou <code>.csv</code> (UTF-8), <strong>un seul onglet</strong>.</li>
+                <li><strong>Première ligne</strong> : les en-têtes de colonnes, sans ligne de titre au-dessus.</li>
+                <li><strong>Une ligne = un contact</strong> (plusieurs lignes par organisation = plusieurs contacts regroupés dans un même prospect).</li>
+                <li>Pas de ligne vide, pas de cellules fusionnées, pas de lignes de total.</li>
+                <li><strong>Colonnes obligatoires</strong> : Organisation, Nom, Prénom, Courriel.</li>
+                <li><strong>Colonnes facultatives</strong> : Fonction, Téléphone, Adresse, Code postal, Ville, Site web.</li>
+                <li><strong>Courriel</strong> : une seule adresse valide par ligne.</li>
+                <li><strong>Téléphone et code postal</strong> : formatés en texte pour ne pas perdre le zéro initial (<code>08000</code>, <code>03 80 00 00 00</code>).</li>
+                <li><strong>Cellules</strong> : pas de formules, uniquement des valeurs.</li>
+                <li><strong>Doublons dans le fichier</strong> : un prospect ne doit pas apparaître plusieurs fois avec le même courriel.</li>
+            </ul>
+            <p class="mt-2 mb-0">
+                <a href="{{ path(routetemplate) }}" class="small">
+                    <i class="fas fa-download"></i> Télécharger un tableur modèle prêt à l'emploi
+                </a>
+            </p>
+        </div>
+    </div>
+{% endblock %}

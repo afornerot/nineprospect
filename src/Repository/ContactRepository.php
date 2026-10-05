@@ -36,4 +36,35 @@ class ContactRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Contacts existants pour ces emails, indexés par email (lowercase).
+     * Utilisé pour détecter les doublons de Contact à l'import.
+     *
+     * @param list<string> $emails
+     *
+     * @return array<string, Contact>
+     */
+    public function findByEmails(array $emails): array
+    {
+        if ([] === $emails) {
+            return [];
+        }
+
+        $contacts = $this->createQueryBuilder('c')
+            ->where('c.email IN (:emails)')
+            ->setParameter('emails', $emails)
+            ->getQuery()
+            ->getResult();
+
+        $out = [];
+        foreach ($contacts as $c) {
+            $email = $c->getEmail();
+            if (null !== $email) {
+                $out[$email] = $c;
+            }
+        }
+
+        return $out;
+    }
 }

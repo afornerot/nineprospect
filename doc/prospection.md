@@ -309,8 +309,7 @@ docker compose exec -T nineprospect php bin/console app:init
 # 4. rattacher toutes les vagues existantes au pipeline par défaut
 docker compose exec -T mariadb mariadb -unineprospect -p<mdp> nineprospect -e \
   "UPDATE sprint SET pipeline_id = (SELECT id FROM pipeline WHERE par_defaut = 1) WHERE pipeline_id IS NULL"
-# 5. reconstituer les valeurs depuis le CSV (commande idempotente, sans --reset)
-docker compose exec -T nineprospect php bin/console app:import-prospects misc/import/Prospects.csv
+# 5. (optionnel) réimporter un fichier via l'écran UI /user/cibles/import
 ```
 
 L'étape 5 est indispensable : `d:s:update --force` supprime les anciennes colonnes
@@ -324,8 +323,7 @@ Pour ajouter un nouveau champ `Prospect` (ex. `idDolibarr`) :
 # 2. ajouter le champ dans src/Form/ProspectType.php
 # 3. mettre à jour le schéma :
 docker compose exec -T nineprospect php bin/console doctrine:schema:update --force
-# 4. (optionnel) rejouer l'import CSV pour enrichir la base existante
-docker compose exec -T nineprospect php bin/console app:import-prospects misc/import/Prospects.csv
+# 4. (optionnel) enrichir via l'écran d'import UI /user/cibles/import
 ```
 
 Pas de migration Doctrine générée : le `d:s:update --force` est la procédure
@@ -334,26 +332,98 @@ Les `UPDATE` SQL directs sur les données sont autorisés (ex. correction
 du `par_defaut` du pipeline « Pipeline par défaut »), mais **jamais**
 sur le schéma.
 
-## Import des données (one-shot)
+## Import d'une cible depuis un tableur (UI)
 
-Source : `misc/import/Prospects.csv` (converti depuis `Prospects.ods`).
+L'application propose un import interactif depuis `/user/cibles/import`
+pour constituer une liste depuis un tableur (`.xlsx` ou `.csv`).
+
+**Flux** :
+1. L'utilisateur choisit le mode : nouvelle cible ou cible existante.
+2. Optionnellement : une ou plusieurs cibles supplémentaires + une campagne d'affectation.
+3. Upload du tableur (modèle téléchargeable depuis l'écran).
+4. **Écran de pré-import** : affiche chaque ligne, les erreurs de format et les doublons
+   détectés (prospect ou contact déjà existant). L'utilisateur choisit l'action par ligne
+   (Importer / Mettre à jour / Rattacher / Ignorer).
+5. **Rapport final** : compteurs (créés, mis à jour, rattachés, ignorés, en erreur).
+
+**Format attendu** (10 colonnes, une ligne = un contact) :
+- Obligatoires : `Organisation`, `Nom`, `Prénom`, `Courriel`
+- Facultatives : `Fonction`, `Téléphone`, `Adresse`, `Code postal`, `Ville`, `Site web`
+- Plusieurs lignes avec la même `Organisation` → un seul Prospect avec plusieurs Contacts
+
+**Regroupement** : les lignes sont regroupées par `Organisation` normalisée
+(insensible casse/accents/ponctuation). Chaque groupe produit 1 Prospect ;
+chaque ligne produit 1 Contact.
+
+**Détection des doublons** : email normalisé ou `cleEntreprise` ; les doublons
+intra-fichier sont signalés. Par défaut l'action est "Ignorer" (sécuritaire) ;
+l'utilisateur peut choisir "Mettre à jour" ou "Rattacher" au cas par cas.
+
+**Notes techniques** :
+- Fichier temporaire stocké dans `sys_get_temp_dir()/nine_import/`, supprimé
+  après execute.
+- Service : `App\Service\Import\ImportAnalyzer` (analyse dry-run),
+  `App\Service\Import\ImportExecutor` (écrit en base).
+- L'ancienne commande `app:import-prospects` (CLI) a été supprimée : elle a été
+  utilisée pour initialiser la base une fois, mais n'a plus d'usage opérationnel.
+
+## Nettoyage des orphelins (SQL brut)
+
+Si vous supprimez manuellement des Prospects, Cibles, Campagnes ou Sprints en SQL,
+les tables liées (`contact`, `action`, `prospect_cible`, `prospect_user`,
+`prospect_sprint`) conservent des FK pointant dans le vide. Doctrine refuse alors
+de charger ces entités ("Entity of type X for IDs id(Y) was not found").
+
+Les `cascade: ['remove']` ne fonctionnent QUE via l'ORM. Pour nettoyer la base
+après une purge manuelle, utilisez :
 
 ```bash
-docker compose exec -T nineprospect php bin/console app:import-prospects misc/import/Prospects.csv
-docker compose exec -T nineprospect php bin/console app:import-prospects misc/import/Prospects.csv --dry-run
-docker compose exec -T nineprospect php bin/console app:import-prospects misc/import/Prospects.csv --reset
+docker compose exec -T nineprospect php bin/console app:cleanup-orphans --dry-run  # preview
+docker compose exec -T nineprospect php bin/console app:cleanup-orphans --yes      # exécution
 ```
 
-Le service `App\Service\Import\ProspectImporter` est **idempotent** (rejouer la commande
-ne recrée rien) : il répare les lignes décalées, regroupe les entreprises, crée le contact
-principal, les vagues, les campagnes et les actions, puis journalise les anomalies.
+La commande scanne 8 catégories (actions / contacts / liens prospect-user /
+prospect_sprint × 2 / prospect_cible × 2 / prospects orphelins en campagne) et
+supprime en transaction.
 
-État attendu après import : 889 prospects, 904 contacts, 117 actions, 3 campagnes,
-21 vagues (toutes rattachées au pipeline par défaut), **743 liens prospect↔vague**
-(dont 28 prospects multi-vagues), 67 anomalies, 65 prospects hors Meta, 784 sans
-département résolu, **38 valeurs de pipeline** (31 Visio, 4 Démo, 3 Devis, 0 Signature).
-La base de développement peut contenir en plus des saisies manuelles passées par les
-écrans (elles sont ignorées par l'idempotence de l'import).
+## Géocodage des Prospects (API Adresse)
+
+À chaque création ou enrichissement d'adresse d'un Prospect, un message
+`GeocodeProspectMessage` est dispatché sur le transport `async` pour géocoder
+le Prospect via [l'API Adresse du gouvernement](https://api-adresse.data.gouv.fr).
+
+Règles :
+- Dispatch uniquement si le Prospect a une adresse utilisable ET n'a pas
+  encore de coordonnées (pas de re-géocodage si lat/lon existent déjà — ça
+  éviterait d'écraser une correction manuelle).
+- L'API Adresse est appelée avec `limit=2` ; si elle renvoie 2+ résultats
+  (= géocodage ambigu), aucune coordonnée n'est assignée.
+- Si une seule adresse est renvoyée, lat/lon sont mis à jour.
+
+Pour re-géocoder un Prospect manuellement :
+
+```bash
+docker compose exec -T nineprospect php bin/console app:geocode-prospect <id>
+```
+
+Pour dispatcher un batch de tous les Prospects sans coordonnées :
+
+```bash
+docker compose exec -T nineprospect php bin/console app:geocode-prospects [--dry-run] [--limit N]
+```
+
+Les messages sont consommés par le worker Messenger, lancé automatiquement
+au démarrage du container par `misc/script/reconfigure.sh` :
+
+```bash
+# Le worker tourne en arrière-plan automatiquement (PID supervisé par reconfigure.sh)
+docker compose exec -T nineprospect ps -ef | grep messenger
+# Logs du worker :
+docker compose exec -T nineprospect tail -f var/log/messenger-worker.log
+
+# Pour rejouer manuellement les messages en attente :
+docker compose exec -T nineprospect php bin/console messenger:consume async failed --limit=20
+```
 
 ## Qualité du code (à lancer avant chaque livraison)
 

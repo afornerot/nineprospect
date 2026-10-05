@@ -16,11 +16,17 @@ bin/console app:init
 supercronic -quiet -no-reap /crontab &
 SUPERCRONIC_PID=$!
 
+# Worker Messenger : consomme les transports async/failed en arrière-plan.
+# Sans ce worker, les messages GeocodeProspectMessage et autres s'accumulent
+# dans messenger_messages sans jamais être exécutés.
+bin/console messenger:consume async failed --time-limit=25 -v > var/log/messenger-worker.log 2>&1 &
+MESSENGER_PID=$!
+
 "$@" &
 APACHE_PID=$!
 
 graceful_stop() {
-    kill -TERM "$SUPERCRONIC_PID" "$APACHE_PID" 2>/dev/null || true
+    kill -TERM "$SUPERCRONIC_PID" "$MESSENGER_PID" "$APACHE_PID" 2>/dev/null || true
     wait
     exit 0
 }
@@ -31,6 +37,10 @@ while true; do
         echo "$(date '+%F %T') STOP SUPERCRONIC" >> var/log/startup.log
         break
     fi
+    if ! kill -0 "$MESSENGER_PID" 2>/dev/null; then
+        echo "$(date '+%F %T') STOP MESSENGER WORKER" >> var/log/startup.log
+        break
+    fi
     if ! kill -0 "$APACHE_PID" 2>/dev/null; then
         echo "$(date '+%F %T') STOP APACHE" >> var/log/startup.log
         break
@@ -38,5 +48,5 @@ while true; do
     sleep 2
 done
 
-kill -TERM "$SUPERCRONIC_PID" "$APACHE_PID" 2>/dev/null || true
+kill -TERM "$SUPERCRONIC_PID" "$MESSENGER_PID" "$APACHE_PID" 2>/dev/null || true
 wait

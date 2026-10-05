@@ -2,8 +2,12 @@ FROM reg.cadoles.com/envole/nineapache:8.5
 
 USER root
 
+# Extensions PHP supplémentaires requises par les dépendances Composer.
+# php85-xmlreader est nécessaire pour phpoffice/phpspreadsheet (lecture xlsx).
+RUN apk add --no-cache php85-xmlreader
+
 RUN echo "* * * * * php /app/bin/console app:cron >> /app/var/log/cron.log 2>&1" > /crontab \
- && chmod g+w /crontab
+  && chmod g+w /crontab
 
 USER apache
 WORKDIR /app

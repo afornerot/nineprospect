@@ -1,0 +1,207 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    {% include('include/error.html.twig') %}
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <i class="fas fa-eye"></i> Aperçu du fichier
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Fichier</dt>
+                <dd class="col-sm-9"><code>{{ context.filename }}</code></dd>
+
+                <dt class="col-sm-3">Cible principale</dt>
+                <dd class="col-sm-9">
+                    {% if 'new' == context.mode %}
+                        Nouvelle cible : <strong>{{ context.ciblePrincipaleTitle }}</strong>
+                    {% elseif context.ciblePrincipaleId %}
+                        Existante (id {{ context.ciblePrincipaleId }})
+                    {% else %}
+                        <em class="text-muted">Aucune (import sans rattachement à une cible)</em>
+                    {% endif %}
+                </dd>
+
+                {% if context.ciblesSupplementairesIds is not empty %}
+                    <dt class="col-sm-3">Cibles supplémentaires</dt>
+                    <dd class="col-sm-9">
+                        {% for id in context.ciblesSupplementairesIds %}<span class="badge bg-secondary me-1">{{ id }}</span>{% endfor %}
+                    </dd>
+                {% endif %}
+
+                {% if context.campagneId %}
+                    <dt class="col-sm-3">Campagne</dt>
+                    <dd class="col-sm-9">id {{ context.campagneId }}</dd>
+                {% endif %}
+
+                <dt class="col-sm-3">Colonnes détectées</dt>
+                <dd class="col-sm-9">
+                    {% for col in preview.columnsDetected %}
+                        <span class="badge bg-info text-dark me-1">{{ col }}</span>
+                    {% endfor %}
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-3">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <div class="display-6">{{ preview.okRows() }}</div>
+                    <div class="small">OK</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning text-dark">
+                <div class="card-body">
+                    <div class="display-6">{{ preview.duplicateRows() }}</div>
+                    <div class="small">Doublons</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-danger text-white">
+                <div class="card-body">
+                    <div class="display-6">{{ preview.errorRows() }}</div>
+                    <div class="small">En erreur</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-light">
+                <div class="card-body">
+                    <div class="display-6">{{ preview.totalRows() }}</div>
+                    <div class="small">Total lignes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form action="{{ path('app_user_cibles_import_execute') }}" method="post" class="mt-3">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('cible-import-execute') }}">
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list"></i> Détail des lignes ({{ preview.groups|length }} groupe(s))</span>
+                <div>
+                    <select id="bulk-set" class="form-select form-select-sm d-inline-block w-auto">
+                        <option value="">Appliquer aux lignes disponibles :</option>
+                        <option value="import">Tout importer (OK)</option>
+                        <option value="link">Tout rattacher (doublons prospect)</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="apply-bulk">
+                        <i class="fas fa-check"></i> Appliquer
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-bordered mb-0">
+                    <thead>
+                        <tr>
+                            <th width="4%">Ligne</th>
+                            <th width="4%">Groupe</th>
+                            <th>Organisation</th>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>Courriel</th>
+                            <th width="8%">État</th>
+                            <th width="14%">Action</th>
+                            <th>Détails</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for group in preview.groups %}
+                            {% for ar in group.rows %}
+                                {% set row = ar.row %}
+                                <tr class="table-{{ ar.statusColor() }}">
+                                    <td>{{ row.rowNumber }}</td>
+                                    <td title="{{ group.cleEntreprise }}">
+                                        <small class="text-muted">#{{ loop.parent.loop.index }}</small>
+                                    </td>
+                                    <td>{{ row.organisation }}</td>
+                                    <td>{{ row.nom }}</td>
+                                    <td>{{ row.prenom }}</td>
+                                    <td>{{ row.email }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ ar.statusColor() }}">
+                                            {{ ar.statusLabel() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if ar.hasActionChoice() %}
+                                            <select name="row_actions[{{ row.rowNumber }}]" class="form-select form-select-sm row-action" data-status="{{ ar.status }}">
+                                                {% for action, label in ar.availableActions() %}
+                                                    <option value="{{ action }}" {{ action == ar.defaultAction ? 'selected' : '' }}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        {% else %}
+                                            <span class="text-muted small">
+                                                {%- if ar.isError() %}erreur — ignorée{% else %}ignoré automatiquement{% endif -%}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if row.hasErrors() %}
+                                            <ul class="mb-0 small">
+                                                {% for champ, motif in row.errors %}
+                                                    <li><strong>{{ champ }}</strong> : {{ motif }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% elseif ar.isDuplicate() %}
+                                            {% if ar.existingProspectId %}
+                                                <small class="text-muted">Prospect existant #{{ ar.existingProspectId }}</small>
+                                            {% elseif ar.existingContactId %}
+                                                <small class="text-muted">Contact existant #{{ ar.existingContactId }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <small class="text-muted">—</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-3 d-flex justify-content-between">
+            <a href="{{ path(routeimport) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Recommencer
+            </a>
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-check"></i> Lancer l'import
+            </button>
+        </div>
+    </form>
+{% endblock %}
+
+{% block localscript %}
+    <script>
+        (function () {
+            var bulkSet = document.getElementById('bulk-set');
+            var applyBtn = document.getElementById('apply-bulk');
+            if (!applyBtn) return;
+            applyBtn.addEventListener('click', function () {
+                var val = bulkSet.value;
+                if (!val) return;
+                // On n'applique la bulk action qu'aux selects dont la valeur est compatible :
+                // - "import" → uniquement les selects qui proposent "import" (lignes OK)
+                // - "link"   → uniquement les selects qui proposent "link" (doublons prospect)
+                document.querySelectorAll('select.row-action').forEach(function (sel) {
+                    var opts = Array.from(sel.options).map(function (o) { return o.value; });
+                    if (opts.indexOf(val) !== -1) {
+                        sel.value = val;
+                    }
+                });
+            });
+        })();
+    </script>
+{% endblock %}

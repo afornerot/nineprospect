@@ -346,4 +346,32 @@ class ProspectRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+    /**
+     * Prospects existants pour les clés d'entreprise données.
+     * Utilisé par l'import tableur pour détecter les doublons d'organisation.
+     *
+     * @param list<string> $clesEntreprise
+     *
+     * @return array<string, Prospect> indexé par cleEntreprise
+     */
+    public function findByClesEntreprise(array $clesEntreprise): array
+    {
+        if ([] === $clesEntreprise) {
+            return [];
+        }
+
+        $prospects = $this->createQueryBuilder('p')
+            ->where('p.cleEntreprise IN (:cles)')
+            ->setParameter('cles', $clesEntreprise)
+            ->getQuery()
+            ->getResult();
+
+        $out = [];
+        foreach ($prospects as $p) {
+            $out[$p->getCleEntreprise()] = $p;
+        }
+
+        return $out;
+    }
 }

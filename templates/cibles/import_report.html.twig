@@ -1,0 +1,68 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    <div class="card mt-3 border-success">
+        <div class="card-body">
+            <h5 class="card-title">
+                <i class="fas fa-check-circle text-success"></i> Import terminé
+            </h5>
+            <p class="card-text">
+                <strong>{{ result.prospectsCreated }}</strong> prospect(s) créé(s),
+                <strong>{{ result.prospectsLinked }}</strong> rattaché(s) à un prospect existant,
+                <strong>{{ result.contactsCreated }}</strong> contact(s) créé(s),
+                <strong>{{ result.rowsSkipped }}</strong> ligne(s) ignorée(s),
+                <strong>{{ result.rowsErrored }}</strong> en erreur.
+            </p>
+            {% if result.cibleId %}
+                <a href="{{ path(routecible, {id: result.cibleId}) }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right"></i> Voir la cible « {{ result.cibleTitle }} »
+                </a>
+            {% endif %}
+            <a href="{{ path(routecancel) }}" class="btn btn-secondary ms-2">
+                <i class="fas fa-list"></i> Retour à la liste des cibles
+            </a>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><i class="fas fa-chart-bar"></i> Compteurs détaillés</div>
+        <div class="card-body">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    <tr><th>Prospects créés</th><td>{{ result.prospectsCreated }}</td></tr>
+                    <tr><th>Prospects liés (existant)</th><td>{{ result.prospectsLinked }}</td></tr>
+                    <tr><th>Contacts créés</th><td>{{ result.contactsCreated }}</td></tr>
+                    <tr><th>Lignes ignorées (skip)</th><td>{{ result.rowsSkipped }}</td></tr>
+                    <tr><th>Lignes en erreur</th><td>{{ result.rowsErrored }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if result.errors is not empty %}
+        <div class="card mt-3 border-danger">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-exclamation-triangle"></i> Détail des erreurs
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr><th width="10%">Ligne</th><th>Motif</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for err in result.errors %}
+                            <tr>
+                                <td>{{ err.row > 0 ? err.row : '—' }}</td>
+                                <td>{{ err.motif }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

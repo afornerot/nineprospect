@@ -122,8 +122,7 @@ Procédure standard quand on ajoute/modifie un champ Doctrine :
 # 1. modifier l'Entity et le FormType
 # 2. appliquer le schéma :
 docker compose exec -T nineprospect php bin/console doctrine:schema:update --force
-# 3. (optionnel) rejouer l'import CSV pour enrichir la base existante :
-docker compose exec -T nineprospect php bin/console app:import-prospects misc/import/Prospects.csv
+# 3. (optionnel) importer un nouveau fichier via l'écran /user/cibles/import
 ```
 
 Pour une correction ponctuelle de **données** (jamais de schéma) : `UPDATE` SQL

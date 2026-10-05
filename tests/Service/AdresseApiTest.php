@@ -57,4 +57,54 @@ class AdresseApiTest extends TestCase
         $svc = new AdresseApi($this->stubJson([], 500), new NullLogger());
         $this->assertNull($svc->geocode('rue', 'cp', 'ville'));
     }
+
+    public function testGeocodeReturnsNullOnAmbiguousResults(): void
+    {
+        // 2+ résultats → adresse ambiguë → on n'assigne pas de coordonnées
+        // (l'utilisateur devra préciser ou saisir manuellement).
+        $payload = [
+            'features' => [
+                ['geometry' => ['coordinates' => [2.3522, 48.8566]]],
+                ['geometry' => ['coordinates' => [2.3533, 48.8577]]],
+            ],
+        ];
+        $svc = new AdresseApi($this->stubJson($payload), new NullLogger());
+        $this->assertNull($svc->geocode('rue de la Paix', '75002', 'Paris'));
+    }
+
+    public function testGeocodeWithStatusSingle(): void
+    {
+        $payload = [
+            'features' => [
+                ['geometry' => ['coordinates' => [2.3522, 48.8566]]],
+            ],
+        ];
+        $svc = new AdresseApi($this->stubJson($payload), new NullLogger());
+        $r = $svc->geocodeWithStatus('rue de la Paix', '75002', 'Paris');
+        $this->assertSame(AdresseApi::RESULT_SINGLE, $r['status']);
+        $this->assertNotNull($r['coords']);
+        $this->assertSame(48.8566, $r['coords']['lat']);
+    }
+
+    public function testGeocodeWithStatusMultiple(): void
+    {
+        $payload = [
+            'features' => [
+                ['geometry' => ['coordinates' => [2.3522, 48.8566]]],
+                ['geometry' => ['coordinates' => [2.3533, 48.8577]]],
+            ],
+        ];
+        $svc = new AdresseApi($this->stubJson($payload), new NullLogger());
+        $r = $svc->geocodeWithStatus('rue de la Paix', '75002', 'Paris');
+        $this->assertSame(AdresseApi::RESULT_MULTIPLE, $r['status']);
+        $this->assertNull($r['coords']);
+    }
+
+    public function testGeocodeWithStatusNone(): void
+    {
+        $svc = new AdresseApi($this->stubJson(['features' => []]), new NullLogger());
+        $r = $svc->geocodeWithStatus('XXX', '99999', 'NOWHERE');
+        $this->assertSame(AdresseApi::RESULT_NONE, $r['status']);
+        $this->assertNull($r['coords']);
+    }
 }
