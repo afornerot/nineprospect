@@ -31,6 +31,8 @@ final class ImportPreview
         /** @var list<int> */
         public readonly array $ciblesSupplementairesIds = [],
         public readonly ?int $campagneId = null,
+        /** @var list<int> */
+        public readonly array $categoriesSupplementairesIds = [],
     ) {
     }
 

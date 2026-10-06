@@ -9,6 +9,7 @@ use App\Entity\Prospect;
 use App\Entity\ProspectCible;
 use App\Message\GeocodeProspectMessage;
 use App\Repository\CampagneRepository;
+use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
 use App\Repository\ContactRepository;
 use App\Repository\ProspectRepository;
@@ -36,6 +37,7 @@ final class ImportExecutor
         private ProspectRepository $prospectsRepo,
         private ContactRepository $contactRepo,
         private CibleRepository $ciblesRepo,
+        private CategoryRepository $categoriesRepo,
         private CampagneRepository $campagnesRepo,
         private GeoResolver $geo,
         private MessageBusInterface $bus,
@@ -71,6 +73,16 @@ final class ImportExecutor
         $campagne = null;
         if (null !== $preview->campagneId) {
             $campagne = $this->campagnesRepo->find($preview->campagneId);
+        }
+
+        // 3bis) Catégories supplémentaires : tous les Prospects importés
+        // (créés OU rattachés) seront liés à ces catégories.
+        $allCategories = [];
+        foreach ($preview->categoriesSupplementairesIds as $catId) {
+            $c = $this->categoriesRepo->find($catId);
+            if (null !== $c) {
+                $allCategories[] = $c;
+            }
         }
 
         // 4) Cache des Prospects créés/rattachés par cleEntreprise
@@ -138,7 +150,7 @@ final class ImportExecutor
             }
 
             // Chercher ou créer le Prospect du groupe
-            $prospect = $this->resolveProspect($group, $prospectByCle, $result, $allCibles, $campagne);
+            $prospect = $this->resolveProspect($group, $prospectByCle, $result, $allCibles, $allCategories, $campagne);
             $prospectByCle[$cle] = $prospect;
 
             // Pour chaque ligne du groupe, créer/maj les Contacts + ProspectCibles
@@ -210,10 +222,11 @@ final class ImportExecutor
     }
 
     /**
-     * @param list<Cible>             $allCibles
-     * @param array<string, Prospect> $prospectByCle
+     * @param list<Cible>                $allCibles
+     * @param list<\App\Entity\Category> $allCategories
+     * @param array<string, Prospect>    $prospectByCle
      */
-    private function resolveProspect(ImportGroup $group, array $prospectByCle, ImportResult $result, array $allCibles, ?Campagne $campagne): Prospect
+    private function resolveProspect(ImportGroup $group, array $prospectByCle, ImportResult $result, array $allCibles, array $allCategories, ?Campagne $campagne): Prospect
     {
         $cle = $group->getCleEntreprise();
 
@@ -347,6 +360,10 @@ final class ImportExecutor
         // Créer les ProspectCibles (toutes les cibles de la liste)
         $this->ensureProspectCibles($prospect, $allCibles);
 
+        // Lier le Prospect aux catégories supplémentaires cochées (sans toucher
+        // aux catégories déjà présentes sur le Prospect : fill-only).
+        $this->ensureCategories($prospect, $allCategories);
+
         return $prospect;
     }
 
@@ -442,6 +459,27 @@ final class ImportExecutor
             $pc->setCible($cible);
             $pc->setQualifie(null); // Pas encore qualifié
             $this->em->persist($pc);
+        }
+    }
+
+    /**
+     * Lie le Prospect aux catégories données (sans toucher aux catégories
+     * déjà présentes). Symétrique de ensureProspectCibles.
+     *
+     * @param list<\App\Entity\Category> $categories
+     */
+    private function ensureCategories(Prospect $prospect, array $categories): void
+    {
+        $existingCategoryIds = [];
+        foreach ($prospect->getCategories() as $cat) {
+            $existingCategoryIds[$cat->getId()] = true;
+        }
+
+        foreach ($categories as $category) {
+            if (isset($existingCategoryIds[$category->getId()])) {
+                continue;
+            }
+            $prospect->addCategory($category);
         }
     }
 }

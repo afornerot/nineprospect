@@ -7,6 +7,7 @@ use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Cible;
 use App\Form\CibleType;
 use App\Repository\CampagneRepository;
+use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
 use App\Service\Import\ImportAnalyzer;
 use App\Service\Import\ImportExecutor;
@@ -35,6 +36,7 @@ class CibleController extends AbstractController
 
     public function __construct(
         private CibleRepository $cibles,
+        private CategoryRepository $categories,
         private CampagneRepository $campagnes,
         private EntityManagerInterface $em,
         private ImportAnalyzer $analyzer,
@@ -211,6 +213,15 @@ class CibleController extends AbstractController
                 }
             }
 
+            // Catégories supplémentaires (optionnelles) : multi-select, on vérifie
+            // que les IDs existent réellement et on dédoublonne avec la cible
+            // principale (pas de chevauchement possible entre Cible et Catégorie).
+            $categorieIds = array_values(array_filter(array_map('intval', (array) ($data['categories'] ?? []))));
+            $categorieIds = array_values(array_filter(
+                $categorieIds,
+                fn (int $id): bool => null !== $this->categories->find($id),
+            ));
+
             // Stockage du contexte pour l'étape preview
             // Si mode "new", la nouvelle cible est la principale (ciblePrincipaleId sera défini après création)
             // Les autres IDs du multi-select sont les "cibles supplémentaires"
@@ -231,6 +242,7 @@ class CibleController extends AbstractController
                 'ciblePrincipaleTitle' => $ciblePrincipaleTitle,
                 'ciblesSupplementairesIds' => $ciblesSupplementairesIds,
                 'campagneId' => $campagneId,
+                'categoriesSupplementairesIds' => $categorieIds,
             ];
             $this->saveImportContext($request, $session, $context);
 
@@ -256,7 +268,7 @@ class CibleController extends AbstractController
             return $this->redirectToRoute('app_user_cibles_import');
         }
 
-        /** @var array{filename: string, filePath: string, mode: string, ciblePrincipaleId: int|null, ciblePrincipaleTitle: string|null, ciblesSupplementairesIds: list<int>, campagneId: int|null} $context */
+        /** @var array{filename: string, filePath: string, mode: string, ciblePrincipaleId: int|null, ciblePrincipaleTitle: string|null, ciblesSupplementairesIds: list<int>, campagneId: int|null, categoriesSupplementairesIds: list<int>} $context */
         $preview = $this->analyzer->analyze($context);
 
         if ($preview->isFatal()) {
@@ -403,6 +415,35 @@ class CibleController extends AbstractController
                     array_map(static fn ($c) => (string) $c, $campagnes),
                     array_map(static fn ($c) => (string) $c->getId(), $campagnes),
                 ),
+            ]);
+        }
+
+        // Catégories existantes (multi-select, optionnel) : tous les prospects
+        // importés seront rattachés à ces catégories. Symétrique au multi-select
+        // cibles ci-dessus.
+        $categories = $this->categories->findAllOrdered();
+        if ([] === $categories) {
+            $builder->add('categories', \Symfony\Component\Form\Extension\Core\Type\ChoiceType::class, [
+                'label' => 'Catégories (optionnel)',
+                'required' => false,
+                'multiple' => true,
+                'expanded' => false,
+                'choices' => [],
+                'disabled' => true,
+                'help' => 'Aucune catégorie existante — créez-en une via /user/categories.',
+                'attr' => ['class' => 'select2'],
+            ]);
+        } else {
+            $builder->add('categories', \Symfony\Component\Form\Extension\Core\Type\ChoiceType::class, [
+                'label' => 'Catégories (optionnel — laissez vide pour importer sans catégorie)',
+                'required' => false,
+                'multiple' => true,
+                'expanded' => false,
+                'choices' => array_combine(
+                    array_map(static fn (\App\Entity\Category $c) => (string) $c, $categories),
+                    array_map(static fn (\App\Entity\Category $c) => (string) $c->getId(), $categories),
+                ),
+                'attr' => ['class' => 'select2'],
             ]);
         }
 

@@ -34,6 +34,13 @@
                     </dd>
                 {% endif %}
 
+                {% if context.categoriesSupplementairesIds is not empty %}
+                    <dt class="col-sm-3">Catégories supplémentaires</dt>
+                    <dd class="col-sm-9">
+                        {% for id in context.categoriesSupplementairesIds %}<span class="badge bg-info me-1">{{ id }}</span>{% endfor %}
+                    </dd>
+                {% endif %}
+
                 {% if context.campagneId %}
                     <dt class="col-sm-3">Campagne</dt>
                     <dd class="col-sm-9">id {{ context.campagneId }}</dd>

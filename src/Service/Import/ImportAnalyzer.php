@@ -36,6 +36,7 @@ final class ImportAnalyzer
      *     ciblePrincipaleTitle?: string|null,
      *     ciblesSupplementairesIds?: list<int>,
      *     campagneId?: int|null,
+     *     categoriesSupplementairesIds?: list<int>,
      * } $params
      */
     public function analyze(array $params): ImportPreview
@@ -47,6 +48,7 @@ final class ImportAnalyzer
             ciblePrincipaleTitle: $params['ciblePrincipaleTitle'] ?? null,
             ciblesSupplementairesIds: $params['ciblesSupplementairesIds'] ?? [],
             campagneId: $params['campagneId'] ?? null,
+            categoriesSupplementairesIds: $params['categoriesSupplementairesIds'] ?? [],
         );
 
         try {
