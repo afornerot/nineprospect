@@ -411,4 +411,35 @@ class ProspectRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Prospects qui n'ont AUCUNE cible rattachée.
+     *
+     * @return array<int, Prospect>
+     */
+    public function findSansCible(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.prospectCibles', 'pc')
+            ->where('pc IS NULL')
+            ->orderBy('p.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Prospects qui ne sont PAS dans la cible donnée.
+     *
+     * @return array<int, Prospect>
+     */
+    public function findHorsCible(int $cibleId): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.prospectCibles', 'pc', 'WITH', 'pc.cible = :cibleId')
+            ->where('pc.id IS NULL')
+            ->setParameter('cibleId', $cibleId)
+            ->orderBy('p.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }
