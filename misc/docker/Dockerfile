@@ -16,12 +16,10 @@ COPY --chown=apache:apache . .
 RUN composer install --no-interaction --no-scripts
 RUN php bin/console assets:install public
 
-# Mise à jour du schéma BDD au build (équivalent de `d:s:u --force`).
-# Cette commande n'est PAS rejouée à chaque démarrage du container, ce qui
-# évite des opérations ALTER TABLE inutiles (et le risque de boucles).
-# Pour appliquer manuellement un changement de schéma après le build :
-#   docker compose exec -T nineprospect php bin/console doctrine:schema:update --force
-RUN php bin/console doctrine:schema:update --force --no-interaction || true
+# NOTE : la mise à jour du schéma BDD (d:s:u --force) n'est PAS lancée au build
+# de l'image. Elle est exécutée au démarrage du container par
+# misc/script/reconfigure.sh, qui est la procédure officielle du projet
+# (cf. doc/installation.md et doc/prospection.md).
 
 RUN mkdir -p /app/uploads \
     && mkdir -p /app/public/uploads/avatar \
