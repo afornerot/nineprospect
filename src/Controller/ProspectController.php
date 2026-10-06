@@ -12,10 +12,11 @@ use App\Enum\PipelineStatut;
 use App\Form\ProspectType;
 use App\Repository\ActionTypeDefautRepository;
 use App\Repository\CampagneRepository;
-use App\Repository\DepartementRepository;
+use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
-use App\Repository\ProspectCibleRepository;
+use App\Repository\DepartementRepository;
 use App\Repository\PipelineRepository;
+use App\Repository\ProspectCibleRepository;
 use App\Repository\ProspectRepository;
 use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
@@ -48,6 +49,7 @@ class ProspectController extends AbstractController
         private UserRepository $users,
         private EntityManagerInterface $em,
         private CibleRepository $cibles,
+        private CategoryRepository $categories,
         private ProspectCibleRepository $prospectCibles,
         #[Autowire('%mapboxPublicToken%')]
         private string $mapboxPublicToken,
@@ -72,6 +74,7 @@ class ProspectController extends AbstractController
             'sprints' => $this->sprints->findAllOrdered(),
             'utilisateurs' => $this->users->findAll(),
             'cibles' => $this->cibles->findAllOrdered(),
+            'categories' => $this->categories->findAllOrdered(),
         ]);
     }
 
@@ -830,6 +833,7 @@ class ProspectController extends AbstractController
             'userId' => $this->paramEntier($request, 'utilisateur'),
             'contacte' => '' === $contacte ? null : $contacte,
             'cible' => $this->paramEntier($request, 'cible'),
+            'categorie' => $this->paramEntier($request, 'categorie'),
             'qualifie' => '' === $qualifie ? null : $qualifie,
             'recherche' => $this->paramTexte($request, 'q'),
         ];

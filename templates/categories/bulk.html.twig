@@ -1,0 +1,157 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block body %}
+    <h1>{{ title }}</h1>
+
+    {% include('include/error.html.twig') %}
+
+    <a href="{{ path(routecancel) }}" class="btn btn-secondary mb-3">Retour</a>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Prospects</span>
+                    <input type="text" id="js-search" class="form-control form-control-sm" style="width: 200px;" placeholder="Rechercher...">
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-striped mb-0" id="js-prospects-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"></th>
+                                <th>Prospect</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prospect in prospectsHors %}
+                                <tr data-search="{{ prospect.nom|lower }}">
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-success js-add-prospect"
+                                                data-prospect-id="{{ prospect.id }}"
+                                                data-prospect-nom="{{ prospect.nom }}">
+                                        <i class="fas fa-plus"></i>
+                                        </button>
+                                    </td>
+                                    <td>{{ prospect.nom }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Prospects à affecter</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <select id="js-categorie-select" class="form-select form-select-sm" style="width: auto;">
+                            {% for categorie in categories %}
+                                <option value="{{ categorie.id }}" {% if categorie.id == categorieId %}selected{% endif %}>
+                                    {{ categorie.nom }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" form="js-bulk-form" class="btn btn-sm btn-success" id="js-submit-btn" disabled>Affecter</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <form id="js-bulk-form" method="post" action="{{ path('app_user_categories_bulk_submit') }}">
+                        <input type="hidden" name="categorie_id" id="js-categorie-id" value="{{ categorieId }}">
+                        <table class="table table-sm table-striped mb-0" id="js-prospects-right">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th>Prospect</th>
+                                </tr>
+                            </thead>
+                            <tbody id="js-selected-list">
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block localscript %}
+    {{ parent() }}
+    <script>
+        (function() {
+            function ready(fn) {
+                if (document.readyState !== 'loading') fn();
+                else document.addEventListener('DOMContentLoaded', fn);
+            }
+
+            ready(function() {
+                const selected = {};
+
+                function updateSubmitBtn() {
+                    const btn = document.getElementById('js-submit-btn');
+                    const input = document.getElementById('js-categorie-id');
+                    const categorieSelect = document.getElementById('js-categorie-select');
+                    const count = Object.keys(selected).length;
+                    btn.disabled = count === 0 || !input.value;
+                    input.value = categorieSelect.value;
+                }
+
+                function addRowToTable(id, nom) {
+                    const tbody = document.getElementById('js-selected-list');
+                    const tr = document.createElement('tr');
+                    tr.dataset.prospectId = id;
+                    tr.innerHTML =
+                        '<td><button type="button" class="btn btn-sm btn-danger js-remove-prospect"><i class="fas fa-minus"></i></button></td>' +
+                        '<td>' + nom + '</td>' +
+                        '<input type="hidden" name="prospect_ids[]" value="' + id + '">';
+                    tbody.appendChild(tr);
+                }
+
+                function removeRowFromTable(id) {
+                    const tr = document.querySelector('#js-selected-list tr[data-prospect-id="' + id + '"]');
+                    if (tr) tr.remove();
+                }
+
+                // Changer de catégorie recharge la liste des prospects (excluant
+                // ceux qui sont déjà dans la nouvelle catégorie).
+                document.getElementById('js-categorie-select').addEventListener('change', function() {
+                    const id = this.value;
+                    window.location.href = '{{ path('app_user_categories_bulk') }}?categorie=' + id;
+                });
+
+                document.querySelectorAll('.js-add-prospect').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.prospectId;
+                        const nom = this.dataset.prospectNom;
+                        if (selected[id]) return;
+                        selected[id] = true;
+                        addRowToTable(id, nom);
+                        updateSubmitBtn();
+                    });
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (e.target.closest('.js-remove-prospect')) {
+                        const btn = e.target.closest('.js-remove-prospect');
+                        const tr = btn.closest('tr');
+                        const id = tr.dataset.prospectId;
+                        delete selected[id];
+                        removeRowFromTable(id);
+                        updateSubmitBtn();
+                    }
+                });
+
+                document.getElementById('js-search').addEventListener('keyup', function() {
+                    const search = this.value.toLowerCase();
+                    document.querySelectorAll('#js-prospects-table tbody tr').forEach(function(tr) {
+                        const text = tr.dataset.search;
+                        tr.style.display = text.includes(search) ? '' : 'none';
+                    });
+                });
+            });
+        })();
+    </script>
+{% endblock %}

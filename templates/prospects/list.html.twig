@@ -55,6 +55,15 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="flex-grow-1" style="min-width: 160px;">
+            <label class="form-label" for="filtre-categorie">Catégorie</label>
+            <select class="form-select" id="filtre-categorie" name="categorie">
+                <option value="">Toutes</option>
+                {% for categorie in categories %}
+                    <option value="{{ categorie.id }}" {% if filtres.categorie == categorie.id %}selected{% endif %}>{{ categorie.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <div class="flex-grow-1" style="min-width: 140px;">
             <label class="form-label" for="filtre-qualifie">Qualifié</label>
             <select class="form-select" id="filtre-qualifie" name="qualifie">
@@ -85,13 +94,13 @@
             <thead>
             <tr>
                 <th width="90px" class="no-sort">Action</th>
-                <th>Prospect</th>
+                <th width="200px">Prospect</th>
                 <th width="150px">Contact principal</th>
-                <th width="100px">Campagne</th>
-                <th>Vague</th>
+                <th>Catégories</th>
+                <th width="80px">Vague</th>
                 <th>Pipeline</th>
                 <th width="80px">Contacté</th>
-                <th>Cible</th>
+                <th width="220px">Cible</th>
                 <th width="100px">Prc Action</th>
             </tr>
             </thead>
@@ -121,7 +130,17 @@
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td><small class="text-muted">{{ prospect.campagne ? prospect.campagne.libelle : 'Hors Meta' }}</small></td>
+                        <td>
+                            {% if prospect.categories|length > 0 %}
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for cat in prospect.categories %}
+                                        <span class="badge text-bg-info">{{ cat.nom }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% for lien in liens %}<span class="badge text-bg-secondary me-1">{{ lien.sprint.numero }}</span>{% else %}<span class="text-muted">—</span>{% endfor %}
                         </td>

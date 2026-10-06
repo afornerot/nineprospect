@@ -19,7 +19,7 @@ class ProspectRepository extends ServiceEntityRepository
     }
 
     /**
-     * Filtres de la liste : campagne, vague, qualification,
+     * Filtres de la liste : campagne, vague, qualification, catégorie,
      * affectation et recherche plein texte.
      *
      * @param array{
@@ -27,6 +27,7 @@ class ProspectRepository extends ServiceEntityRepository
      *     sprint?: int|null,
      *     contacte?: string|null,
      *     cible?: int|null,
+     *     categorie?: int|null,
      *     qualifie?: string|null,
      *     userId?: int|null,
      *     recherche?: string|null
@@ -48,7 +49,8 @@ class ProspectRepository extends ServiceEntityRepository
             ->leftJoin('p.actions', 'a')
             ->leftJoin('p.prospectCibles', 'pc')
             ->leftJoin('pc.cible', 'ci')
-            ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'ct', 'u', 'a', 'pc', 'ci')
+            ->leftJoin('p.categories', 'cat')
+            ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'ct', 'u', 'a', 'pc', 'ci', 'cat')
             ->orderBy('p.nom', 'ASC');
 
         if (isset($filtres['campagne'])) {
@@ -76,6 +78,10 @@ class ProspectRepository extends ServiceEntityRepository
 
         if (isset($filtres['cible'])) {
             $qb->andWhere('ci.id = :cible')->setParameter('cible', $filtres['cible']);
+        }
+
+        if (isset($filtres['categorie'])) {
+            $qb->andWhere('cat.id = :categorie')->setParameter('categorie', $filtres['categorie']);
         }
 
         if (isset($filtres['qualifie'])) {
@@ -373,5 +379,36 @@ class ProspectRepository extends ServiceEntityRepository
         }
 
         return $out;
+    }
+
+    /**
+     * Prospects qui n'ont AUCUNE catégorie rattachée.
+     *
+     * @return array<int, Prospect>
+     */
+    public function findSansCategorie(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.categories', 'cat')
+            ->where('cat IS NULL')
+            ->orderBy('p.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Prospects qui ne sont PAS dans la catégorie donnée.
+     *
+     * @return array<int, Prospect>
+     */
+    public function findHorsCategorie(int $categorieId): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.categories', 'cat', 'WITH', 'cat.id = :catId')
+            ->where('cat.id IS NULL')
+            ->setParameter('catId', $categorieId)
+            ->orderBy('p.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 }
