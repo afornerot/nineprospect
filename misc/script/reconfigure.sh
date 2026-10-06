@@ -9,13 +9,15 @@ DIR=$(pwd)
 
 mkdir -p var/log
 
-# On ne lance PAS `d:s:u --force` à chaque démarrage : c'est une opération
-# destructive (ALTER TABLE sur chaque colonne), longue et inutile si le schéma
-# n'a pas changé. Le schema est mis à jour :
-#  - au build de l'image (`compose build` ou premier `up`) via le Dockerfile
-#  - manuellement quand on ajoute une entité : `d:s:u --force`
-# Au boot, on se contente de vider le cache et de recharger les fixtures.
 bin/console cache:clear
+
+# Mise à jour du schéma BDD. C'est la procédure officielle du projet
+# (cf. doc/installation.md:110-124 et doc/prospection.md:293,329-330).
+# Le --dump-sql affiche les changements AVANT de les appliquer pour
+# qu'on puisse suivre ce qui se passe. Le --force applique sans
+# confirmation. Si rien ne change, c'est un no-op MySQL (rapide).
+bin/console doctrine:schema:update --force --no-interaction --env=dev
+
 bin/console app:init
 
 supercronic -quiet -no-reap /crontab &
