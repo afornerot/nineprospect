@@ -7,7 +7,7 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
 class FileVoter extends AbstractFileVoter
 {
-    private const PUBLIC_DOMAINS = ['avatar', 'logo', 'cible'];
+    private const PUBLIC_DOMAINS = ['footer'];
 
     /**
      * @param int|string $id
@@ -48,10 +48,10 @@ class FileVoter extends AbstractFileVoter
             return false;
         }
 
-        if ('cible' === $domain) {
-            return in_array('ROLE_USER', $user->getRoles());
+        if (in_array('ROLE_ADMIN', $user->getRoles())) {
+            return true;
         }
 
-        return in_array('ROLE_ADMIN', $user->getRoles());
+        return in_array('ROLE_USER', $user->getRoles());
     }
 }
