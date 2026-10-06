@@ -79,16 +79,42 @@ class AdresseApi
                 return null;
             }
 
-            // Si plusieurs résultats, on ne sait pas lequel choisir → on n'assigne pas
-            // les coordonnées. L'utilisateur devra les saisir manuellement ou compléter
-            // l'adresse (ville/CP).
+            // Si plusieurs résultats : vérifier s'ils sont tous dans le bon CP + ville.
+            // Si oui, c'est juste une ambiguïté de rue (ex. "Boulevard de la Marne"
+            // existe à 2 endroits) → on prend le premier (score API le plus haut).
+            // Si non (CP ou ville différents), l'adresse est réellement ambiguë :
+            // on ne sait pas laquelle choisir → null.
             if (\count($features) > 1) {
-                $this->logger->info('API Adresse: {count} résultats ambigus pour "{query}"', [
+                $allMatchCpVille = true;
+                $hasCodePostal = '' !== $codePostal;
+                $hasVille = '' !== $ville;
+                foreach ($features as $f) {
+                    $props = $f['properties'] ?? [];
+                    if ($hasCodePostal && ($props['postcode'] ?? null) !== $codePostal) {
+                        $allMatchCpVille = false;
+                        break;
+                    }
+                    if ($hasVille) {
+                        $city = (string) ($props['city'] ?? '');
+                        if (mb_strtolower($city) !== mb_strtolower($ville)) {
+                            $allMatchCpVille = false;
+                            break;
+                        }
+                    }
+                }
+                if (!$allMatchCpVille) {
+                    $this->logger->info('API Adresse: {count} résultats ambigus (CP/ville différents) pour "{query}"', [
+                        'count' => \count($features),
+                        'query' => $query,
+                    ]);
+
+                    return null;
+                }
+                // Tous les résultats ont le bon CP/ville → on prend le 1er
+                $this->logger->info('API Adresse: {count} résultats dans le même CP/ville pour "{query}", prise du 1er', [
                     'count' => \count($features),
                     'query' => $query,
                 ]);
-
-                return null;
             }
 
             $coords = $features[0]['geometry']['coordinates'] ?? null;
@@ -143,7 +169,28 @@ class AdresseApi
             }
 
             if (\count($features) > 1) {
-                return ['status' => self::RESULT_MULTIPLE, 'coords' => null];
+                // Tous les résultats ont le bon CP/ville → on accepte (rue ambiguë
+                // dans la même ville, on prend le 1er). Sinon → résultat ambigu.
+                $allMatchCpVille = true;
+                $hasCodePostal = '' !== $codePostal;
+                $hasVille = '' !== $ville;
+                foreach ($features as $f) {
+                    $props = $f['properties'] ?? [];
+                    if ($hasCodePostal && ($props['postcode'] ?? null) !== $codePostal) {
+                        $allMatchCpVille = false;
+                        break;
+                    }
+                    if ($hasVille) {
+                        $city = (string) ($props['city'] ?? '');
+                        if (mb_strtolower($city) !== mb_strtolower($ville)) {
+                            $allMatchCpVille = false;
+                            break;
+                        }
+                    }
+                }
+                if (!$allMatchCpVille) {
+                    return ['status' => self::RESULT_MULTIPLE, 'coords' => null];
+                }
             }
 
             $coords = $features[0]['geometry']['coordinates'] ?? null;

@@ -60,16 +60,45 @@ class AdresseApiTest extends TestCase
 
     public function testGeocodeReturnsNullOnAmbiguousResults(): void
     {
-        // 2+ résultats → adresse ambiguë → on n'assigne pas de coordonnées
+        // 2+ résultats AVEC des CP/ville différents → adresse réellement ambiguë
         // (l'utilisateur devra préciser ou saisir manuellement).
         $payload = [
             'features' => [
-                ['geometry' => ['coordinates' => [2.3522, 48.8566]]],
-                ['geometry' => ['coordinates' => [2.3533, 48.8577]]],
+                [
+                    'geometry' => ['coordinates' => [2.3522, 48.8566]],
+                    'properties' => ['postcode' => '75002', 'city' => 'Paris'],
+                ],
+                [
+                    'geometry' => ['coordinates' => [2.3533, 48.8577]],
+                    'properties' => ['postcode' => '69001', 'city' => 'Lyon'],
+                ],
             ],
         ];
         $svc = new AdresseApi($this->stubJson($payload), new NullLogger());
         $this->assertNull($svc->geocode('rue de la Paix', '75002', 'Paris'));
+    }
+
+    public function testGeocodeAcceptsSameCpVilleWhenMultipleStreets(): void
+    {
+        // Cas vécu en prod : 2 rues avec le même nom dans la même ville
+        // (ex. "Boulevard de la Marne" à Auxerre). On prend la 1ère (score API).
+        $payload = [
+            'features' => [
+                [
+                    'geometry' => ['coordinates' => [3.560991, 47.810933]],
+                    'properties' => ['postcode' => '89000', 'city' => 'Auxerre'],
+                ],
+                [
+                    'geometry' => ['coordinates' => [3.562, 47.811]],
+                    'properties' => ['postcode' => '89000', 'city' => 'Auxerre'],
+                ],
+            ],
+        ];
+        $svc = new AdresseApi($this->stubJson($payload), new NullLogger());
+        $r = $svc->geocode('18 Boulevard de la Marne', '89000', 'Auxerre');
+        $this->assertNotNull($r);
+        $this->assertSame(47.810933, $r['lat']);
+        $this->assertSame(3.560991, $r['lon']);
     }
 
     public function testGeocodeWithStatusSingle(): void
@@ -88,16 +117,45 @@ class AdresseApiTest extends TestCase
 
     public function testGeocodeWithStatusMultiple(): void
     {
+        // 2+ résultats AVEC des CP/ville différents → adresse réellement ambiguë.
         $payload = [
             'features' => [
-                ['geometry' => ['coordinates' => [2.3522, 48.8566]]],
-                ['geometry' => ['coordinates' => [2.3533, 48.8577]]],
+                [
+                    'geometry' => ['coordinates' => [2.3522, 48.8566]],
+                    'properties' => ['postcode' => '75002', 'city' => 'Paris'],
+                ],
+                [
+                    'geometry' => ['coordinates' => [2.3533, 48.8577]],
+                    'properties' => ['postcode' => '69001', 'city' => 'Lyon'],
+                ],
             ],
         ];
         $svc = new AdresseApi($this->stubJson($payload), new NullLogger());
         $r = $svc->geocodeWithStatus('rue de la Paix', '75002', 'Paris');
         $this->assertSame(AdresseApi::RESULT_MULTIPLE, $r['status']);
         $this->assertNull($r['coords']);
+    }
+
+    public function testGeocodeWithStatusSingleWhenMultipleInSameCity(): void
+    {
+        // 2 résultats même ville = on prend le 1er → SINGLE (pas MULTIPLE).
+        $payload = [
+            'features' => [
+                [
+                    'geometry' => ['coordinates' => [3.560991, 47.810933]],
+                    'properties' => ['postcode' => '89000', 'city' => 'Auxerre'],
+                ],
+                [
+                    'geometry' => ['coordinates' => [3.562, 47.811]],
+                    'properties' => ['postcode' => '89000', 'city' => 'Auxerre'],
+                ],
+            ],
+        ];
+        $svc = new AdresseApi($this->stubJson($payload), new NullLogger());
+        $r = $svc->geocodeWithStatus('18 Boulevard de la Marne', '89000', 'Auxerre');
+        $this->assertSame(AdresseApi::RESULT_SINGLE, $r['status']);
+        $this->assertNotNull($r['coords']);
+        $this->assertSame(47.810933, $r['coords']['lat']);
     }
 
     public function testGeocodeWithStatusNone(): void
