@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Campagne;
+use App\Entity\Category;
 use App\Entity\Departement;
 use App\Entity\PipelineEtape;
 use App\Entity\Prospect;
@@ -19,7 +20,6 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
-use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -236,6 +236,16 @@ class ProspectType extends AbstractType
                 'multiple' => true,
                 'required' => false,
                 'attr' => ['class' => 'select2'],
+            ])
+
+            ->add('categories', EntityType::class, [
+                'label' => 'Catégories',
+                'class' => Category::class,
+                'choice_label' => 'nom',
+                'multiple' => true,
+                'required' => false,
+                'attr' => ['class' => 'select2'],
+                'query_builder' => static fn (EntityRepository $er) => $er->createQueryBuilder('c')->orderBy('c.nom', 'ASC'),
             ])
 
             ->add('redirect', HiddenType::class, [

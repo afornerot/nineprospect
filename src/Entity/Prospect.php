@@ -103,13 +103,9 @@ class Prospect
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Campagne $campagne = null;
 
-/**
- * Prospect (entreprise BtoB ayant manifesté un intérêt pour les services Nine).
- *
- * @author Nine Marsal <developpeurs@ninecien.fr>
- *
- * (campagne, vagues de traitement, affectation).
- */
+    /**
+     * Prospect (entreprise BtoB ayant manifesté un intérêt pour les services Nine).
+     */
     #[ORM\OneToMany(targetEntity: ProspectSprint::class, mappedBy: 'prospect', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $sprints;
 
@@ -120,6 +116,15 @@ class Prospect
      */
     #[ORM\OneToMany(targetEntity: ProspectCible::class, mappedBy: 'prospect', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $prospectCibles;
+
+    /**
+     * Catégories du prospect (0..n) : taxonomie libre.
+     *
+     * @var Collection<int, Category>
+     */
+    #[ORM\ManyToMany(targetEntity: Category::class, inversedBy: 'prospects')]
+    #[ORM\JoinTable(name: 'prospect_category')]
+    private Collection $categories;
 
     /**
      * @var Collection<int, Contact>
@@ -157,6 +162,7 @@ class Prospect
         $this->users = new ArrayCollection();
         $this->sprints = new ArrayCollection();
         $this->prospectCibles = new ArrayCollection();
+        $this->categories = new ArrayCollection();
         $this->createdAt = new \DateTime();
     }
 
@@ -622,6 +628,30 @@ class Prospect
     public function removeUser(User $user): static
     {
         $this->users->removeElement($user);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Category>
+     */
+    public function getCategories(): Collection
+    {
+        return $this->categories;
+    }
+
+    public function addCategory(Category $category): static
+    {
+        if (!$this->categories->contains($category)) {
+            $this->categories->add($category);
+        }
+
+        return $this;
+    }
+
+    public function removeCategory(Category $category): static
+    {
+        $this->categories->removeElement($category);
 
         return $this;
     }
