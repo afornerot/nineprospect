@@ -343,13 +343,20 @@ pour constituer une liste depuis un tableur (`.xlsx` ou `.csv`).
 3. Upload du tableur (modèle téléchargeable depuis l'écran).
 4. **Écran de pré-import** : affiche chaque ligne, les erreurs de format et les doublons
    détectés (prospect ou contact déjà existant). L'utilisateur choisit l'action par ligne
-   (Importer / Mettre à jour / Rattacher / Ignorer).
-5. **Rapport final** : compteurs (créés, mis à jour, rattachés, ignorés, en erreur).
+   (Importer / Modifier / Ignorer). Un bouton "Tout ignorer" permet de marquer
+   l'ensemble des lignes disponibles en SKIP.
+5. **Rapport final** : compteurs (créés, rattachés, ignorés, en erreur).
 
-**Format attendu** (10 colonnes, une ligne = un contact) :
-- Obligatoires : `Organisation`, `Nom`, `Prénom`, `Courriel`
-- Facultatives : `Fonction`, `Téléphone`, `Adresse`, `Code postal`, `Ville`, `Site web`
-- Plusieurs lignes avec la même `Organisation` → un seul Prospect avec plusieurs Contacts
+**Format attendu** (10 colonnes, une ligne = un contact potentiel) :
+- **Obligatoire** : `Organisation` (seule cette colonne est requise)
+- **Facultatives** : `Nom`, `Prénom`, `Courriel`, `Fonction`, `Téléphone`, `Adresse`, `Code postal`, `Ville`, `Site web`
+
+**Règles de création** :
+- Un Prospect est créé dès qu'une ligne a une Organisation
+- Un Contact n'est créé que si **Nom ET Prénom** sont présents (les deux ensemble)
+- L'email du row est copié sur `Prospect.email` (fill-only) si **aucun Contact n'est créé** (= Nom OU Prénom manquant)
+- L'email du row va uniquement sur `Contact.email` si un Contact est créé (pas de duplication sur Prospect)
+- Plusieurs lignes avec la même `Organisation` → 1 seul Prospect avec plusieurs Contacts (regroupement)
 
 **Regroupement** : les lignes sont regroupées par `Organisation` normalisée
 (insensible casse/accents/ponctuation). Chaque groupe produit 1 Prospect ;
@@ -357,7 +364,8 @@ chaque ligne produit 1 Contact.
 
 **Détection des doublons** : email normalisé ou `cleEntreprise` ; les doublons
 intra-fichier sont signalés. Par défaut l'action est "Ignorer" (sécuritaire) ;
-l'utilisateur peut choisir "Mettre à jour" ou "Rattacher" au cas par cas.
+l'utilisateur peut choisir "Importer" ou "Modifier" (lien vers Prospect existant)
+au cas par cas.
 
 **Notes techniques** :
 - Fichier temporaire stocké dans `sys_get_temp_dir()/nine_import/`, supprimé

@@ -213,18 +213,17 @@ final class RowNormalizer
         }
 
         // Erreurs par champ
+        // Seule l'Organisation est obligatoire (une ligne peut représenter
+        // une entreprise seule, sans contact). Nom/Prénom sont facultatifs
+        // (Nom ET Prénom doivent être présents pour créer un Contact côté
+        // Executor, mais on ne lèvera pas d'erreur ici). L'email est
+        // également facultatif ; s'il est présent et mal formé, on signale
+        // quand même l'anomalie pour information de l'utilisateur.
         $errors = [];
         if (null === $organisation || '' === $organisation) {
             $errors['organisation'] = 'Organisation manquante';
         }
-        if (null === $nomFinal) {
-            if (null === $prenomFinal) {
-                $errors['nom'] = 'Nom et prénom manquants';
-            }
-        }
-        if (null === $email) {
-            $errors['email'] = 'Email manquant';
-        } else {
+        if (null !== $email) {
             $anomalie = $this->emails->anomalie($data['email'] ?? null);
             if (null !== $anomalie) {
                 $errors['email'] = $anomalie;

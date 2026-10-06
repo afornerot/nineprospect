@@ -271,6 +271,18 @@ final class ImportExecutor
             if ($estCree || null === $prospect->getSiteUrl()) {
                 $prospect->setSiteUrl($row->siteWeb);
             }
+            // Email du row : on ne l'écrit sur Prospect.email QUE si aucun
+            // Contact ne va être créé pour cette ligne (= Nom OU Prénom manquant).
+            // Si Nom ET Prénom sont présents, l'email ira uniquement sur le Contact
+            // (processRow). Si on n'a pas d'email, on ne touche pas au Prospect
+            // (fill-only, comme l'adresse/CP/ville).
+            $contactSeraCree = null !== $row->nom && '' !== $row->nom
+                && null !== $row->prenom && '' !== $row->prenom;
+            if (!$contactSeraCree && null !== $row->email
+                && ($estCree || null === $prospect->getEmail())
+            ) {
+                $prospect->setEmail($row->email);
+            }
             if ($estCree || null === $prospect->getDepartement()) {
                 if (null !== $row->codePostal && preg_match('/^\d{5}$/', $row->codePostal)) {
                     $dept = $this->geo->resolve($row->codePostal)['departement'] ?? null;
@@ -344,6 +356,13 @@ final class ImportExecutor
     private function processRow(AnalyzedImportRow $ar, string $action, Prospect $prospect, array $allCibles, ?Campagne $campagne, ImportResult $result): void
     {
         $row = $ar->row;
+
+        // Règle métier : un Contact n'est créé que si Nom ET Prénom sont présents
+        // dans le row. Si Nom OU Prénom manque, on ne crée pas de Contact (l'email
+        // du row a déjà été copié sur Prospect.email dans resolveProspect).
+        if (null === $row->nom || '' === $row->nom || null === $row->prenom || '' === $row->prenom) {
+            return;
+        }
 
         // 1) Gestion du Contact existant (peut être sur le même prospect ou un autre)
         $existingContact = null;

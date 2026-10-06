@@ -96,7 +96,7 @@ class RowNormalizerTest extends TestCase
         $this->assertArrayHasKey('organisation', $row->errors);
     }
 
-    public function testNormalizeAvecParticulier(): void
+    public function testNormalizeParticulier(): void
     {
         $row = $this->normalizer->normalize(2, [
             'Organisation' => 'Particulier',
@@ -119,5 +119,74 @@ class RowNormalizerTest extends TestCase
         ]);
 
         $this->assertArrayHasKey('codePostal', $row->errors);
+    }
+
+    public function testNormalizeEntrepriseSeuleSansContactNiEmail(): void
+    {
+        // Cas 1 : juste l'Organisation → on doit accepter, aucune erreur.
+        $row = $this->normalizer->normalize(2, [
+            'Organisation' => 'Société X',
+        ]);
+
+        $this->assertSame('Société X', $row->organisation);
+        $this->assertNull($row->nom);
+        $this->assertNull($row->prenom);
+        $this->assertNull($row->email);
+        $this->assertSame([], $row->errors, 'Aucune erreur attendue (organisation suffit)');
+    }
+
+    public function testNormalizeEmailSeulSansNomNiPrenom(): void
+    {
+        // Cas 3 : Organisation + email, pas de Nom/Prénom → accepté.
+        $row = $this->normalizer->normalize(2, [
+            'Organisation' => 'Société X',
+            'Courriel' => 'contact@x.com',
+        ]);
+
+        $this->assertSame('contact@x.com', $row->email);
+        $this->assertNull($row->nom);
+        $this->assertNull($row->prenom);
+        $this->assertSame([], $row->errors);
+    }
+
+    public function testNormalizeContactSansEmail(): void
+    {
+        // Cas 2 : Nom + Prénom présents, pas d'email → accepté, email reste null.
+        $row = $this->normalizer->normalize(2, [
+            'Organisation' => 'Société X',
+            'Nom' => 'DUPONT',
+            'Prénom' => 'Marie',
+        ]);
+
+        $this->assertSame('DUPONT', $row->nom);
+        $this->assertSame('Marie', $row->prenom);
+        $this->assertNull($row->email);
+        $this->assertSame([], $row->errors);
+    }
+
+    public function testNormalizeNomSeulAccepte(): void
+    {
+        // Nom seul sans Prénom doit être accepté (anomalie non bloquante,
+        // l'Executor décidera de ne pas créer de Contact).
+        $row = $this->normalizer->normalize(2, [
+            'Organisation' => 'Société X',
+            'Nom' => 'DUPONT',
+        ]);
+
+        $this->assertSame('DUPONT', $row->nom);
+        $this->assertNull($row->prenom);
+        $this->assertSame([], $row->errors);
+    }
+
+    public function testNormalizePrenomSeulAccepte(): void
+    {
+        $row = $this->normalizer->normalize(2, [
+            'Organisation' => 'Société X',
+            'Prénom' => 'Marie',
+        ]);
+
+        $this->assertSame('Marie', $row->prenom);
+        $this->assertNull($row->nom);
+        $this->assertSame([], $row->errors);
     }
 }

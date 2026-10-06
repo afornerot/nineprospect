@@ -543,6 +543,23 @@ class ImportExecutorTest extends TestCase
     }
 
     /**
+     * Mock d'EntityManagerInterface qui collecte les entités passées à persist()
+     * dans un tableau `persisted` (utilisé par les tests qui veulent inspecter
+     * le Prospect / Contact effectivement persisté).
+     */
+    private function makeTrackingEntityManager(): EntityManagerInterface
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $persisted = [];
+        $em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {
+            $persisted[] = $entity;
+        });
+        $em->persisted = &$persisted;
+
+        return $em;
+    }
+
+    /**
      * Mock d'un MessageBusInterface qui collecte les messages dispatchés.
      */
     private function makeMessageBusStub(): MessageBusInterface
@@ -559,5 +576,166 @@ class ImportExecutorTest extends TestCase
                 return $envelope;
             }
         };
+    }
+
+    public function testExecuteCréeProspectSansContactSiNomOuPrenomManquant(): void
+    {
+        // Cas 1+2 : Organisation + email (pas de Nom/Prénom) → Prospect sans Contact.
+        $em = $this->makeTrackingEntityManager();
+
+        $prospectsRepo = $this->createMock(ProspectRepository::class);
+        $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
+        $contactRepo = $this->createMock(ContactRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $campagnesRepo = $this->createMock(CampagneRepository::class);
+        $geo = $this->makeGeoResolverStub();
+        $bus = $this->makeMessageBusStub();
+
+        $preview = $this->createPreviewWithMode([
+            ['Société X', '', '', 'contact@x.com', null, '10 rue Test', '75002', 'Paris'],
+        ], 'new', null, 'Test');
+
+        $executor = new ImportExecutor(
+            $em,
+            $prospectsRepo,
+            $contactRepo,
+            $ciblesRepo,
+            $campagnesRepo,
+            $geo,
+            $bus,
+        );
+
+        $result = $executor->execute($preview, [2 => ImportRowAction::IMPORT]);
+
+        $this->assertSame(1, $result->prospectsCreated);
+        $this->assertSame(0, $result->contactsCreated, 'Aucun Contact car Nom et Prénom manquent');
+    }
+
+    public function testExecuteCopieEmailSurProspectSiNomOuPrenomManque(): void
+    {
+        // Cas 2 : email seul → l'email doit être copié sur Prospect.email.
+        $em = $this->makeTrackingEntityManager();
+
+        $prospectsRepo = $this->createMock(ProspectRepository::class);
+        $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
+        $contactRepo = $this->createMock(ContactRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $campagnesRepo = $this->createMock(CampagneRepository::class);
+        $geo = $this->makeGeoResolverStub();
+        $bus = $this->makeMessageBusStub();
+
+        $preview = $this->createPreviewWithMode([
+            ['Société X', '', '', 'contact@x.com', null, '10 rue Test', '75002', 'Paris'],
+        ], 'new', null, 'Test');
+
+        $executor = new ImportExecutor(
+            $em,
+            $prospectsRepo,
+            $contactRepo,
+            $ciblesRepo,
+            $campagnesRepo,
+            $geo,
+            $bus,
+        );
+
+        $executor->execute($preview, [2 => ImportRowAction::IMPORT]);
+
+        $persistedProspect = null;
+        foreach ($em->persisted as $arg) {
+            if ($arg instanceof Prospect) {
+                $persistedProspect = $arg;
+                break;
+            }
+        }
+        $this->assertNotNull($persistedProspect);
+        $this->assertSame('contact@x.com', $persistedProspect->getEmail(), 'Email doit être copié sur Prospect');
+    }
+
+    public function testExecuteCréeContactSansEmailSiRowNaPasEmail(): void
+    {
+        // Cas 3 : Nom + Prénom présents, pas d'email → Contact créé SANS email.
+        $em = $this->makeTrackingEntityManager();
+
+        $prospectsRepo = $this->createMock(ProspectRepository::class);
+        $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
+        $contactRepo = $this->createMock(ContactRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $campagnesRepo = $this->createMock(CampagneRepository::class);
+        $geo = $this->makeGeoResolverStub();
+        $bus = $this->makeMessageBusStub();
+
+        $preview = $this->createPreviewWithMode([
+            ['Société X', 'DUPONT', 'Marie', '', null, '10 rue Test', '75002', 'Paris'],
+        ], 'new', null, 'Test');
+
+        $executor = new ImportExecutor(
+            $em,
+            $prospectsRepo,
+            $contactRepo,
+            $ciblesRepo,
+            $campagnesRepo,
+            $geo,
+            $bus,
+        );
+
+        $result = $executor->execute($preview, [2 => ImportRowAction::IMPORT]);
+
+        $this->assertSame(1, $result->prospectsCreated);
+        $this->assertSame(1, $result->contactsCreated);
+
+        $persistedContact = null;
+        foreach ($em->persisted as $arg) {
+            if ($arg instanceof \App\Entity\Contact) {
+                $persistedContact = $arg;
+                break;
+            }
+        }
+        $this->assertNotNull($persistedContact);
+        $this->assertTrue('' === (string) $persistedContact->getEmail() || null === $persistedContact->getEmail(), 'Email du Contact doit rester null/vide');
+    }
+
+    public function testExecuteEmailVaUniquementSurContactPasSurProspectSiContactCree(): void
+    {
+        // Cas 4 (complet) : Nom + Prénom + email → email uniquement sur le Contact,
+        // PAS dupliqué sur Prospect.
+        $em = $this->makeTrackingEntityManager();
+
+        $prospectsRepo = $this->createMock(ProspectRepository::class);
+        $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
+        $contactRepo = $this->createMock(ContactRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $campagnesRepo = $this->createMock(CampagneRepository::class);
+        $geo = $this->makeGeoResolverStub();
+        $bus = $this->makeMessageBusStub();
+
+        $preview = $this->createPreviewWithMode([
+            ['Société X', 'DUPONT', 'Marie', 'marie@example.com', null, '10 rue Test', '75002', 'Paris'],
+        ], 'new', null, 'Test');
+
+        $executor = new ImportExecutor(
+            $em,
+            $prospectsRepo,
+            $contactRepo,
+            $ciblesRepo,
+            $campagnesRepo,
+            $geo,
+            $bus,
+        );
+
+        $executor->execute($preview, [2 => ImportRowAction::IMPORT]);
+
+        $persistedProspect = null;
+        $persistedContact = null;
+        foreach ($em->persisted as $arg) {
+            if ($arg instanceof Prospect) {
+                $persistedProspect = $arg;
+            } elseif ($arg instanceof \App\Entity\Contact) {
+                $persistedContact = $arg;
+            }
+        }
+        $this->assertNotNull($persistedProspect);
+        $this->assertNotNull($persistedContact);
+        $this->assertSame('marie@example.com', $persistedContact->getEmail());
+        $this->assertNull($persistedProspect->getEmail(), 'Email ne doit pas être dupliqué sur Prospect quand un Contact est créé');
     }
 }
