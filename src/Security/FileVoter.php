@@ -7,7 +7,7 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
 class FileVoter extends AbstractFileVoter
 {
-    private const PUBLIC_DOMAINS = ['footer'];
+    private const PUBLIC_DOMAINS = ['footer', 'avatar', 'logo', 'icon'];
 
     /**
      * @param int|string $id
