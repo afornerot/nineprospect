@@ -812,6 +812,7 @@ class ProspectController extends AbstractController
      *     contacte: string|null,
      *     cible: int|null,
      *     qualifie: string|null,
+     *     statut: string|null,
      *     recherche: string
      * }
      */
@@ -827,6 +828,11 @@ class ProspectController extends AbstractController
             $qualifie = '';
         }
 
+        $statut = trim((string) $request->query->get('statut', ''));
+        if (!\in_array($statut, ['', 'retard', 'aujourdhui', 'avenir', 'faites'], true)) {
+            $statut = '';
+        }
+
         return [
             'campagne' => $this->paramEntier($request, 'campagne'),
             'sprint' => $this->paramEntier($request, 'sprint'),
@@ -835,6 +841,7 @@ class ProspectController extends AbstractController
             'cible' => $this->paramEntier($request, 'cible'),
             'categorie' => $this->paramEntier($request, 'categorie'),
             'qualifie' => '' === $qualifie ? null : $qualifie,
+            'statut' => '' === $statut ? null : $statut,
             'recherche' => $this->paramTexte($request, 'q'),
         ];
     }

@@ -2,16 +2,62 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block localstyle %}
+    <style>
+        .fc-event-aujourdhui { font-weight: 600; }
+        .js-reaffecter { color: inherit; opacity: .75; pointer-events: all; text-decoration: none; margin-left: .35rem; }
+        .js-reaffecter:hover { opacity: 1; color: #fff; }
+    </style>
+{% endblock %}
+
 {% block body %}
     <h1>{{ title }}</h1>
+
+    <form method="get" action="{{ path('app_user_agenda') }}" class="d-flex align-items-center gap-2 mb-3">
+        <label for="filtre-user" class="form-label mb-0">Agenda de</label>
+        <select id="filtre-user" name="user" class="form-select w-auto" onchange="this.form.submit()">
+            {% for user in users %}
+                <option value="{{ user.id }}" {% if selectedUserId == user.id %}selected{% endif %}>{{ user.username }}</option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Afficher</button></noscript>
+        <span class="text-muted small">
+            <i class="fas fa-people-arrows"></i> Consultez l'agenda d'un collègue ou réaffectez ses actions.
+        </span>
+    </form>
 
     <p class="text-muted small">
         <i class="fas fa-info-circle"></i>
         Cliquez sur une date pour créer une action à cette date.
         Cliquez sur un événement pour modifier l'action correspondante.
+        Les actions à faire aujourd'hui sont mises en avant en toute première position.
     </p>
 
     <div id="agenda-calendar"></div>
+
+    <div class="modal fade" id="js-reaffecter-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Réaffecter l'action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label" for="js-reaffecter-user">Nouveau responsable</label>
+                    <select id="js-reaffecter-user" class="form-select">
+                        {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="alert alert-danger d-none mt-3" id="js-reaffecter-error" role="alert"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" id="js-reaffecter-confirm">Réaffecter</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block localscript %}
@@ -56,6 +102,9 @@
                         week: 'Semaine',
                         list: 'Liste',
                     },
+                    // Les actions « Aujourd'hui » arrivent en tête de liste
+                    // (statutPriority renvoyé par l'endpoint events).
+                    eventOrder: 'statutPriority,start',
                     // Clic sur une date → pré-remplit le formulaire de
                     // création d'action avec cette date.
                     dateClick: function (info) {
@@ -112,7 +161,7 @@
                         });
                     },
                     events: {
-                        url: '{{ path('app_user_agenda_events') }}',
+                        url: '{{ path('app_user_agenda_events', {user: selectedUserId}) }}',
                         method: 'GET',
                         formatDates: function (info) {
                             return {
@@ -132,9 +181,118 @@
                         else if (p.aFairePar) lines.push('À faire par : ' + p.aFairePar);
                         if (p.resultat) lines.push('—\n' + p.resultat);
                         info.el.setAttribute('title', lines.join('\n'));
+
+                        // Les actions « Aujourd'hui » sont mises en avant.
+                        if (p.statut === 'aujourdhui') {
+                            info.el.classList.add('fc-event-aujourdhui');
+                        }
+
+                        // Bouton « Réaffecter » (sauf dans les cellules du mois)
+                        if (!info.view.type.startsWith('dayGrid')) {
+                            const btn = document.createElement('a');
+                            btn.href = '#';
+                            btn.className = 'js-reaffecter';
+                            btn.title = 'Réaffecter cette action';
+                            btn.innerHTML = '<i class="fas fa-user-pen fa-xs"></i>';
+                            btn.addEventListener('click', function (ev) {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+                                openReassign(String(info.event.id));
+                            });
+                            info.el.appendChild(btn);
+                        }
                     },
                 });
                 calendar.render();
+
+                // --- Réaffectation d'une action ---
+                const modalEl = document.getElementById('js-reaffecter-modal');
+                const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+                let pendingId = null;
+
+                function openReassign(id) {
+                    if (!modal) return;
+                    pendingId = id;
+                    const errEl = document.getElementById('js-reaffecter-error');
+                    if (errEl) {
+                        errEl.classList.add('d-none');
+                        errEl.textContent = '';
+                    }
+                    document.getElementById('js-reaffecter-user').value = '';
+                    modal.show();
+                }
+
+                function showToast(message) {
+                    let toastEl = document.getElementById('js-app-toast');
+                    if (!toastEl) {
+                        toastEl = document.createElement('div');
+                        toastEl.id = 'js-app-toast';
+                        toastEl.className = 'toast position-fixed bottom-0 end-0 m-3';
+                        toastEl.setAttribute('role', 'alert');
+                        toastEl.innerHTML = '<div class="toast-body bg-success text-white"></div>';
+                        document.body.appendChild(toastEl);
+                    }
+                    toastEl.querySelector('.toast-body').textContent = message;
+                    const t = new bootstrap.Toast(toastEl, { delay: 3000 });
+                    t.show();
+                }
+
+                if (modalEl) {
+                    document.getElementById('js-reaffecter-confirm').addEventListener('click', function () {
+                        if (!pendingId) return;
+                        const id = pendingId;
+                        const versUser = document.getElementById('js-reaffecter-user').value;
+                        const errEl = document.getElementById('js-reaffecter-error');
+                        if (!versUser) {
+                            errEl.textContent = 'Sélectionnez un utilisateur.';
+                            errEl.classList.remove('d-none');
+                            return;
+                        }
+                        const csrfUrl = ('{{ path('app_user_agenda_reaffecter_csrf', {id: 0}) }}').replace('/0', '/' + id);
+                        const url = ('{{ path('app_user_actions_reaffecter', {id: 0}) }}').replace('/0', '/' + id);
+                        fetch(csrfUrl, {
+                            method: 'GET',
+                            credentials: 'same-origin',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Origin': window.location.origin,
+                            },
+                        }).then(function (resp) {
+                            return resp.json();
+                        }).then(function (data) {
+                            if (!data || !data.token) {
+                                throw new Error('Token CSRF manquant');
+                            }
+                            return fetch(url, {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Origin': window.location.origin,
+                                },
+                                body: JSON.stringify({ versUser: versUser, csrf_token: data.token }),
+                            });
+                        }).then(function (resp) {
+                            return resp.json().then(function (data) {
+                                return { ok: resp.ok, status: resp.status, data: data };
+                            });
+                        }).then(function (r) {
+                            if (!r.ok || !r.data.ok) {
+                                errEl.textContent = (r.data && r.data.error) ? r.data.error : ('Erreur ' + r.status);
+                                errEl.classList.remove('d-none');
+                                return;
+                            }
+                            pendingId = null;
+                            modal.hide();
+                            showToast('Action réaffectée à ' + r.data.aFairePar);
+                            calendar.refetchEvents();
+                        }).catch(function (e) {
+                            errEl.textContent = 'Erreur réseau : ' + (e.message || 'Veuillez réessayer.');
+                            errEl.classList.remove('d-none');
+                        });
+                    });
+                }
             });
         })();
     </script>

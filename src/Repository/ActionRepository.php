@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Action;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -17,24 +18,50 @@ class ActionRepository extends ServiceEntityRepository
     }
 
     /**
-     * Actions planifiées en retard ou échues aujourd'hui, avec prospect + contact.
+     * Actions planifiées en retard (échéance strictement antérieure à aujourd'hui),
+     * avec prospect + contact. Les actions dues aujourd'hui relèvent de
+     * {@see findToday()}.
      *
      * @return array<int, Action>
      */
-    public function findDue(?\DateTime $jour = null): array
+    public function findDue(?\DateTime $jour = null, ?User $user = null): array
     {
         $jour ??= new \DateTime('today');
 
-        return $this->createQueryBuilder('a')
+        $qb = $this->createQueryBuilder('a')
             ->leftJoin('a.prospect', 'p')->addSelect('p')
             ->leftJoin('a.contact', 'c')->addSelect('c')
             ->where('a.dateRealisee IS NULL')
             ->andWhere('a.datePrevue IS NOT NULL')
-            ->andWhere('a.datePrevue <= :jour')
+            ->andWhere('a.datePrevue < :jour')
             ->setParameter('jour', $jour->format('Y-m-d'))
-            ->orderBy('a.datePrevue', 'ASC')
-            ->getQuery()
-            ->getResult();
+            ->orderBy('a.datePrevue', 'ASC');
+
+        $this->appliquerFiltreUtilisateur($qb, $user);
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Actions planifiées à faire aujourd'hui (datePrevue = aujourd'hui).
+     *
+     * @return array<int, Action>
+     */
+    public function findToday(?\DateTime $jour = null, ?User $user = null): array
+    {
+        $jour ??= new \DateTime('today');
+
+        $qb = $this->createQueryBuilder('a')
+            ->leftJoin('a.prospect', 'p')->addSelect('p')
+            ->leftJoin('a.contact', 'c')->addSelect('c')
+            ->where('a.dateRealisee IS NULL')
+            ->andWhere('a.datePrevue = :jour')
+            ->setParameter('jour', $jour->format('Y-m-d'))
+            ->orderBy('a.datePrevue', 'ASC');
+
+        $this->appliquerFiltreUtilisateur($qb, $user);
+
+        return $qb->getQuery()->getResult();
     }
 
     /**
@@ -44,20 +71,22 @@ class ActionRepository extends ServiceEntityRepository
      *
      * @return array<int, Action>
      */
-    public function findUpcoming(?\DateTime $jour = null, int $limit = 50): array
+    public function findUpcoming(?\DateTime $jour = null, int $limit = 50, ?User $user = null): array
     {
         $jour ??= new \DateTime('today');
 
-        return $this->createQueryBuilder('a')
+        $qb = $this->createQueryBuilder('a')
             ->leftJoin('a.prospect', 'p')->addSelect('p')
             ->leftJoin('a.contact', 'c')->addSelect('c')
             ->where('a.dateRealisee IS NULL')
             ->andWhere('(a.datePrevue IS NULL OR a.datePrevue > :jour)')
             ->setParameter('jour', $jour->format('Y-m-d'))
             ->orderBy('a.datePrevue', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($limit);
+
+        $this->appliquerFiltreUtilisateur($qb, $user);
+
+        return $qb->getQuery()->getResult();
     }
 
     /**
@@ -65,48 +94,69 @@ class ActionRepository extends ServiceEntityRepository
      *
      * @return array<int, Action>
      */
-    public function findDone(int $limit = 100): array
+    public function findDone(int $limit = 100, ?User $user = null): array
     {
-        return $this->createQueryBuilder('a')
+        $qb = $this->createQueryBuilder('a')
             ->leftJoin('a.prospect', 'p')->addSelect('p')
             ->leftJoin('a.contact', 'c')->addSelect('c')
             ->where('a.dateRealisee IS NOT NULL')
             ->orderBy('a.dateRealisee', 'DESC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($limit);
+
+        $this->appliquerFiltreUtilisateur($qb, $user);
+
+        return $qb->getQuery()->getResult();
     }
 
-    public function countDue(): int
+    public function countDue(?User $user = null): int
     {
-        return (int) $this->createQueryBuilder('a')
+        $qb = $this->createQueryBuilder('a')
             ->select('COUNT(a.id)')
             ->where('a.dateRealisee IS NULL')
             ->andWhere('a.datePrevue IS NOT NULL')
-            ->andWhere('a.datePrevue <= :jour')
-            ->setParameter('jour', (new \DateTime('today'))->format('Y-m-d'))
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->andWhere('a.datePrevue < :jour')
+            ->setParameter('jour', (new \DateTime('today'))->format('Y-m-d'));
+
+        $this->appliquerFiltreUtilisateur($qb, $user);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
-    public function countUpcoming(): int
+    public function countToday(?User $user = null): int
     {
-        return (int) $this->createQueryBuilder('a')
+        $qb = $this->createQueryBuilder('a')
+            ->select('COUNT(a.id)')
+            ->where('a.dateRealisee IS NULL')
+            ->andWhere('a.datePrevue = :jour')
+            ->setParameter('jour', (new \DateTime('today'))->format('Y-m-d'));
+
+        $this->appliquerFiltreUtilisateur($qb, $user);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    public function countUpcoming(?User $user = null): int
+    {
+        $qb = $this->createQueryBuilder('a')
             ->select('COUNT(a.id)')
             ->where('a.dateRealisee IS NULL')
             ->andWhere('(a.datePrevue IS NULL OR a.datePrevue > :jour)')
-            ->setParameter('jour', (new \DateTime('today'))->format('Y-m-d'))
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->setParameter('jour', (new \DateTime('today'))->format('Y-m-d'));
+
+        $this->appliquerFiltreUtilisateur($qb, $user);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
-    public function countDone(): int
+    public function countDone(?User $user = null): int
     {
-        return (int) $this->createQueryBuilder('a')
+        $qb = $this->createQueryBuilder('a')
             ->select('COUNT(a.id)')
-            ->where('a.dateRealisee IS NOT NULL')
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->where('a.dateRealisee IS NOT NULL');
+
+        $this->appliquerFiltreUtilisateur($qb, $user);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**
@@ -116,21 +166,47 @@ class ActionRepository extends ServiceEntityRepository
      *  - les en retard depuis le début (datePrevue < start ET non réalisée)
      *  - les réalisées dans la fenêtre (dateRealisee ∈ [start, end[)
      *
+     * Si un utilisateur est fourni, seules les actions qui lui sont affectées
+     * (`aFairePar`) sont renvoyées : c'est l'agenda personnel.
+     *
      * @return array<int, Action>
      */
-    public function findForAgendaRange(\DateTimeInterface $start, \DateTimeInterface $end): array
+    public function findForAgendaRange(\DateTimeInterface $start, \DateTimeInterface $end, ?User $user = null): array
     {
-        return $this->createQueryBuilder('a')
+        $qb = $this->createQueryBuilder('a')
             ->leftJoin('a.prospect', 'p')->addSelect('p')
             ->leftJoin('a.contact', 'c')->addSelect('c')
             ->leftJoin('a.aFairePar', 'u')->addSelect('u')
             ->where('(a.datePrevue IS NOT NULL AND a.datePrevue < :end AND (a.dateRealisee IS NULL OR a.dateRealisee >= :start))')
             ->orWhere('(a.dateRealisee IS NOT NULL AND a.dateRealisee >= :start AND a.dateRealisee < :end)')
             ->setParameter('start', $start->format('Y-m-d'))
-            ->setParameter('end', $end->format('Y-m-d'))
+            ->setParameter('end', $end->format('Y-m-d'));
+
+        if (null !== $user) {
+            $qb->andWhere('a.aFairePar = :user')
+                ->setParameter('user', $user);
+        }
+
+        return $qb
             ->orderBy('a.datePrevue', 'ASC')
             ->addOrderBy('a.dateRealisee', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    // --- Helpers ---
+
+    /**
+     * Ajoute au query builder le filtre par utilisateur : action affectée
+     * directement (`aFairePar`) ou via l'affection du prospect (`prospect.users`).
+     */
+    private function appliquerFiltreUtilisateur(mixed $qb, ?User $user): void
+    {
+        if (null === $user) {
+            return;
+        }
+
+        $qb->andWhere('(a.aFairePar = :userFiltre OR EXISTS (SELECT 1 FROM App\Entity\Prospect p2 INNER JOIN p2.users u2 WHERE p2 = a.prospect AND u2.id = :userFiltre))')
+            ->setParameter('userFiltre', $user);
     }
 }

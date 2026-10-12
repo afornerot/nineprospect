@@ -14,12 +14,15 @@ use Doctrine\ORM\Mapping as ORM;
  * une nouvelle action (indépendante : plusieurs actions peuvent coexister
  * sur un même prospect sans lien hiérarchique).
  *
- * Statut dérivé :
- *  - réalisée si {@see $dateRealisee} non null
- *  - planifiée sinon
+ * Statut dérivé (basé sur la date seule, heure ignorée) :
+ *  - Réalisée  si {@see $dateRealisee} non null
+ *  - En retard = planifiée & datePrevue < aujourd'hui
+ *  - Aujourd'hui = planifiée & datePrevue = aujourd'hui
+ *  - À venir   = planifiée & (datePrevue > aujourd'hui ou null)
  *
  * Onglets de la liste :
- *  - En retard = planifiée & datePrevue <= aujourd'hui
+ *  - En retard = planifiée & datePrevue < aujourd'hui
+ *  - Aujourd'hui = planifiée & datePrevue = aujourd'hui
  *  - À venir  = planifiée & (datePrevue > aujourd'hui ou null)
  *  - Réalisées = dateRealisee != null
  */
@@ -202,6 +205,69 @@ class Action
         return null === $this->dateRealisee;
     }
 
+    /**
+     * Statut dérivé de l'action : « retard », « aujourdhui », « avenir »
+     * ou « faites ». Clé utilisée par les onglets et les filtres.
+     * Basé sur la date seule : une action due aujourd'hui reste
+     * « aujourdhui » quel que soit l'heure de la journée.
+     */
+    public function statut(?\DateTime $jour = null): string
+    {
+        if ($this->estRealisee()) {
+            return 'faites';
+        }
+
+        $datePrevue = $this->getDatePrevue();
+        if (null === $datePrevue) {
+            return 'avenir';
+        }
+
+        $jour ??= new \DateTime('today');
+        $cle = $datePrevue->format('Y-m-d');
+        $jourKey = $jour->format('Y-m-d');
+        if ($cle < $jourKey) {
+            return 'retard';
+        }
+        if ($cle === $jourKey) {
+            return 'aujourdhui';
+        }
+
+        return 'avenir';
+    }
+
+    public function statutLabel(?\DateTime $jour = null): string
+    {
+        return match ($this->statut($jour)) {
+            'retard' => 'En retard',
+            'aujourdhui' => 'Aujourd\'hui',
+            'faites' => 'Réalisée',
+            default => 'À venir',
+        };
+    }
+
+    public function statutColor(?\DateTime $jour = null): string
+    {
+        return match ($this->statut($jour)) {
+            'retard' => 'danger',
+            'aujourdhui' => 'warning',
+            'faites' => 'success',
+            default => 'info',
+        };
+    }
+
+    /**
+     * Date à afficher (prévue pour une planifiée, réelle pour une réalisée).
+     */
+    public function dateAffichee(): ?\DateTime
+    {
+        return $this->dateRealisee ?? $this->datePrevue;
+    }
+
+    /**
+     * Une planifiée est en retard si son échéance est strictement antérieure
+     * à aujourd'hui. Les actions dues aujourd'hui sont classées « Aujourd'hui »
+     * ({@see statut()}), pas en retard.
+     */
     public function estEnRetard(?\DateTime $jour = null): bool
     {
         if (!$this->estPlanifiee() || null === $this->datePrevue) {
@@ -210,7 +276,7 @@ class Action
 
         $jour ??= new \DateTime('today');
 
-        return $this->datePrevue <= $jour;
+        return $this->datePrevue < $jour;
     }
 
     public function __toString(): string

@@ -278,6 +278,7 @@
                                 <th>Type</th>
                                 <th>Prévue le</th>
                                 <th>Réalisée le</th>
+                                <th>À faire par</th>
                                 <th>Contact</th>
                                 <th>Résultat</th>
                                 <th class="no-sort">Clôture</th>
@@ -289,9 +290,13 @@
                                     <td>
                                         <a href="{{ path('app_user_actions_update', {id: action.id, redirect: path('app_user_prospects_show', {id: prospect.id})}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
                                     </td>
-                                    <td>{{ action.typeAction ?: '—' }}</td>
+                                    <td>
+                                        <span class="badge text-bg-{{ action.statutColor }}">{{ action.statutLabel }}</span>
+                                        <span>{{ action.typeAction ?: '—' }}</span>
+                                    </td>
                                     <td>{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}</td>
                                     <td>{{ action.dateRealisee ? action.dateRealisee|date('d/m/Y') : '—' }}</td>
+                                    <td>{{ action.aFairePar ? action.aFairePar.username : '—' }}</td>
                                     <td>{{ action.contact ? action.contact.nomComplet : '—' }}</td>
                                     <td style="white-space: pre-line">{{ action.resultat ?: '—' }}</td>
                                     <td>
@@ -307,7 +312,7 @@
                                     </td>
                                 </tr>
                             {% else %}
-                                <tr><td colspan="7" class="text-muted">Aucune action enregistrée</td></tr>
+                                <tr><td colspan="8" class="text-muted">Aucune action enregistrée</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>

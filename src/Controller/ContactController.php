@@ -5,8 +5,10 @@ namespace App\Controller;
 use App\Controller\Trait\CrudDeleteTrait;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Contact;
+use App\Entity\User;
 use App\Form\ContactType;
 use App\Repository\ContactRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -22,26 +24,35 @@ class ContactController extends AbstractController
 
     public function __construct(
         private ContactRepository $contacts,
+        private UserRepository $users,
         private EntityManagerInterface $em,
     ) {
     }
 
     #[Route('', name: 'app_user_contacts')]
-    public function list(): Response
+    public function list(Request $request): Response
     {
-        $contacts = $this->contacts->createQueryBuilder('c')
+        $user = $this->paramUtilisateur($request);
+
+        $qb = $this->contacts->createQueryBuilder('c')
             ->addSelect('p')
             ->leftJoin('c.prospect', 'p')
             ->orderBy('c.nom', 'ASC')
-            ->addOrderBy('c.prenom', 'ASC')
-            ->getQuery()
-            ->getResult();
+            ->addOrderBy('c.prenom', 'ASC');
+
+        if (null !== $user) {
+            $qb->innerJoin('p.users', 'cu')
+                ->andWhere('cu.id = :cuId')
+                ->setParameter('cuId', $user);
+        }
 
         return $this->renderLayout('contacts/list.html.twig', 'Contacts', [
             'routesubmit' => 'app_user_contacts_submit',
             'routeupdate' => 'app_user_contacts_update',
             'routeprospect' => 'app_user_prospects_show',
-            'contacts' => $contacts,
+            'contacts' => $qb->getQuery()->getResult(),
+            'utilisateurs' => $this->users->findAll(),
+            'utilisateurFiltre' => $user?->getId(),
         ]);
     }
 
@@ -141,5 +152,35 @@ class ContactController extends AbstractController
         }
 
         return new RedirectResponse($url);
+    }
+
+    /**
+     * Utilisateur ciblé par le filtre « Affecté à » (?utilisateur=).
+     */
+    private function paramUtilisateur(Request $request): ?User
+    {
+        $userId = $this->lireParamEntier($request, 'utilisateur');
+        if (null === $userId) {
+            return null;
+        }
+
+        $user = $this->users->find($userId);
+
+        return $user instanceof User ? $user : null;
+    }
+
+    private function lireParamEntier(Request $request, string $nom): ?int
+    {
+        $valeur = $request->query->all()[$nom] ?? null;
+        if (!is_scalar($valeur)) {
+            return null;
+        }
+
+        $texte = trim((string) $valeur);
+        if ('' === $texte) {
+            return null;
+        }
+
+        return filter_var($texte, FILTER_VALIDATE_INT, ['flags' => FILTER_NULL_ON_FAILURE]);
     }
 }

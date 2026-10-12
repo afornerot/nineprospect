@@ -5,6 +5,24 @@
 {% block body %}
     <h1>{{ title }}</h1>
 
+    <form method="get" action="{{ path('app_user_contacts') }}" class="d-flex flex-wrap gap-2 align-items-end mb-3 w-100">
+        <div class="flex-grow-1" style="min-width: 160px;">
+            <label class="form-label" for="filtre-utilisateur-contacts">Affecté à</label>
+            <select id="filtre-utilisateur-contacts" name="utilisateur" class="form-select" onchange="this.form.submit()">
+                <option value="">Tous</option>
+                {% for u in utilisateurs %}
+                    <option value="{{ u.id }}" {% if utilisateurFiltre == u.id %}selected{% endif %}>{{ u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex-shrink-0">
+            <button type="submit" class="btn btn-primary">Filtrer</button>
+        </div>
+        <div class="flex-shrink-0">
+            <a href="{{ path('app_user_contacts') }}" class="btn btn-secondary">Réinitialiser</a>
+        </div>
+    </form>
+
     <a href="{{ path(routesubmit, {redirect: path('app_user_contacts')}) }}" class="btn btn-success mb-3">Ajouter</a>
 
     <div class="dataTable_wrapper">

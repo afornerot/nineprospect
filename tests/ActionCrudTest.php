@@ -405,19 +405,76 @@ class ActionCrudTest extends WebTestCase
         $this->em()->flush();
     }
 
-    public function testLesTroisOngletsChargent(): void
+    public function testLesQuatreOngletsChargent(): void
     {
         $client = $this->loginAsUser();
         if (null === $client) {
             static::markTestSkipped('Base de test indisponible.');
         }
 
-        foreach (['retard', 'avenir', 'faites'] as $vue) {
+        foreach (['retard', 'aujourdhui', 'avenir', 'faites'] as $vue) {
             $client->request('GET', '/user/actions?vue='.$vue);
             $this->assertResponseIsSuccessful();
             $this->assertSelectorTextContains('h1', 'Actions');
             $this->assertSelectorExists('table#dataTables');
         }
+    }
+
+    public function testStatutAujourdhuiEstDistinct(): void
+    {
+        $client = $this->loginAsUser();
+        $prospect = $this->unProspect();
+        if (null === $client || null === $prospect) {
+            static::markTestSkipped('Base de test indisponible.');
+        }
+
+        $aujourdhui = (new \DateTime('today'))->format('Y-m-d');
+        $hier = (new \DateTime('yesterday'))->format('Y-m-d');
+        $demain = (new \DateTime('tomorrow'))->format('Y-m-d');
+
+        $duJour = $this->creerPlanifiee($prospect, $aujourdhui);
+        $enRetard = $this->creerPlanifiee($prospect, $hier);
+        $aVeniir = $this->creerPlanifiee($prospect, $demain);
+        $realisee = $this->creerRealisee($prospect, $hier, 'déjà faite');
+
+        $this->em()->clear();
+
+        // Sémantique : l'action du jour est « Aujourd'hui », jamais « En retard »
+        // ni « À venir » ; la bascule se fait sur la date seule.
+        $duJourReload = $this->reload($duJour);
+        $this->assertSame('aujourdhui', $duJourReload->statut());
+        $this->assertSame("Aujourd'hui", $duJourReload->statutLabel());
+        $this->assertFalse($duJourReload->estEnRetard());
+
+        $this->assertSame('retard', $this->reload($enRetard)->statut());
+        $this->assertTrue($this->reload($enRetard)->estEnRetard());
+
+        $this->assertSame('avenir', $this->reload($aVeniir)->statut());
+
+        // Une action réalisée reste « Réalisée », quelle que soit sa date.
+        $this->assertSame('faites', $this->reload($realisee)->statut());
+
+        // L'action du jour apparaît dans l'onglet « Aujourd'hui »…
+        $duJourId = (int) $duJour->getId();
+        $client->request('GET', '/user/actions?vue=aujourdhui');
+        $this->assertResponseIsSuccessful();
+        $this->assertSelectorExists('tr[data-action-id="'.$duJourId.'"]');
+
+        // … et n'apparaît ni dans « En retard » ni dans « À venir ».
+        $client->request('GET', '/user/actions?vue=retard');
+        $this->assertResponseIsSuccessful();
+        $this->assertSelectorNotExists('tr[data-action-id="'.$duJourId.'"]');
+        $client->request('GET', '/user/actions?vue=avenir');
+        $this->assertResponseIsSuccessful();
+        $this->assertSelectorNotExists('tr[data-action-id="'.$duJourId.'"]');
+
+        foreach ([$duJour, $enRetard, $aVeniir, $realisee] as $a) {
+            $rechargee = $this->actions()->find((int) $a->getId());
+            if ($rechargee instanceof Action) {
+                $this->em()->remove($rechargee);
+            }
+        }
+        $this->em()->flush();
     }
 
     public function testCreationActionAvecTypeLibre(): void
@@ -695,6 +752,17 @@ class ActionCrudTest extends WebTestCase
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    private function reload(Action $action): Action
+    {
+        $id = $action->getId();
+        $this->assertNotNull($id, 'Action sans id.');
+        $this->em()->clear();
+        $rechargee = $this->actions()->find($id);
+        $this->assertInstanceOf(Action::class, $rechargee);
+
+        return $rechargee;
     }
 
     private function derniereActionParDatePrevue(string $dateYmd): ?Action

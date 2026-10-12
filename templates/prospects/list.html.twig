@@ -73,6 +73,16 @@
                 <option value="horscible" {% if filtres.qualifie == 'horscible' %}selected{% endif %}>Hors cible</option>
             </select>
         </div>
+        <div class="flex-grow-1" style="min-width: 140px;">
+            <label class="form-label" for="filtre-statut">Statut action</label>
+            <select class="form-select" id="filtre-statut" name="statut">
+                <option value="">Tous</option>
+                <option value="retard" {% if filtres.statut == 'retard' %}selected{% endif %}>En retard</option>
+                <option value="aujourdhui" {% if filtres.statut == 'aujourdhui' %}selected{% endif %}>Aujourd'hui</option>
+                <option value="avenir" {% if filtres.statut == 'avenir' %}selected{% endif %}>À venir</option>
+                <option value="faites" {% if filtres.statut == 'faites' %}selected{% endif %}>Réalisée</option>
+            </select>
+        </div>
         <div class="flex-shrink-0"> 
             <button type="submit" class="btn btn-primary">Filtrer</button>
         </div>
@@ -197,9 +207,12 @@
                             </div>
                         </td>
                         <td class="text-center">
-                            {% set prochaine = prospect.prochaineAction %}
-                            {% if prochaine %}
-                                <a href="{{ path('app_user_actions_update', {id: prochaine.id, redirect: prospects_list_url(prospect.id)}) }}" title="{{ prochaine.typeAction ?: '—' }}">{{ prochaine.datePrevue|date('d/m/Y') }}</a>
+                            {% set actionSuivi = prospect.derniereAction %}
+                            {% if actionSuivi %}
+                                <a href="{{ path('app_user_actions_update', {id: actionSuivi.id, redirect: prospects_list_url(prospect.id)}) }}" title="{{ actionSuivi.typeAction ?: '—' }}">
+                                    <span class="badge text-bg-{{ actionSuivi.statutColor }} d-block">{{ actionSuivi.statutLabel }}</span>
+                                    {{ actionSuivi.dateAffichee ? actionSuivi.dateAffichee|date('d/m/Y') : '—' }}
+                                </a>
                             {% else %}
                                 <a href="{{ path('app_user_actions_submit', {prospect: prospect.id, redirect: prospects_list_url(prospect.id)}) }}" class="btn btn-sm btn-outline-primary" title="Créer une action"><i class="fas fa-plus"></i></a>
                             {% endif %}

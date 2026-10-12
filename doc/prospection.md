@@ -7,13 +7,13 @@ pipeline commercial, sous les routes `/user/*` (firewall `main`, rôle `ROLE_USE
 
 | Module | Routes | Écran |
 |--------|--------|-------|
-| Tableau de bord | `/user/dashboard` | KPIs (prospects, contacts, actions en retard / à venir, prospects non contactés, non qualifiés), pipeline, leads par campagne, top départements, actions en retard |
+| Tableau de bord | `/user/dashboard` | KPIs (prospects, contacts, actions en retard / aujourd'hui / à venir, prospects non contactés, non qualifiés), pipeline, leads par campagne, top départements, actions en retard / aujourd'hui / à venir |
 | Prospects | `/user/prospects`, `/show/{id}`, `/submit`, `/update/{id}`, `/delete/{id}`, `/verify/{id}`, `/verify/{id}/apply` | Liste filtrée + fiche prospect (contacts, actions, pipeline, carte Mapbox). Vérification des données via Annuaire des Entreprises (data.gouv.fr) avec modale inline |
 | Créer depuis l'Annuaire | `/user/prospects/from-annuaire`, `/from-annuaire/create` | Page dédiée pour créer un prospect en cherchant par SIREN / raison sociale — n'écrase aucun prospect existant |
 | Carte | `/user/carte` | Vue plein écran Mapbox de tous les prospects géolocalisés. Style sélectionnable (Rues / Clair / Sombre / Satellite / Terrain, défaut Clair) |
 | Contacts | `/user/contacts` | Liste, création, modification, suppression |
-| Actions | `/user/actions` | 3 vues (En retard / À venir / Réalisées), création, modification, suppression, clôture/déclôture |
-| Agenda | `/user/agenda`, `/user/agenda/events`, `/user/agenda/csr/{id}`, `/user/agenda/csr/{id}/set-date` | Calendrier FullCalendar (vues mois/semaine/liste). Création d'action par clic sur une date, déplacement drag & drop d'événements, retour à la date mise à jour |
+| Actions | `/user/actions` | 4 vues (En retard / Aujourd'hui / À venir / Réalisées), création, modification, suppression, clôture/déclôture |
+| Agenda | `/user/agenda`, `/user/agenda/events`, `/user/agenda/csr/{id}`, `/user/agenda/csr/{id}/set-date` | Calendrier FullCalendar (vues mois/semaine/liste). Agenda personnel par défaut (sélecteur de collaborateur), réaffectation d'actions. Création d'action par clic sur une date, déplacement drag & drop d'événements, retour à la date mise à jour |
 | Types d'action | `/user/action-types` | CRUD des types suggérés à la création d'une action (libellé, ordre, actif) |
 | Campagnes | `/user/campagnes` | Budget, leads, coût par lead |
 | Vagues | `/user/vagues` | Vagues de traitement (anciennement « sprints »), pipeline affecté |
@@ -34,6 +34,10 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
   - **Qualifié** : `qualifie` nullable (`null` = Non, `true` = Oui, `false` = Hors cible).
   - **Prochaine action** : `Prospect::getProchaineAction()` calcule l'action planifiée la
     plus proche dans le futur (`datePrevue >= today`, non réalisée).
+  - **Dernière action (liste)** : `Prospect::getDerniereAction()` renvoie l'action à
+    afficher dans la colonne « Prc Action », priorité : en retard la plus récente →
+    aujourd'hui → à venir la plus proche → planifiée sans date → réalisée la plus récente.
+    Une action en retard reste visible même quand une action future existe.
 - `ProspectSprint` : lien **prospect ↔ vague** (table `prospect_sprint`, contrainte
   `uniq_prospect_sprint`). Un prospect appartient à **0..n vagues** (relance en vague
   suivante) ; ses valeurs de pipeline sont portées par `pipeline_valeur` (ci-dessous).
@@ -61,9 +65,14 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
   (avec un résultat). Champs : `datePrevue` (échéance d'une planifiée, colonne SQL `date_relance`),
   `dateRealisee` (date effective de réalisation, colonne SQL `date`), `typeAction`
   (obligatoire, suggestions paramétrables), `aFairePar` (FK user), `realisePar` (FK user),
-  `resultat`. Statut **dérivé** : réalisée si `dateRealisee != null`, planifiée sinon.
-  Aucune colonne `faite` / `statut` : le statut n'est jamais stocké, il se recalcule à
-  chaque requête.
+  `resultat`. Le **statut est dérivé**, jamais stocké, et se recalcule à chaque requête
+  sur la **date seule** (heure ignorée) :
+  - **Réalisée** : `dateRealisee != null`
+  - **En retard** : planifiée & `datePrevue < aujourd'hui`
+  - **Aujourd'hui** : planifiée & `datePrevue = aujourd'hui`
+  - **À venir** : planifiée & (`datePrevue > aujourd'hui` ou `null`)
+  Helpers : `Action::statut()` (clé `retard|aujourdhui|avenir|faites`), `statutLabel()`,
+  `statutColor()`, `dateAffichee()`, `estEnRetard()`.
 - `Campagne` : campagne publicitaire Meta (identifiant externe, budget).
 - `Sprint` : vague interne de traitement des leads (numéro, période) ; porte son
   **pipeline** (`pipeline_id`, ManyToOne, obligatoire au niveau applicatif, `RESTRICT`
@@ -101,8 +110,9 @@ il ne supprime jamais d'enregistrement. Avoir un prospect dans plusieurs vagues 
 - Fiche prospect : badges des vagues + un tableau de pipeline **par vague** avec
   bouton de cycle cliquable sur chaque étape (badge `js-cycle-etape`).
 - Liste prospects : badges des vagues + pipeline de la vague courante (colonnes = étapes)
-  avec cycle cliquable. Colonne supplémentaire **« Prc Action »** : lien vers la fiche
-  de la prochaine action planifiée (`Prospect::getProchaineAction()`).
+  avec cycle cliquable. Colonne supplémentaire **« Prc Action »** : badge de statut
+  (`En retard / Aujourd'hui / À venir / Réalisée`) + date de l'action de suivi
+  (`Prospect::getDerniereAction()`), lien vers la fiche de l'action.
 - Tableau de bord : sélecteur **Pipeline** ET sélecteur de vague sur le graphe Pipeline
   (défaut « Toutes les vagues » ; un prospect présent dans plusieurs vagues est compté
   dans chacune). Les libellés de séries sont les **noms d'étapes** du pipeline choisi.
@@ -123,6 +133,9 @@ les filtres suivants (query string) :
   c'est-à-dire tous les prospects sans `true`)
 - `qualifie` : `oui` (match exact `true`), `non` (`IS NULL`, défaut Non), `horscible`
   (match exact `false`)
+- `statut` : au moins une action du statut donné — `retard` (planifiée
+  `datePrevue < aujourd'hui`), `aujourdhui` (`datePrevue = aujourd'hui`), `avenir`
+  (`datePrevue > aujourd'hui` ou sans date), `faites` (`dateRealisee != null`)
 
 Les filtres « En anomalie », « Hors Meta », « Sans département » ont été
 **retirés** de la barre de filtres (les KPI correspondants ont aussi été
@@ -243,11 +256,18 @@ Bouton **« Créer depuis l'Annuaire »** dans la liste prospects à côté de
 - Page `/user/agenda` (`src/Controller/AgendaController.php`) : calendrier
   FullCalendar v6.1.15 via CDN, locale `fr`, vues `dayGridMonth` /
   `timeGridWeek` / `listWeek`.
-- Endpoint JSON `/user/agenda/events` (paramètres `start`/`end`) :
-  renvoie les actions via `ActionRepository::findForAgendaRange(start, end)`
+- **Agenda personnel** : chaque utilisateur voit par défaut **son propre
+  agenda** (actions dont il est `aFairePar`). Un sélecteur « Agenda de »
+  affiche l'agenda d'un autre collaborateur (`?user={id}`) — tout `ROLE_USER`
+  peut consulter et reprendre le suivi d'un collègue.
+- Endpoint JSON `/user/agenda/events` (paramètres `start`/`end`, optionnel
+  `user`) : renvoie les actions via
+  `ActionRepository::findForAgendaRange(start, end, ?user)`
   (planifiées `datePrevue < end` + réalisées `[start, end[`).
   Couleurs : vert `#198754` si faite, orange `#fd7e14` sinon.
   Tooltip natif via `eventDidMount` + `title` attr.
+  Les actions « Aujourd'hui » sont **mises en avant** (`statutPriority`,
+  `eventOrder` FullCalendar — en tête en vue liste) et surlignées en gras.
 - **Création d'action** : clic sur une date → `/user/actions/submit?date=YYYY-MM-DD`.
   Le contrôleur initialise `datePrevue` à la date cliquée.
 - **Drag & drop** d'un événement : endpoint POST
@@ -256,6 +276,11 @@ Bouton **« Créer depuis l'Annuaire »** dans la liste prospects à côté de
   si l'action est déjà clôturée). Token récupéré via
   `GET /user/agenda/csrf/{id}`. En cas d'erreur serveur, `info.revert()`
   annule le déplacement côté UI.
+- **Réaffectation** : bouton « Réaffecter » sur les événements (hors vue
+  mois) → modale de choix du nouveau responsable. POST
+  `/user/actions/reaffecter/{id}` (JSON `{versUser, csrf_token}`, token
+  `reaffecter-action{id}` via `GET /user/agenda/reaffecter-csrf/{id}`) : met à
+  jour `aFairePar` de l'action.
 - **Retour à l'agenda** : `redirect=/user/agenda?date=YYYY-MM-DD` où la
   date est la date prévue (ou réalisée) de l'action. Le contrôleur
   `ActionController::update()` **régénère** ce redirect avec la date

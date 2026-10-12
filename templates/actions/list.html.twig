@@ -8,12 +8,34 @@
     <a href="{{ path(routesubmit) }}" class="btn btn-success mb-3">Ajouter une action</a>
     <a href="{{ path('app_user_actions_bulk') }}" class="btn btn-primary mb-3 ms-1">Ajouter en masse</a>
 
+    <form method="get" action="{{ path('app_user_actions') }}" class="d-flex flex-wrap gap-2 align-items-end mb-3 w-100">
+        <div class="flex-grow-1" style="min-width: 160px;">
+            <label class="form-label" for="filtre-utilisateur-actions">Affecté à</label>
+            <select id="filtre-utilisateur-actions" name="utilisateur" class="form-select" onchange="this.form.submit()">
+                <option value="">Tous</option>
+                {% for u in utilisateurs %}
+                    <option value="{{ u.id }}" {% if utilisateurFiltre == u.id %}selected{% endif %}>{{ u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <input type="hidden" name="vue" value="{{ vue }}">
+        <div class="flex-shrink-0">
+            <button type="submit" class="btn btn-primary">Filtrer</button>
+        </div>
+        <div class="flex-shrink-0">
+            <a href="{{ path('app_user_actions') }}" class="btn btn-secondary">Réinitialiser</a>
+        </div>
+    </form>
+
     <ul class="nav nav-tabs mb-3">
         <li class="nav-item">
             <a class="nav-link {% if vue == 'retard' %}active{% endif %}" href="{{ path('app_user_actions', {vue: 'retard'}) }}">En retard (<span class="js-counter" data-counter="retard">{{ compteurRetard }}</span>)</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if vue != 'retard' and vue != 'faites' %}active{% endif %}" href="{{ path('app_user_actions', {vue: 'avenir'}) }}">À venir (<span class="js-counter" data-counter="avenir">{{ compteurUpcoming }}</span>)</a>
+            <a class="nav-link {% if vue == 'aujourdhui' %}active{% endif %}" href="{{ path('app_user_actions', {vue: 'aujourdhui'}) }}">Aujourd'hui (<span class="js-counter" data-counter="aujourdhui">{{ compteurAujourdhui }}</span>)</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if vue != 'retard' and vue != 'aujourdhui' and vue != 'faites' %}active{% endif %}" href="{{ path('app_user_actions', {vue: 'avenir'}) }}">À venir (<span class="js-counter" data-counter="avenir">{{ compteurUpcoming }}</span>)</a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if vue == 'faites' %}active{% endif %}" href="{{ path('app_user_actions', {vue: 'faites'}) }}">Réalisées (<span class="js-counter" data-counter="faites">{{ compteurDone }}</span>)</a>
@@ -21,6 +43,7 @@
     </ul>
 
     {% if vue == 'retard' %}{% set liste = retard %}
+    {% elseif vue == 'aujourdhui' %}{% set liste = aujourdhui %}
     {% elseif vue == 'faites' %}{% set liste = faites %}
     {% else %}{% set liste = avenir %}{% endif %}
 
@@ -49,7 +72,10 @@
                                 <a href="{{ path(routeprospect, {id: action.prospect.id}) }}" title="Fiche prospect"><i class="fas fa-building fa-2x"></i></a>
                             {% endif %}
                         </td>
-                        <td data-order="{{ dateAffichage ? dateAffichage|date('Y-m-d') : '' }}">{{ dateAffichage ? dateAffichage|date('d/m/Y') : '—' }}</td>
+                        <td data-order="{{ dateAffichage ? dateAffichage|date('Y-m-d') : '' }}">
+                            <span class="badge text-bg-{{ action.statutColor }}">{{ action.statutLabel }}</span>
+                            {{ dateAffichage ? dateAffichage|date('d/m/Y') : '—' }}
+                        </td>
                         <td>{{ action.typeAction ?: '—' }}</td>
                         <td>{{ action.prospect ? action.prospect.nom : '—' }}</td>
                         <td>{{ action.contact ? action.contact.nomComplet : '—' }}</td>
@@ -130,6 +156,7 @@
             ready(function () {
                 const csrfMeta = document.querySelector('meta[name="csrf-token"]');
                 const csrfFromMeta = csrfMeta ? csrfMeta.getAttribute('content') : null;
+                const userFilterParam = '{{ utilisateurFiltre ? '?utilisateur=' ~ utilisateurFiltre : '' }}';
 
                 function mettreCompteurs(compteurs) {
                     if (!compteurs) return;
@@ -188,7 +215,7 @@
                         const checkbox = wrapper.querySelector('.js-cloturer');
                         const actionId = wrapper.dataset.actionId;
                         const csrf = wrapper.dataset.csrf || csrfFromMeta;
-                        const url = '/user/actions/cloturer/' + actionId;
+                        const url = '/user/actions/cloturer/' + actionId + userFilterParam;
                         const body = new URLSearchParams();
                         body.set('_csrf_token', csrf);
                         body.set('dateRealisee', document.getElementById('js-cloturer-date').value);
@@ -240,7 +267,7 @@
 
                     checkbox.addEventListener('change', function () {
                         checkbox.disabled = true;
-                        const url = '/user/actions/decloturer/' + actionId;
+                        const url = '/user/actions/decloturer/' + actionId + userFilterParam;
                         const body = new URLSearchParams();
                         body.set('_csrf_token', csrf);
 

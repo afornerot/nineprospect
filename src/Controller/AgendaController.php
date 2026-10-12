@@ -4,7 +4,9 @@ namespace App\Controller;
 
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Action;
+use App\Entity\User;
 use App\Repository\ActionRepository;
+use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,19 +18,38 @@ class AgendaController extends AbstractController
 {
     use LayoutRenderTrait;
 
-    public function __construct(private ActionRepository $actions)
+    public function __construct(private ActionRepository $actions, private UserRepository $users)
     {
     }
 
     #[Route('', name: 'app_user_agenda')]
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        return $this->renderLayout('agenda/index.html.twig', 'Agenda', []);
+        $users = $this->users->findAll();
+        $selected = null;
+        $userId = $this->paramEntier($request, 'user');
+        if (null !== $userId) {
+            foreach ($users as $user) {
+                if ($user->getId() === $userId) {
+                    $selected = $user;
+                    break;
+                }
+            }
+        }
+        // L'agenda affiché par défaut est celui de l'utilisateur identifié.
+        $selected ??= $this->getUser();
+
+        return $this->renderLayout('agenda/index.html.twig', 'Agenda', [
+            'users' => $users,
+            'selectedUserId' => $selected instanceof User ? $selected->getId() : null,
+        ]);
     }
 
     /**
      * Endpoint JSON consommé par FullCalendar via fetch.
      * Query params `start` / `end` au format ISO (YYYY-MM-DD).
+     * Query param `user` : agenda d'un collaborateur (par défaut l'utilisateur
+     * identifié — chaque utilisateur voit son propre agenda).
      */
     #[Route('/events', name: 'app_user_agenda_events', methods: ['GET'])]
     public function events(Request $request): JsonResponse
@@ -41,7 +62,7 @@ class AgendaController extends AbstractController
         }
 
         $events = [];
-        foreach ($this->actions->findForAgendaRange($start, $end) as $action) {
+        foreach ($this->actions->findForAgendaRange($start, $end, $this->utilisateurCible($request)) as $action) {
             $events[] = $this->actionToEvent($action);
         }
 
@@ -67,6 +88,64 @@ class AgendaController extends AbstractController
     }
 
     /**
+     * Token CSRF pour la réaffectation d'une action (POST
+     * `/user/actions/reaffecter/{id}`).
+     */
+    #[Route('/reaffecter-csrf/{id}', name: 'app_user_agenda_reaffecter_csrf', methods: ['GET'])]
+    public function reaffecterCsrf(int $id): JsonResponse
+    {
+        $action = $this->actions->find($id);
+        if (!$action) {
+            return new JsonResponse(['ok' => false, 'error' => 'Action introuvable.'], 404);
+        }
+
+        return new JsonResponse([
+            'token' => $this->container->get('security.csrf.token_manager')
+                ->getToken('reaffecter-action'.$id)->getValue(),
+        ]);
+    }
+
+    /**
+     * Utilisateur dont on affiche l'agenda : celui ciblé par ?user= (tout
+     * ROLE_USER peut consulter l'agenda d'un collègue), sinon l'utilisateur
+     * identifié.
+     */
+    private function utilisateurCible(Request $request): ?User
+    {
+        $userId = $this->paramEntier($request, 'user');
+        if (null !== $userId) {
+            $user = $this->users->find($userId);
+            if ($user instanceof User) {
+                return $user;
+            }
+        }
+
+        $current = $this->getUser();
+
+        return $current instanceof User ? $current : null;
+    }
+
+    /**
+     * Entier de requête tolérant aux valeurs vides ou non numériques.
+     */
+    private function paramEntier(Request $request, string $nom): ?int
+    {
+        $valeur = $request->query->all()[$nom] ?? null;
+        if (!is_scalar($valeur)) {
+            return null;
+        }
+
+        $texte = trim((string) $valeur);
+        if ('' === $texte) {
+            return null;
+        }
+
+        $entier = filter_var($texte, FILTER_VALIDATE_INT, ['flags' => FILTER_NULL_ON_FAILURE]);
+
+        return null === $entier ? null : $entier;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function actionToEvent(Action $a): array
@@ -76,6 +155,7 @@ class AgendaController extends AbstractController
         // par l'utilisateur), sinon la date de réalisation.
         $date = $a->getDatePrevue() ?? $a->getDateRealisee();
         $couleur = $realisee ? '#198754' : '#fd7e14'; // vert si faite, orange si à faire
+        $statut = $a->statut();
 
         $titre = ($a->getTypeAction() ?: 'Action');
         if ($prospect = $a->getProspect()) {
@@ -106,6 +186,10 @@ class AgendaController extends AbstractController
                 'realisePar' => $a->getRealisePar()?->getUsername(),
                 'resultat' => $a->getResultat(),
                 'realisee' => $realisee,
+                'statut' => $statut,
+                // Priorité de tri FullCalendar : les actions « Aujourd'hui »
+                // sont mises en avant en tête de liste.
+                'statutPriority' => 'aujourdhui' === $statut ? 0 : 1,
             ],
         ];
     }

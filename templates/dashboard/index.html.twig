@@ -3,6 +3,20 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block body %}
+    <h1>{{ title }}</h1>
+
+    <form method="get" action="{{ path('app_user_dashboard') }}" class="d-flex align-items-center gap-2 mb-3">
+        <label for="filtre-utilisateur-dashboard" class="form-label mb-0">Affecté à</label>
+        <select id="filtre-utilisateur-dashboard" name="utilisateur" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+            <option value="">Tous</option>
+            {% for u in utilisateurs %}
+                <option value="{{ u.id }}" {% if utilisateurFiltre == u.id %}selected{% endif %}>{{ u.username }}</option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filtrer</button></noscript>
+        <span class="text-muted small"><i class="fas fa-filter"></i> Les KPIs et cartes sont filtrés par l'utilisateur sélectionné.</span>
+    </form>
+
     <div class="row g-2">
         <div class="col-md-3">
             <div class="row text-center g-2 mb-2">
@@ -28,6 +42,13 @@
                         <div class="display-6 text-{% if kpi.actionsEnRetard > 0 %}danger{% else %}success{% endif %}">{{ kpi.actionsEnRetard }}</div>
                         <div class="text-muted">Actions en retard</div>
                         <a href="{{ path('app_user_actions', {vue: 'retard'}) }}" class="stretched-link" aria-label="Actions en retard"></a>
+                    </div></div>
+                </div>
+                <div class="col">
+                    <div class="card"><div class="card-body">
+                        <div class="display-6 text-{% if kpi.actionsAujourdhui > 0 %}warning{% else %}success{% endif %}">{{ kpi.actionsAujourdhui }}</div>
+                        <div class="text-muted">Aujourd'hui</div>
+                        <a href="{{ path('app_user_actions', {vue: 'aujourdhui'}) }}" class="stretched-link" aria-label="Actions à faire aujourd'hui"></a>
                     </div></div>
                 </div>
                 <div class="col">
@@ -82,6 +103,20 @@
                                 <option value="{{ sprint.id }}" {% if filtreSprint == sprint.id %}selected{% endif %}>{{ sprint }}</option>
                             {% endfor %}
                         </select>
+                        <label for="filtre-cible-pipeline" class="text-muted small mb-0">Cible</label>
+                        <select name="cible" id="filtre-cible-pipeline" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                            <option value="">Toutes les cibles</option>
+                            {% for cible in cibles %}
+                                <option value="{{ cible.id }}" {% if filtreCible == cible.id %}selected{% endif %}>{{ cible.titre }}</option>
+                            {% endfor %}
+                        </select>
+                        <label for="filtre-categorie-pipeline" class="text-muted small mb-0">Catégorie</label>
+                        <select name="categorie" id="filtre-categorie-pipeline" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                            <option value="">Toutes les catégories</option>
+                            {% for categorie in categories %}
+                                <option value="{{ categorie.id }}" {% if filtreCategorie == categorie.id %}selected{% endif %}>{{ categorie.nom }}</option>
+                            {% endfor %}
+                        </select>
                         <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filtrer</button></noscript>
                     </form>
                 </div>
@@ -120,6 +155,23 @@
                         </li>
                     {% else %}
                         <li class="list-group-item text-muted">Aucune action en retard</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="card mb-2">
+                <div class="card-header">Aujourd'hui</div>
+                <ul class="list-group list-group-flush">
+                    {% for action in aujourdhui %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>
+                                {% if action.prospect %}<a href="{{ path(routeProspect, {id: action.prospect.id}) }}">{{ action.prospect.nom }}</a>{% endif %}
+                                {% if action.contact %}<br><small class="text-muted">{{ action.contact.nomComplet }}</small>{% endif %}
+                            </span>
+                            <span class="badge text-bg-warning">{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}</span>
+                        </li>
+                    {% else %}
+                        <li class="list-group-item text-muted">Aucune action à faire aujourd'hui</li>
                     {% endfor %}
                 </ul>
             </div>

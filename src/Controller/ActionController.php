@@ -7,11 +7,11 @@ use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Action;
 use App\Entity\User;
 use App\Form\ActionType;
-use App\Form\BulkActionType;
 use App\Repository\ActionRepository;
 use App\Repository\ActionTypeDefautRepository;
 use App\Repository\ContactRepository;
 use App\Repository\ProspectRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -32,6 +32,7 @@ class ActionController extends AbstractController
         private ProspectRepository $prospects,
         private ContactRepository $contacts,
         private ActionTypeDefautRepository $types,
+        private UserRepository $users,
         private EntityManagerInterface $em,
     ) {
     }
@@ -39,20 +40,31 @@ class ActionController extends AbstractController
     #[Route('', name: 'app_user_actions')]
     public function list(Request $request): Response
     {
-        $vue = (string) $request->query->get('vue', 'avenir');
+        // Vue par défaut : « En retard » — on traite l'urgent d'abord, puis
+        // la liste « Aujourd'hui », puis l'avenir.
+        $vue = (string) $request->query->get('vue', 'retard');
+        if (!\in_array($vue, ['retard', 'aujourdhui', 'avenir', 'faites'], true)) {
+            $vue = 'retard';
+        }
+
+        $user = $this->paramUtilisateur($request);
 
         return $this->renderLayout('actions/list.html.twig', 'Actions', [
             'routesubmit' => 'app_user_actions_submit',
             'routeupdate' => 'app_user_actions_update',
             'routeprospect' => 'app_user_prospects_show',
             'vue' => $vue,
-            'compteurRetard' => $this->actions->countDue(),
-            'compteurUpcoming' => $this->actions->countUpcoming(),
-            'compteurDone' => $this->actions->countDone(),
-            'retard' => $this->actions->findDue(),
-            'avenir' => $this->actions->findUpcoming(),
-            'faites' => $this->actions->findDone(),
+            'compteurRetard' => $this->actions->countDue($user),
+            'compteurAujourdhui' => $this->actions->countToday($user),
+            'compteurUpcoming' => $this->actions->countUpcoming($user),
+            'compteurDone' => $this->actions->countDone($user),
+            'retard' => $this->actions->findDue(null, $user),
+            'aujourdhui' => $this->actions->findToday(null, $user),
+            'avenir' => $this->actions->findUpcoming(null, 50, $user),
+            'faites' => $this->actions->findDone(100, $user),
             'typesSuggestions' => $this->types->findActifsOrdonnes(),
+            'utilisateurs' => $this->users->findAll(),
+            'utilisateurFiltre' => $user?->getId(),
         ]);
     }
 
@@ -148,11 +160,11 @@ class ActionController extends AbstractController
                 $action->setAFairePar($user);
             }
             $this->em->persist($action);
-            $count++;
+            ++$count;
         }
 
         $this->em->flush();
-        $this->addFlash('success', $count . ' action(s) créée(s).');
+        $this->addFlash('success', $count.' action(s) créée(s).');
 
         return $this->redirectToRoute('app_user_actions');
     }
@@ -261,6 +273,42 @@ class ActionController extends AbstractController
         return new JsonResponse(['ok' => true, 'date' => $date->format('Y-m-d')]);
     }
 
+    /**
+     * Réaffecte une action à un autre collaborateur (agenda personnel).
+     * Body JSON : `{"versUser": <id>, "csrf_token": "..."}` (token
+     * `reaffecter-action{id}`, récupéré via `/user/agenda/reaffecter-csrf/{id}`).
+     * Met à jour `aFairePar`.
+     */
+    #[Route('/reaffecter/{id}', name: 'app_user_actions_reaffecter', methods: ['POST'])]
+    public function reaffecter(int $id, Request $request): JsonResponse
+    {
+        $action = $this->actions->find($id);
+        if (!$action) {
+            return new JsonResponse(['ok' => false, 'error' => 'Action introuvable.'], 404);
+        }
+
+        $body = json_decode((string) $request->getContent(), true);
+        if (!\is_array($body)) {
+            return new JsonResponse(['ok' => false, 'error' => 'Body JSON invalide.'], 400);
+        }
+
+        $csrf = (string) ($body['csrf_token'] ?? '');
+        if (!$this->isCsrfTokenValid('reaffecter-action'.$id, $csrf)) {
+            return new JsonResponse(['ok' => false, 'error' => 'Token CSRF invalide.'], 403);
+        }
+
+        $versUserId = (int) ($body['versUser'] ?? 0);
+        $versUser = $this->em->find(User::class, $versUserId);
+        if (!$versUser instanceof User) {
+            return new JsonResponse(['ok' => false, 'error' => 'Utilisateur cible invalide.'], 422);
+        }
+
+        $action->setAFairePar($versUser);
+        $this->em->flush();
+
+        return new JsonResponse(['ok' => true, 'aFairePar' => $versUser->getUsername()]);
+    }
+
     #[Route('/delete/{id}', name: 'app_user_actions_delete', methods: ['POST'])]
     public function delete(int $id, Request $request): Response
     {
@@ -353,7 +401,7 @@ class ActionController extends AbstractController
         return new JsonResponse([
             'ok' => true,
             'planifiee' => $planifiee,
-            'compteurs' => $this->compteurs(),
+            'compteurs' => $this->compteurs($this->paramUtilisateur($request)),
         ]);
     }
 
@@ -379,20 +427,56 @@ class ActionController extends AbstractController
 
         return new JsonResponse([
             'ok' => true,
-            'compteurs' => $this->compteurs(),
+            'compteurs' => $this->compteurs($this->paramUtilisateur($request)),
         ]);
     }
 
     /**
-     * @return array{retard:int,avenir:int,faites:int}
+     * @return array{retard:int,aujourdhui:int,avenir:int,faites:int}
      */
-    private function compteurs(): array
+    private function compteurs(?User $user = null): array
     {
         return [
-            'retard' => $this->actions->countDue(),
-            'avenir' => $this->actions->countUpcoming(),
-            'faites' => $this->actions->countDone(),
+            'retard' => $this->actions->countDue($user),
+            'aujourdhui' => $this->actions->countToday($user),
+            'avenir' => $this->actions->countUpcoming($user),
+            'faites' => $this->actions->countDone($user),
         ];
+    }
+
+    /**
+     * Utilisateur ciblé par le filtre « Affecté à » (?utilisateur=).
+     */
+    private function paramUtilisateur(Request $request): ?User
+    {
+        $userId = $this->lireParamEntier($request, 'utilisateur');
+        if (null === $userId) {
+            return null;
+        }
+
+        $user = $this->users->find($userId);
+
+        return $user instanceof User ? $user : null;
+    }
+
+    /**
+     * Entier de requête tolérant aux valeurs vides ou non numériques.
+     */
+    private function lireParamEntier(Request $request, string $nom): ?int
+    {
+        $valeur = $request->query->all()[$nom] ?? null;
+        if (!is_scalar($valeur)) {
+            return null;
+        }
+
+        $texte = trim((string) $valeur);
+        if ('' === $texte) {
+            return null;
+        }
+
+        $entier = filter_var($texte, FILTER_VALIDATE_INT, ['flags' => FILTER_NULL_ON_FAILURE]);
+
+        return null === $entier ? null : $entier;
     }
 
     /**

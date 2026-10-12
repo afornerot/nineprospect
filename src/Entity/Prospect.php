@@ -598,6 +598,58 @@ class Prospect
         return $prochaine;
     }
 
+    /**
+     * Action à afficher dans les listes : la plus pertinente pour le suivi.
+     * Priorité (une seule passe sur les actions, sans requête SQL) :
+     *  1. action planifiée en retard la plus récente (datePrevue < aujourd'hui)
+     *  2. action planifiée à faire aujourd'hui
+     *  3. action planifiée à venir la plus proche (datePrevue > aujourd'hui)
+     *  4. action planifiée sans échéance (à traiter)
+     *  5. action réalisée la plus récente (dateRealisee la plus haute)
+     *
+     * Une action en retard reste visible même quand une action future existe.
+     */
+    public function getDerniereAction(): ?Action
+    {
+        $aujourdhui = (new \DateTime('today'))->format('Y-m-d');
+        $enRetard = null;
+        $actionDuJour = null;
+        $avenir = null;
+        $sansDate = null;
+        $realisee = null;
+
+        foreach ($this->actions as $action) {
+            if ($action->estRealisee()) {
+                $date = $action->getDateRealisee();
+                if (null !== $date && (null === $realisee || $date > $realisee->getDateRealisee())) {
+                    $realisee = $action;
+                }
+
+                continue;
+            }
+
+            $datePrevue = $action->getDatePrevue();
+            if (null === $datePrevue) {
+                $sansDate ??= $action;
+
+                continue;
+            }
+
+            $cle = $datePrevue->format('Y-m-d');
+            if ($cle < $aujourdhui) {
+                if (null === $enRetard || $datePrevue > $enRetard->getDatePrevue()) {
+                    $enRetard = $action;
+                }
+            } elseif ($cle === $aujourdhui) {
+                $actionDuJour ??= $action;
+            } elseif (null === $avenir || $datePrevue < $avenir->getDatePrevue()) {
+                $avenir = $action;
+            }
+        }
+
+        return $enRetard ?? $actionDuJour ?? $avenir ?? $sansDate ?? $realisee;
+    }
+
     public function addAction(Action $action): static
     {
         if (!$this->actions->contains($action)) {

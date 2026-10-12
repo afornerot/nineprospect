@@ -4,14 +4,18 @@ namespace App\Controller;
 
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Pipeline;
+use App\Entity\User;
 use App\Enum\PipelineStatut;
 use App\Repository\ActionRepository;
 use App\Repository\CampagneRepository;
+use App\Repository\CategoryRepository;
+use App\Repository\CibleRepository;
 use App\Repository\ContactRepository;
 use App\Repository\DepartementRepository;
 use App\Repository\PipelineRepository;
 use App\Repository\ProspectRepository;
 use App\Repository\SprintRepository;
+use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,6 +34,9 @@ class DashboardController extends AbstractController
         private DepartementRepository $departements,
         private SprintRepository $sprints,
         private PipelineRepository $pipelines,
+        private UserRepository $users,
+        private CibleRepository $cibles,
+        private CategoryRepository $categories,
     ) {
     }
 
@@ -38,6 +45,11 @@ class DashboardController extends AbstractController
     {
         $filtrePipeline = $this->pipelineCible($request);
         $filtreSprint = $this->lireParamEntier($request, 'sprint');
+        $filtreCible = $this->lireParamEntier($request, 'cible');
+        $filtreCategorie = $this->lireParamEntier($request, 'categorie');
+
+        $user = $this->paramUtilisateur($request);
+        $userId = $user?->getId();
 
         $etapes = null !== $filtrePipeline ? $filtrePipeline->getEtapes()->toArray() : [];
         $labels = [];
@@ -46,7 +58,7 @@ class DashboardController extends AbstractController
         }
 
         $compteurs = null !== $filtrePipeline
-            ? $this->prospects->countPipeline((int) $filtrePipeline->getId(), $filtreSprint)
+            ? $this->prospects->countPipeline((int) $filtrePipeline->getId(), $filtreSprint, $userId, $filtreCible, $filtreCategorie)
             : [];
 
         $donneesPipeline = [];
@@ -58,22 +70,31 @@ class DashboardController extends AbstractController
             $donneesPipeline[] = ['label' => $label, 'data' => $serie];
         }
 
+        $kpiProspects = $this->compteurProspects($user);
+        $kpiContacts = $this->compteurContacts($user);
+
         $campagnes = [];
         foreach ($this->campagnes->findAllOrdered() as $campagne) {
             $campagnes['noms'][] = $campagne->getLibelle();
-            $campagnes['totaux'][] = $this->prospects->countByCampagne((int) $campagne->getId());
+            $campagnes['totaux'][] = $this->prospects->countByCampagne((int) $campagne->getId(), $userId);
         }
 
-        $geo = array_slice(array_values(array_filter($this->departements->countProspectsGrouped(), static fn (array $ligne) => $ligne['total'] > 0)), 0, 10);
+        $geo = array_slice(array_values(array_filter(
+            null !== $userId
+                ? $this->departements->countProspectsGrouped($userId)
+                : $this->departements->countProspectsGrouped(),
+            static fn (array $ligne) => $ligne['total'] > 0
+        )), 0, 10);
 
         return $this->renderLayout('dashboard/index.html.twig', 'Tableau de bord', [
             'kpi' => [
-                'prospects' => (int) $this->prospects->count([]),
-                'contacts' => (int) $this->contacts->count([]),
-                'actionsEnRetard' => $this->actions->countDue(),
-                'actionsAVenir' => $this->actions->countUpcoming(),
-                'nonContacte' => $this->prospects->countNonContacte(),
-                'nonQualifie' => $this->prospects->countNonQualifie(),
+                'prospects' => $kpiProspects,
+                'contacts' => $kpiContacts,
+                'actionsEnRetard' => $this->actions->countDue($user),
+                'actionsAujourdhui' => $this->actions->countToday($user),
+                'actionsAVenir' => $this->actions->countUpcoming($user),
+                'nonContacte' => $this->compteurNonContacte($user),
+                'nonQualifie' => $this->compteurNonQualifie($user),
             ],
             'etapes' => $labels,
             'donneesPipeline' => $donneesPipeline,
@@ -81,11 +102,18 @@ class DashboardController extends AbstractController
             'filtrePipeline' => null !== $filtrePipeline ? (int) $filtrePipeline->getId() : null,
             'sprints' => $this->sprints->findAllOrdered(),
             'filtreSprint' => $filtreSprint,
+            'cibles' => $this->cibles->findAllOrdered(),
+            'filtreCible' => $filtreCible,
+            'categories' => $this->categories->findAllOrdered(),
+            'filtreCategorie' => $filtreCategorie,
             'campagnes' => $campagnes,
             'geo' => $geo,
-            'retard' => $this->actions->findDue(),
-            'avenir' => $this->actions->findUpcoming(),
+            'retard' => $this->actions->findDue(null, $user),
+            'aujourdhui' => $this->actions->findToday(null, $user),
+            'avenir' => $this->actions->findUpcoming(null, 50, $user),
             'routeProspect' => 'app_user_prospects_show',
+            'utilisateurs' => $this->users->findAll(),
+            'utilisateurFiltre' => $userId,
         ]);
     }
 
@@ -107,8 +135,7 @@ class DashboardController extends AbstractController
     }
 
     /**
-     * Entier de requête tolérant aux valeurs vides (« Toutes » = '') ou non
-     * numériques : renvoie null au lieu de lever une exception.
+     * Entier de requête tolérant aux valeurs vides ou non numériques.
      */
     private function lireParamEntier(Request $request, string $nom): ?int
     {
@@ -123,5 +150,68 @@ class DashboardController extends AbstractController
         }
 
         return filter_var($texte, FILTER_VALIDATE_INT, ['flags' => FILTER_NULL_ON_FAILURE]);
+    }
+
+    /**
+     * Utilisateur ciblé par le filtre « Affecté à » (?utilisateur=).
+     */
+    private function paramUtilisateur(Request $request): ?User
+    {
+        $userId = $this->lireParamEntier($request, 'utilisateur');
+        if (null === $userId) {
+            return null;
+        }
+
+        $user = $this->users->find($userId);
+
+        return $user instanceof User ? $user : null;
+    }
+
+    // --- Compteurs par utilisateur ---
+
+    private function compteurProspects(?User $user): int
+    {
+        $qb = $this->prospects->createQueryBuilder('p')->select('COUNT(DISTINCT p.id)');
+        if (null !== $user) {
+            $qb->innerJoin('p.users', 'cu')->andWhere('cu.id = :cuId')->setParameter('cuId', $user);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    private function compteurContacts(?User $user): int
+    {
+        $qb = $this->contacts->createQueryBuilder('c')->select('COUNT(DISTINCT c.id)');
+        if (null !== $user) {
+            $qb->innerJoin('c.prospect', 'c_p')
+                ->innerJoin('c_p.users', 'c_u')
+                ->andWhere('c_u.id = :c_uId')
+                ->setParameter('c_uId', $user);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    private function compteurNonContacte(?User $user): int
+    {
+        $qb = $this->prospects->createQueryBuilder('p')->select('COUNT(p.id)')
+            ->where('p.contacte IS NULL OR p.contacte = :false')
+            ->setParameter('false', false);
+        if (null !== $user) {
+            $qb->innerJoin('p.users', 'nc_u')->andWhere('nc_u.id = :nc_uId')->setParameter('nc_uId', $user);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    private function compteurNonQualifie(?User $user): int
+    {
+        $qb = $this->prospects->createQueryBuilder('p')->select('COUNT(p.id)')
+            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
+        if (null !== $user) {
+            $qb->innerJoin('p.users', 'nq_u')->andWhere('nq_u.id = :nq_uId')->setParameter('nq_uId', $user);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 }

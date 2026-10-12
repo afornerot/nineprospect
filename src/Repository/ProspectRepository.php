@@ -20,7 +20,7 @@ class ProspectRepository extends ServiceEntityRepository
 
     /**
      * Filtres de la liste : campagne, vague, qualification, catégorie,
-     * affectation et recherche plein texte.
+     * statut d'action, affectation et recherche plein texte.
      *
      * @param array{
      *     campagne?: int|null,
@@ -29,6 +29,7 @@ class ProspectRepository extends ServiceEntityRepository
      *     cible?: int|null,
      *     categorie?: int|null,
      *     qualifie?: string|null,
+     *     statut?: string|null,
      *     userId?: int|null,
      *     recherche?: string|null
      * } $filtres
@@ -94,6 +95,23 @@ class ProspectRepository extends ServiceEntityRepository
             }
         }
 
+        if (isset($filtres['statut'])) {
+            $jour = (new \DateTime('today'))->format('Y-m-d');
+            $sousRequetes = [
+                'retard' => 'SELECT 1 FROM App\Entity\Action a2 WHERE a2.prospect = p AND a2.dateRealisee IS NULL AND a2.datePrevue IS NOT NULL AND a2.datePrevue < :jour',
+                'aujourdhui' => 'SELECT 1 FROM App\Entity\Action a2 WHERE a2.prospect = p AND a2.dateRealisee IS NULL AND a2.datePrevue = :jour',
+                'avenir' => 'SELECT 1 FROM App\Entity\Action a2 WHERE a2.prospect = p AND a2.dateRealisee IS NULL AND (a2.datePrevue IS NULL OR a2.datePrevue > :jour)',
+                'faites' => 'SELECT 1 FROM App\Entity\Action a2 WHERE a2.prospect = p AND a2.dateRealisee IS NOT NULL',
+            ];
+            $sousRequete = $sousRequetes[$filtres['statut']] ?? null;
+            if (null !== $sousRequete) {
+                $qb->andWhere('EXISTS ('.$sousRequete.')');
+                if ('faites' !== $filtres['statut']) {
+                    $qb->setParameter('jour', $jour);
+                }
+            }
+        }
+
         $recherche = trim((string) ($filtres['recherche'] ?? ''));
         if ('' !== $recherche) {
             $qb->andWhere('p.nom LIKE :recherche OR p.ville LIKE :recherche OR ct.email LIKE :recherche OR ct.nomComplet LIKE :recherche')
@@ -110,7 +128,7 @@ class ProspectRepository extends ServiceEntityRepository
      *
      * @return array<int, array<int, int>> [etapeId][statut] => nombre de liens
      */
-    public function countPipeline(int $pipelineId, ?int $sprintId = null): array
+    public function countPipeline(int $pipelineId, ?int $sprintId = null, ?int $userId = null, ?int $cibleId = null, ?int $categorieId = null): array
     {
         $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('e.id AS etape, v.statut AS valeur, COUNT(ps.id) AS total')
@@ -128,6 +146,29 @@ class ProspectRepository extends ServiceEntityRepository
             $qb->andWhere('s.id = :sprint')->setParameter('sprint', $sprintId);
         }
 
+        if (null !== $userId || null !== $cibleId || null !== $categorieId) {
+            $qb->innerJoin('ps.prospect', 'cp_ps');
+        }
+
+        if (null !== $userId) {
+            $qb->innerJoin('cp_ps.users', 'cp_u')
+                ->andWhere('cp_u.id = :cp_user')
+                ->setParameter('cp_user', $userId);
+        }
+
+        if (null !== $cibleId) {
+            $qb->innerJoin('cp_ps.prospectCibles', 'cp_pc')
+                ->innerJoin('cp_pc.cible', 'cp_c')
+                ->andWhere('cp_c.id = :cp_cible')
+                ->setParameter('cp_cible', $cibleId);
+        }
+
+        if (null !== $categorieId) {
+            $qb->innerJoin('cp_ps.categories', 'cp_cat')
+                ->andWhere('cp_cat.id = :cp_categorie')
+                ->setParameter('cp_categorie', $categorieId);
+        }
+
         $result = [];
         foreach ($qb->getQuery()->getArrayResult() as $ligne) {
             $statut = null === $ligne['valeur'] ? PipelineStatut::NON_DEMARRE : (int) $ligne['valeur'];
@@ -137,14 +178,20 @@ class ProspectRepository extends ServiceEntityRepository
         return $result;
     }
 
-    public function countByCampagne(int $campagneId): int
+    public function countByCampagne(int $campagneId, ?int $userId = null): int
     {
-        return (int) $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
             ->where('p.campagne = :campagne')
-            ->setParameter('campagne', $campagneId)
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->setParameter('campagne', $campagneId);
+
+        if (null !== $userId) {
+            $qb->innerJoin('p.users', 'cbc_u')
+                ->andWhere('cbc_u.id = :cbc_user')
+                ->setParameter('cbc_user', $userId);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**
@@ -328,17 +375,27 @@ class ProspectRepository extends ServiceEntityRepository
     /**
      * Prospects géolocalisés (latitude ET longitude non NULL), avec leur
      * campagne et leur département chargés (utilisés par la vue carte).
+     * Si un userId est fourni, seuls les prospects affectés à cet utilisateur
+     * sont renvoyés.
      *
      * @return array<int, Prospect>
      */
-    public function findGeolocalises(): array
+    public function findGeolocalises(?int $userId = null): array
     {
-        return $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->leftJoin('p.campagne', 'c')
             ->leftJoin('p.departement', 'd')
             ->addSelect('c', 'd')
             ->where('p.latitude IS NOT NULL')
-            ->andWhere('p.longitude IS NOT NULL')
+            ->andWhere('p.longitude IS NOT NULL');
+
+        if (null !== $userId) {
+            $qb->innerJoin('p.users', 'fg_u')
+                ->andWhere('fg_u.id = :fg_uId')
+                ->setParameter('fg_uId', $userId);
+        }
+
+        return $qb
             ->orderBy('p.nom', 'ASC')
             ->getQuery()
             ->getResult();

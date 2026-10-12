@@ -28,6 +28,13 @@
                 <option value="{{ key }}" {% if styleKey == key %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
+        <label for="carte-utilisateur" class="text-muted small mb-0">Affecté à</label>
+        <select id="carte-utilisateur" name="utilisateur" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+            <option value="">Tous</option>
+            {% for u in utilisateurs %}
+                <option value="{{ u.id }}" {% if utilisateurFiltre == u.id %}selected{% endif %}>{{ u.username }}</option>
+            {% endfor %}
+        </select>
         <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">OK</button></noscript>
     </form>
 

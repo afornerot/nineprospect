@@ -35,19 +35,27 @@ class DepartementRepository extends ServiceEntityRepository
 
     /**
      * Nombre de prospects par département (avec région).
+     * Si un userId est fourni, seuls les prospects affectés à cet utilisateur
+     * sont comptés.
      *
      * @return array<int, array{id: int, numero: string|null, nom: string|null, region: string|null, total: int}>
      */
-    public function countProspectsGrouped(): array
+    public function countProspectsGrouped(?int $userId = null): array
     {
-        $lignes = $this->getEntityManager()->createQueryBuilder()
+        $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('d.id AS id, d.numero AS numero, d.nom AS nom, d.region AS region, COUNT(p.id) AS total')
             ->from(Departement::class, 'd')
             ->leftJoin(Prospect::class, 'p', 'WITH', 'p.departement = d')
             ->groupBy('d.id')
-            ->add('orderBy', 'total DESC')
-            ->getQuery()
-            ->getArrayResult();
+            ->add('orderBy', 'total DESC');
+
+        if (null !== $userId) {
+            $qb->innerJoin('p.users', 'cpg_u')
+                ->andWhere('cpg_u.id = :cpg_user')
+                ->setParameter('cpg_user', $userId);
+        }
+
+        $lignes = $qb->getQuery()->getArrayResult();
 
         $result = [];
 

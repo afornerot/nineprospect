@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Repository\ProspectRepository;
+use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,6 +32,7 @@ class CarteController extends AbstractController
         private ProspectRepository $prospects,
         #[Autowire('%mapboxPublicToken%')]
         private string $mapboxPublicToken,
+        private UserRepository $users,
     ) {
     }
 
@@ -42,7 +44,8 @@ class CarteController extends AbstractController
             $style = 'streets-v12';
         }
 
-        $prospectsGeo = $this->prospects->findGeolocalises();
+        $userId = $this->lireParamEntier($request, 'utilisateur');
+        $prospectsGeo = $this->prospects->findGeolocalises($userId);
 
         return $this->renderLayout('carte/index.html.twig', 'Carte des prospects', [
             'mapboxToken' => $this->mapboxPublicToken,
@@ -50,6 +53,26 @@ class CarteController extends AbstractController
             'totalProspects' => (int) $this->prospects->count([]),
             'styleKey' => $style,
             'styles' => self::STYLES,
+            'utilisateurs' => $this->users->findAll(),
+            'utilisateurFiltre' => $userId,
         ]);
+    }
+
+    /**
+     * Entier de requête tolérant aux valeurs vides ou non numériques.
+     */
+    private function lireParamEntier(Request $request, string $nom): ?int
+    {
+        $valeur = $request->query->all()[$nom] ?? null;
+        if (!is_scalar($valeur)) {
+            return null;
+        }
+
+        $texte = trim((string) $valeur);
+        if ('' === $texte) {
+            return null;
+        }
+
+        return filter_var($texte, FILTER_VALIDATE_INT, ['flags' => FILTER_NULL_ON_FAILURE]);
     }
 }
