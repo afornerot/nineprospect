@@ -6,6 +6,7 @@ use App\Entity\Category;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use SortDirection;
 
 /**
  * @extends ServiceEntityRepository<Category>
@@ -23,7 +24,7 @@ class CategoryRepository extends ServiceEntityRepository
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('c')
-            ->orderBy('c.nom', 'ASC')
+            ->orderBy('c.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }

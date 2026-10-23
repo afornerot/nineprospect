@@ -15,6 +15,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use SortDirection;
 
 /**
  * @extends AbstractType<Campagne>
@@ -80,7 +81,7 @@ class CampagneType extends AbstractType
                 'mapped' => false,
                 'attr' => ['class' => 'js-prospects-multi d-none'],
                 'query_builder' => static fn (EntityRepository $er): QueryBuilder => $er->createQueryBuilder('p')
-                    ->orderBy('p.nom', 'ASC'),
+                    ->orderBy('p.nom', SortDirection::Ascending),
             ]);
         }
     }

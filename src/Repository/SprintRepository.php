@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Sprint;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use SortDirection;
 
 /**
  * @extends ServiceEntityRepository<Sprint>
@@ -22,7 +23,7 @@ class SprintRepository extends ServiceEntityRepository
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('s')
-            ->orderBy('s.numero', 'DESC')
+            ->orderBy('s.numero', SortDirection::Descending)
             ->getQuery()
             ->getResult();
     }
@@ -30,7 +31,7 @@ class SprintRepository extends ServiceEntityRepository
     public function findLast(): ?Sprint
     {
         return $this->createQueryBuilder('s')
-            ->orderBy('s.numero', 'DESC')
+            ->orderBy('s.numero', SortDirection::Descending)
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();

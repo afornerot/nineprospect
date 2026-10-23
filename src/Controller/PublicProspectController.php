@@ -23,6 +23,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use SortDirection;
 
 class PublicProspectController extends AbstractController
 {
@@ -121,7 +122,7 @@ class PublicProspectController extends AbstractController
         $session = $request->getSession();
         $prospectId = $session->get('prospect_id');
 
-        $allCibles = $this->cibles->findBy([], ['titre' => 'ASC']);
+        $allCibles = $this->cibles->findBy([], ['titre' => SortDirection::Ascending]);
 
         if ($request->isMethod('POST')) {
             if ($this->altchaEnabled) {
@@ -304,7 +305,7 @@ class PublicProspectController extends AbstractController
             'cible' => $cible,
         ]);
 
-        $allCibles = $this->cibles->findBy([], ['titre' => 'ASC']);
+        $allCibles = $this->cibles->findBy([], ['titre' => SortDirection::Ascending]);
 
         return $this->render('public/contact_success.html.twig', [
             'prospect' => $prospect,

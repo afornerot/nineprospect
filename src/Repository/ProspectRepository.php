@@ -7,6 +7,7 @@ use App\Entity\ProspectSprint;
 use App\Enum\PipelineStatut;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use SortDirection;
 
 /**
  * @extends ServiceEntityRepository<Prospect>
@@ -52,7 +53,7 @@ class ProspectRepository extends ServiceEntityRepository
             ->leftJoin('pc.cible', 'ci')
             ->leftJoin('p.categories', 'cat')
             ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'ct', 'u', 'a', 'pc', 'ci', 'cat')
-            ->orderBy('p.nom', 'ASC');
+            ->orderBy('p.nom', SortDirection::Ascending);
 
         if (isset($filtres['campagne'])) {
             $qb->andWhere('c.id = :campagne')->setParameter('campagne', $filtres['campagne']);
@@ -204,7 +205,7 @@ class ProspectRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('p')
             ->where('p.campagne = :campagne')
             ->setParameter('campagne', $campagneId)
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
@@ -236,7 +237,7 @@ class ProspectRepository extends ServiceEntityRepository
             ->innerJoin('p.sprints', 'ps')
             ->where('ps.sprint = :sprint')
             ->setParameter('sprint', $sprintId)
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getArrayResult();
 
@@ -258,7 +259,7 @@ class ProspectRepository extends ServiceEntityRepository
             ->select('p.id, p.nom, s.id AS sprintId, s.numero AS sprintNumero')
             ->leftJoin('p.sprints', 'ps')
             ->leftJoin('ps.sprint', 's')
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getArrayResult();
     }
@@ -270,7 +271,7 @@ class ProspectRepository extends ServiceEntityRepository
             ->from(\App\Entity\Sprint::class, 's')
             ->innerJoin('s.liens', 'ps')
             ->groupBy('s.id')
-            ->orderBy('s.numero', 'ASC')
+            ->orderBy('s.numero', SortDirection::Ascending)
             ->getQuery()
             ->getArrayResult();
     }
@@ -281,7 +282,7 @@ class ProspectRepository extends ServiceEntityRepository
             ->where('p.id NOT IN (
                 SELECT IDENTITY(ps.prospect) FROM App\Entity\ProspectSprint ps
             )')
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
@@ -290,7 +291,7 @@ class ProspectRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('p')
             ->where('p.campagne IS NULL')
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
@@ -301,7 +302,7 @@ class ProspectRepository extends ServiceEntityRepository
             ->select('p.id, p.nom, s.id AS sprintId, s.numero AS sprintNumero')
             ->leftJoin('p.sprints', 'ps')
             ->leftJoin('ps.sprint', 's')
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getArrayResult();
     }
@@ -357,7 +358,7 @@ class ProspectRepository extends ServiceEntityRepository
             ->select('d.numero, d.nom, COUNT(p.id) as total')
             ->innerJoin('p.departement', 'd')
             ->groupBy('d.id')
-            ->orderBy('total', 'DESC')
+            ->orderBy('total', SortDirection::Descending)
             ->setMaxResults(10)
             ->getQuery()
             ->getArrayResult();
@@ -396,7 +397,7 @@ class ProspectRepository extends ServiceEntityRepository
         }
 
         return $qb
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
@@ -448,7 +449,7 @@ class ProspectRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('p')
             ->leftJoin('p.categories', 'cat')
             ->where('cat IS NULL')
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
@@ -464,7 +465,7 @@ class ProspectRepository extends ServiceEntityRepository
             ->leftJoin('p.categories', 'cat', 'WITH', 'cat.id = :catId')
             ->where('cat.id IS NULL')
             ->setParameter('catId', $categorieId)
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
@@ -479,7 +480,7 @@ class ProspectRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('p')
             ->leftJoin('p.prospectCibles', 'pc')
             ->where('pc IS NULL')
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
@@ -495,7 +496,7 @@ class ProspectRepository extends ServiceEntityRepository
             ->leftJoin('p.prospectCibles', 'pc', 'WITH', 'pc.cible = :cibleId')
             ->where('pc.id IS NULL')
             ->setParameter('cibleId', $cibleId)
-            ->orderBy('p.nom', 'ASC')
+            ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }

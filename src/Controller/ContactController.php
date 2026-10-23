@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use SortDirection;
 
 #[Route('/user/contacts')]
 class ContactController extends AbstractController
@@ -37,8 +38,8 @@ class ContactController extends AbstractController
         $qb = $this->contacts->createQueryBuilder('c')
             ->addSelect('p')
             ->leftJoin('c.prospect', 'p')
-            ->orderBy('c.nom', 'ASC')
-            ->addOrderBy('c.prenom', 'ASC');
+            ->orderBy('c.nom', SortDirection::Ascending)
+            ->addOrderBy('c.prenom', SortDirection::Ascending);
 
         if (null !== $user) {
             $qb->innerJoin('p.users', 'cu')

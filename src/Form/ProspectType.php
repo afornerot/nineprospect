@@ -26,6 +26,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use SortDirection;
 
 /**
  * @extends AbstractType<Prospect>
@@ -208,7 +209,7 @@ class ProspectType extends AbstractType
                 'multiple' => true,
                 'required' => false,
                 'mapped' => false,
-                'query_builder' => static fn (EntityRepository $er): \Doctrine\ORM\QueryBuilder => $er->createQueryBuilder('s')->orderBy('s.numero', 'DESC'),
+                'query_builder' => static fn (EntityRepository $er): \Doctrine\ORM\QueryBuilder => $er->createQueryBuilder('s')->orderBy('s.numero', SortDirection::Descending),
                 'attr' => ['class' => 'select2'],
             ])
 
@@ -245,7 +246,7 @@ class ProspectType extends AbstractType
                 'multiple' => true,
                 'required' => false,
                 'attr' => ['class' => 'select2'],
-                'query_builder' => static fn (EntityRepository $er) => $er->createQueryBuilder('c')->orderBy('c.nom', 'ASC'),
+                'query_builder' => static fn (EntityRepository $er) => $er->createQueryBuilder('c')->orderBy('c.nom', SortDirection::Ascending),
             ])
 
             ->add('redirect', HiddenType::class, [

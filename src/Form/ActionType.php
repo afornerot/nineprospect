@@ -19,6 +19,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\Callback;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
+use SortDirection;
 
 /**
  * @extends AbstractType<Action>
@@ -50,8 +51,8 @@ class ActionType extends AbstractType
                 'required' => false,
                 'query_builder' => static function (\Doctrine\ORM\EntityRepository $er) use ($options) {
                     $qb = $er->createQueryBuilder('c')
-                        ->orderBy('c.nom', 'ASC')
-                        ->addOrderBy('c.prenom', 'ASC');
+                        ->orderBy('c.nom', SortDirection::Ascending)
+                        ->addOrderBy('c.prenom', SortDirection::Ascending);
                     if (null !== $options['prospectFiltre']) {
                         $qb->andWhere('c.prospect = :pid')
                             ->setParameter('pid', $options['prospectFiltre']);
@@ -80,7 +81,7 @@ class ActionType extends AbstractType
                 'choice_label' => 'username',
                 'placeholder' => '—',
                 'required' => false,
-                'query_builder' => static fn (UserRepository $er) => $er->createQueryBuilder('u')->orderBy('u.username', 'ASC'),
+                'query_builder' => static fn (UserRepository $er) => $er->createQueryBuilder('u')->orderBy('u.username', SortDirection::Ascending),
             ])
 
             ->add('datePrevue', DateType::class, [
@@ -101,7 +102,7 @@ class ActionType extends AbstractType
                 'choice_label' => 'username',
                 'placeholder' => '—',
                 'required' => false,
-                'query_builder' => static fn (UserRepository $er) => $er->createQueryBuilder('u')->orderBy('u.username', 'ASC'),
+                'query_builder' => static fn (UserRepository $er) => $er->createQueryBuilder('u')->orderBy('u.username', SortDirection::Ascending),
             ])
 
             ->add('resultat', TextareaType::class, [

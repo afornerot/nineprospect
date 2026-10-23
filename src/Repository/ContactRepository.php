@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Contact;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use SortDirection;
 
 /**
  * @extends ServiceEntityRepository<Contact>
@@ -31,8 +32,8 @@ class ContactRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('c')
             ->andWhere('c.prospect = :pid')
             ->setParameter('pid', $prospectId)
-            ->orderBy('c.nom', 'ASC')
-            ->addOrderBy('c.prenom', 'ASC')
+            ->orderBy('c.nom', SortDirection::Ascending)
+            ->addOrderBy('c.prenom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }

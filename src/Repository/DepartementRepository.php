@@ -6,6 +6,7 @@ use App\Entity\Departement;
 use App\Entity\Prospect;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use SortDirection;
 
 /**
  * @extends ServiceEntityRepository<Departement>
@@ -23,7 +24,7 @@ class DepartementRepository extends ServiceEntityRepository
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('d')
-            ->orderBy('d.numero', 'ASC')
+            ->orderBy('d.numero', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }

@@ -7,6 +7,7 @@ use App\Entity\PipelineValeur;
 use App\Entity\Sprint;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use SortDirection;
 
 /**
  * @extends ServiceEntityRepository<Pipeline>
@@ -24,8 +25,8 @@ class PipelineRepository extends ServiceEntityRepository
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('p')
-            ->orderBy('p.parDefaut', 'DESC')
-            ->addOrderBy('p.nom', 'ASC')
+            ->orderBy('p.parDefaut', SortDirection::Descending)
+            ->addOrderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }

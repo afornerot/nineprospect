@@ -15,6 +15,7 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use SortDirection;
 
 #[Route('/user/campagnes')]
 class CampagneController extends AbstractController
@@ -138,7 +139,7 @@ class CampagneController extends AbstractController
             return $this->redirectToRoute('app_user_campagnes');
         }
 
-        $allProspects = $this->prospects->findBy([], ['nom' => 'ASC']);
+        $allProspects = $this->prospects->findBy([], ['nom' => SortDirection::Ascending]);
         $campagneProspects = $this->prospectsDe($campagne);
 
         return $this->renderLayout('campagnes/edit.html.twig', 'Modification = '.$campagne->getLibelle(), [

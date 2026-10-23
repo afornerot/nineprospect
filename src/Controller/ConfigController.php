@@ -12,6 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use SortDirection;
 
 class ConfigController extends AbstractController
 {
@@ -27,7 +28,7 @@ class ConfigController extends AbstractController
     #[Route('/admin/config', name: self::ROUTE_PREFIX)]
     public function list(): Response
     {
-        $configs = $this->configRepository->findBy([], ['configGroup' => 'ASC', 'order' => 'ASC', 'id' => 'ASC']);
+        $configs = $this->configRepository->findBy([], ['configGroup' => SortDirection::Ascending, 'order' => SortDirection::Ascending, 'id' => SortDirection::Ascending]);
 
         return $this->renderLayout('config/list.html.twig', 'Configuration', [
             'configs' => $configs,

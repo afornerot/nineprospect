@@ -6,6 +6,7 @@ use App\Entity\Action;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use SortDirection;
 
 /**
  * @extends ServiceEntityRepository<Action>
@@ -35,7 +36,7 @@ class ActionRepository extends ServiceEntityRepository
             ->andWhere('a.datePrevue IS NOT NULL')
             ->andWhere('a.datePrevue < :jour')
             ->setParameter('jour', $jour->format('Y-m-d'))
-            ->orderBy('a.datePrevue', 'ASC');
+            ->orderBy('a.datePrevue', SortDirection::Ascending);
 
         $this->appliquerFiltreUtilisateur($qb, $user);
 
@@ -57,7 +58,7 @@ class ActionRepository extends ServiceEntityRepository
             ->where('a.dateRealisee IS NULL')
             ->andWhere('a.datePrevue = :jour')
             ->setParameter('jour', $jour->format('Y-m-d'))
-            ->orderBy('a.datePrevue', 'ASC');
+            ->orderBy('a.datePrevue', SortDirection::Ascending);
 
         $this->appliquerFiltreUtilisateur($qb, $user);
 
@@ -81,7 +82,7 @@ class ActionRepository extends ServiceEntityRepository
             ->where('a.dateRealisee IS NULL')
             ->andWhere('(a.datePrevue IS NULL OR a.datePrevue > :jour)')
             ->setParameter('jour', $jour->format('Y-m-d'))
-            ->orderBy('a.datePrevue', 'ASC')
+            ->orderBy('a.datePrevue', SortDirection::Ascending)
             ->setMaxResults($limit);
 
         $this->appliquerFiltreUtilisateur($qb, $user);
@@ -100,7 +101,7 @@ class ActionRepository extends ServiceEntityRepository
             ->leftJoin('a.prospect', 'p')->addSelect('p')
             ->leftJoin('a.contact', 'c')->addSelect('c')
             ->where('a.dateRealisee IS NOT NULL')
-            ->orderBy('a.dateRealisee', 'DESC')
+            ->orderBy('a.dateRealisee', SortDirection::Descending)
             ->setMaxResults($limit);
 
         $this->appliquerFiltreUtilisateur($qb, $user);
@@ -188,8 +189,8 @@ class ActionRepository extends ServiceEntityRepository
         }
 
         return $qb
-            ->orderBy('a.datePrevue', 'ASC')
-            ->addOrderBy('a.dateRealisee', 'ASC')
+            ->orderBy('a.datePrevue', SortDirection::Ascending)
+            ->addOrderBy('a.dateRealisee', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }

@@ -6,6 +6,7 @@ use App\Repository\PipelineRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use SortDirection;
 
 /**
  * Pipeline commercial : liste ordonnée d'étapes (visio, démo, devis, signature…).
@@ -33,7 +34,7 @@ class Pipeline
      * @var Collection<int, PipelineEtape>
      */
     #[ORM\OneToMany(targetEntity: PipelineEtape::class, mappedBy: 'pipeline', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[ORM\OrderBy(['ordre' => 'ASC'])]
+    #[ORM\OrderBy(['ordre' => SortDirection::Ascending])]
     private Collection $etapes;
 
     public function __construct()

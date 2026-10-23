@@ -6,6 +6,7 @@ use App\Entity\Cible;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
+use SortDirection;
 
 /**
  * @extends ServiceEntityRepository<Cible>
@@ -23,7 +24,7 @@ class CibleRepository extends ServiceEntityRepository
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('c')
-            ->orderBy('c.titre', 'ASC')
+            ->orderBy('c.titre', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }

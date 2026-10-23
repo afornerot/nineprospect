@@ -12,6 +12,7 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use SortDirection;
 
 class ProspectCibleType extends AbstractType
 {
@@ -27,7 +28,7 @@ class ProspectCibleType extends AbstractType
                 'choice_label' => 'titre',
                 'placeholder' => 'Sélectionnez une cible…',
                 'query_builder' => static function (EntityRepository $er) use ($prospect, $excludedCibleId) {
-                    $qb = $er->createQueryBuilder('c')->orderBy('c.titre', 'ASC');
+                    $qb = $er->createQueryBuilder('c')->orderBy('c.titre', SortDirection::Ascending);
 
                     if ($prospect instanceof Prospect) {
                         $attachedCibleIds = [];

@@ -19,6 +19,7 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use SortDirection;
 
 #[Route('/user/vagues')]
 class SprintController extends AbstractController
@@ -146,7 +147,7 @@ class SprintController extends AbstractController
             return $this->redirectToRoute('app_user_vagues');
         }
 
-        $allProspects = $this->prospects->findBy([], ['nom' => 'ASC']);
+        $allProspects = $this->prospects->findBy([], ['nom' => SortDirection::Ascending]);
 
         return $this->renderLayout('vagues/edit.html.twig', 'Modification = Vague '.$sprint->getNumero(), [
             'routecancel' => 'app_user_vagues',

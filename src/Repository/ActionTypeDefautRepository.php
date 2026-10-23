@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\ActionTypeDefaut;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use SortDirection;
 
 /**
  * @extends ServiceEntityRepository<ActionTypeDefaut>
@@ -26,8 +27,8 @@ class ActionTypeDefautRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('t')
             ->where('t.actif = :actif')
             ->setParameter('actif', true)
-            ->orderBy('t.ordre', 'ASC')
-            ->addOrderBy('t.libelle', 'ASC')
+            ->orderBy('t.ordre', SortDirection::Ascending)
+            ->addOrderBy('t.libelle', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
@@ -41,8 +42,8 @@ class ActionTypeDefautRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('t')
             ->where('t.actif = :actif')
             ->setParameter('actif', true)
-            ->orderBy('t.ordre', 'ASC')
-            ->addOrderBy('t.libelle', 'ASC')
+            ->orderBy('t.ordre', SortDirection::Ascending)
+            ->addOrderBy('t.libelle', SortDirection::Ascending)
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
@@ -56,8 +57,8 @@ class ActionTypeDefautRepository extends ServiceEntityRepository
     public function findAllOrdonnes(): array
     {
         return $this->createQueryBuilder('t')
-            ->orderBy('t.ordre', 'ASC')
-            ->addOrderBy('t.libelle', 'ASC')
+            ->orderBy('t.ordre', SortDirection::Ascending)
+            ->addOrderBy('t.libelle', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
