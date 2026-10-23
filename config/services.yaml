@@ -46,6 +46,8 @@ services:
       $storage: '@app_storage'
       $s3: '%env(bool:STORAGE_S3)%'
 
+  Bnine\FilesBundle\Cache\CachePolicyInterface: '@App\Cache\FileCachePolicy'
+
   App\Service\AltchaService:
     arguments:
       $altchaHmacKey: '%altchaHmacKey%'

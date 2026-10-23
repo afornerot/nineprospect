@@ -24,6 +24,8 @@ class UserType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $user = $builder->getData();
+
         $builder
         ->add('submit', SubmitType::class, [
             'label' => 'Valider',
@@ -55,7 +57,7 @@ class UserType extends AbstractType
             'icon_label' => 'Avatar',
             'icon_empty_preview' => 'medias/avatar/noavatar.png',
             'icon_domain' => 'avatar',
-            'icon_entity_id' => 0,
+            'icon_entity_id' => $user instanceof User ? ($user->getId() ?? 0) : 0,
             'crop' => true,
             'crop_ratio' => '1/1',
             'crop_min_size' => 300,

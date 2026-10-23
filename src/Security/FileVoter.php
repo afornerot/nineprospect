@@ -2,6 +2,7 @@
 
 namespace App\Security;
 
+use App\Entity\User;
 use Bnine\FilesBundle\Security\AbstractFileVoter;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 
@@ -50,6 +51,10 @@ class FileVoter extends AbstractFileVoter
 
         if (in_array('ROLE_ADMIN', $user->getRoles())) {
             return true;
+        }
+
+        if ('avatar' === $domain) {
+            return $user instanceof User && (int) $id === $user->getId();
         }
 
         return in_array('ROLE_USER', $user->getRoles());

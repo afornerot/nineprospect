@@ -6,7 +6,6 @@ twig:
     app_config: '@App\Service\ConfigParameterBag'
   paths:
       '%kernel.project_dir%/vendor/bnine/filesbundle/templates': BnineFilesBundle
-      '%kernel.project_dir%/vendor/bnine/mdeditorbundle/templates': BnineMdEditorBundle
 when@test:
   twig:
     strict_variables: true

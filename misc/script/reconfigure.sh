@@ -20,6 +20,8 @@ bin/console doctrine:schema:update --force --no-interaction --env=dev
 
 bin/console app:init
 
+bin/console assets:install public
+
 supercronic -quiet -no-reap /crontab &
 SUPERCRONIC_PID=$!
 
