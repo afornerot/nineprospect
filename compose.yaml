@@ -28,7 +28,10 @@ services:
     container_name: nineprospect
     restart: unless-stopped
     image: reg.cadoles.com/envole/nineprospect
-    user: "${UID:-1000}:102"
+    user: "${UID:-1000}:${GID:-101}"
+    # UID = utilisateur hôte (accès aux volumes montés), GID = groupe apache (101)
+    # du conteneur : le GID 102 n'existe pas dans l'image et empêchait httpd
+    # d'écrire dans /var/log/apache2 -> apache mourait en boucle de redémarrage.
     depends_on:
       - mariadb
       - altcha
