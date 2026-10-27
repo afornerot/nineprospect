@@ -274,6 +274,20 @@ class ContactValidationTest extends WebTestCase
             static::markTestSkipped('Base de test indisponible.');
         }
 
+        // La liste doit contenir au moins une ligne pour porter un lien
+        // « Modifier » : on cree le contact ici plutot que de dependre de
+        // fixtures absentes.
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $prospect = $em->getRepository(Prospect::class)->findOneBy([]);
+        if (null === $prospect) {
+            static::markTestSkipped('Aucun prospect en base de test.');
+        }
+        $contact = new Contact();
+        $contact->setNom('ZZTEST-liste-contact');
+        $contact->setProspect($prospect);
+        $em->persist($contact);
+        $em->flush();
+
         $client->request('GET', '/user/contacts');
         $crawler = $client->getCrawler();
         $btn = $crawler->filter('a.btn-success');

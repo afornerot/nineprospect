@@ -4,6 +4,7 @@ namespace App\Tests;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -18,7 +19,6 @@ class ProspectionRoutesTest extends WebTestCase
         '/user/vagues',
         '/user/pipelines',
         '/user/geographie',
-        '/user/prospects/verify/1779',
     ];
 
     public function testAnonymousIsRedirectedToLogin(): void
@@ -44,6 +44,27 @@ class ProspectionRoutesTest extends WebTestCase
 
             $this->assertResponseIsSuccessful();
         }
+    }
+
+    public function testVerifyPageRendPourUnProspectReel(): void
+    {
+        $client = $this->loginAsUser();
+        if (null === $client) {
+            static::markTestSkipped('Base de données de test indisponible.');
+        }
+
+        // L'ancien test utilisait /user/prospects/verify/1779, un identifiant
+        // code en dur absent de la base de test (404). On prend un prospect
+        // reel.
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $prospect = $em->getRepository(\App\Entity\Prospect::class)->findOneBy([]);
+        if (null === $prospect) {
+            static::markTestSkipped('Aucun prospect en base de test.');
+        }
+
+        $client->request('GET', '/user/prospects/verify/'.$prospect->getId());
+
+        $this->assertResponseIsSuccessful();
     }
 
     public function testProspectShowPageRendersContactsAndActions(): void

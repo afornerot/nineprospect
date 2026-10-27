@@ -48,17 +48,19 @@ class CibleImportWebTest extends WebTestCase
         $this->assertStringContainsString('attachment', (string) $client->getResponse()->headers->get('Content-Disposition'));
     }
 
-    public function testListeCiblesContientLeBoutonImporter(): void
+    public function testListeProspectsContientLeBoutonImporter(): void
     {
         $client = $this->loginAsUser();
         if (null === $client) {
             static::markTestSkipped('Base de données de test indisponible.');
         }
 
-        $client->request('GET', '/user/cibles');
+        // Le bouton d'import vit sur la liste des PROSPECTS
+        // (templates/prospects/list.html.twig:98), pas sur celle des cibles.
+        $client->request('GET', '/user/prospects');
 
         $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('Importer une cible');
+        $this->assertSelectorTextContains('a[href*="cibles/import"]', 'Importer');
     }
 
     private function loginAsUser(): ?KernelBrowser

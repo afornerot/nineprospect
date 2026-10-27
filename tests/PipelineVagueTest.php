@@ -144,6 +144,25 @@ class PipelineVagueTest extends WebTestCase
 
         $repository = $this->prospects();
 
+        // countPipeline() compte les ProspectSprint : sans assignation en base
+        // de test, le resultat est vide. On cree l'assignation minimale.
+        $vague = $this->deuxVagues();
+        if (null === $vague) {
+            static::markTestSkipped('Aucune vague en base de test.');
+        }
+        [$sprint] = $vague;
+        $prospect = $this->deuxProspects();
+        if (null === $prospect) {
+            static::markTestSkipped('Aucun prospect en base de test.');
+        }
+        $em = $this->em();
+        $lien = new \App\Entity\ProspectSprint();
+        $lien->setProspect($prospect[0]);
+        $lien->setSprint($sprint);
+        $lien->setDateAjout(new \DateTime());
+        $em->persist($lien);
+        $em->flush();
+
         try {
             $toutes = $repository->countPipeline((int) $pipeline->getId());
         } catch (\Doctrine\DBAL\Exception) {

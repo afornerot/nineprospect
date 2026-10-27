@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use Symfony\Component\String\Slugger\AsciiSlugger;
+
 use App\Repository\CategoryRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -105,11 +107,13 @@ class Category
 
     private function generateSlug(string $text): string
     {
-        $text = strtolower($text);
-        $text = preg_replace('/[^a-z0-9]+/', '-', $text) ?? '';
-        $text = trim($text, '-');
+        // AsciiSlugger translitere les accents (É -> e) avant de reduire
+        // aux caracteres surs. Sans lui, '[^a-z0-9]+' supprimait la lettre
+        // accentuee au lieu de la remplacer : "Mon Éducation Nationale"
+        // devenait "mon-ducation-nationale".
+        $slug = (new AsciiSlugger())->slug($text, '-')->lower()->toString();
 
-        return '' === $text ? 'category' : $text;
+        return '' === $slug ? 'category' : $slug;
     }
 
     public function __toString(): string

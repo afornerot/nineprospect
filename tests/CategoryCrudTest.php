@@ -36,6 +36,7 @@ class CategoryCrudTest extends WebTestCase
                 'submit' => '',
                 'nom' => 'ZZTEST-collectivite',
                 'description' => 'Catégorie de test',
+                '_token' => $token,
             ],
         ], [], ['HTTP_ORIGIN' => 'http://localhost']);
 
@@ -64,6 +65,7 @@ class CategoryCrudTest extends WebTestCase
                 'submit' => '',
                 'nom' => 'ZZTEST-collectivite-renomme',
                 'description' => 'Catégorie de test mise à jour',
+                '_token' => $token,
             ],
         ], [], ['HTTP_ORIGIN' => 'http://localhost']);
 
@@ -99,13 +101,25 @@ class CategoryCrudTest extends WebTestCase
             $this->em()->clear();
             $prospectReload = $this->prospects()->find($prospect->getId());
             $this->assertInstanceOf(Prospect::class, $prospectReload);
-            $this->assertTrue($prospectReload->getCategories()->contains($cat),
+            // contains() compare des identites d objet : apres em()->clear(),
+            // $cat est detache et la comparaison echoue toujours. On compare
+            // les identifiants.
+            $idsAssocies = $prospectReload->getCategories()->map(
+                static fn (Category $c): ?int => $c->getId()
+            )->toArray();
+            $this->assertContains($catId, $idsAssocies,
                 'La Category doit être associée au Prospect après update');
         }
 
         // 5) DELETE : POST /user/categories/delete/{id} avec CSRF
+        // Le token n'est pas sur une page dediee : il est emis par le bouton
+        // de suppression (include/delete_button.html.twig) present sur la
+        // page d'edition, avec l'identifiant 'delete-category{id}'.
         $uri = '/user/categories/delete/'.$catId;
-        $token = $this->csrf($client, $uri);
+        $crawler = $client->request('GET', '/user/categories/update/'.$catId);
+        $champToken = $crawler->filter('input[name="_csrf_token"]');
+        $this->assertNotSame(0, $champToken->count(), 'Bouton de suppression absent de la page d edition');
+        $token = (string) $champToken->first()->attr('value');
         $client->request('POST', $uri, [
             '_csrf_token' => $token,
         ], [], ['HTTP_ORIGIN' => 'http://localhost']);
@@ -141,6 +155,7 @@ class CategoryCrudTest extends WebTestCase
                 'submit' => '',
                 'nom' => 'Mon Éducation Nationale',
                 'description' => '',
+                '_token' => $token,
             ],
         ], [], ['HTTP_ORIGIN' => 'http://localhost']);
 
@@ -156,7 +171,11 @@ class CategoryCrudTest extends WebTestCase
         $em = $this->em();
         $qb = $em->createQueryBuilder();
         $qb->delete(Category::class, 'c')
-            ->where($qb->expr()->like('c.nom', $qb->expr()->literal('ZZTEST%')))
+            ->where($qb->expr()->orX(
+                $qb->expr()->like('c.nom', $qb->expr()->literal('ZZTEST%')),
+                $qb->expr()->like('c.nom', $qb->expr()->literal('Mon %ducation Nationale')),
+                $qb->expr()->like('c.nom', $qb->expr()->literal('ZZDBG%')),
+            ))
             ->getQuery()
             ->execute();
     }
