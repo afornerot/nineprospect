@@ -3,6 +3,7 @@
 namespace App\Tests\Service;
 
 use App\Service\AnnuaireEntreprises;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -112,8 +113,8 @@ class AnnuaireEntreprisesTest extends TestCase
     }
 
     /**
-     * @dataProvider deptProvider
      */
+    #[DataProvider('deptProvider')]
     public function testExtractDept(string $cp, ?string $expected): void
     {
         $svc = new AnnuaireEntreprises($this->stubJson(['results' => []]), new NullLogger());
@@ -168,8 +169,8 @@ class AnnuaireEntreprisesTest extends TestCase
      * - 800123456 % 97 = 6  → (12 + 18)  % 97 = 30 → FR30 800 123 456
      * - 123456789 % 97 = 136→ (12 + 408) % 97 = 32 → FR32 123 456 789
      *
-     * @dataProvider tvaProvider
      */
+    #[DataProvider('tvaProvider')]
     public function testComputeTva(string $siren, string $expected): void
     {
         $svc = new AnnuaireEntreprises($this->stubJson([]), new NullLogger());
