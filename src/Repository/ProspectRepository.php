@@ -296,15 +296,85 @@ class ProspectRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findAllWithCurrentSprint(): array
+    /**
+     * Lignes de la page « affecter en masse » : identité, vague courante,
+     * cibles et catégories, pour un filtrage côté client sans aller-retour.
+     *
+     * La vague courante est la plus haute (même règle que
+     * {@see \App\Entity\Prospect::vagueCourante()}) : un prospect rattaché à
+     * plusieurs vagues n'apparaît qu'une fois.
+     *
+     * @return list<array{id:int, nom:string|null, sprintId:int|null, sprintNumero:int|null, cibleIds:list<int>, categorieIds:list<int>}>
+     */
+    public function findAllPourAffectation(): array
     {
-        return $this->createQueryBuilder('p')
-            ->select('p.id, p.nom, s.id AS sprintId, s.numero AS sprintNumero')
-            ->leftJoin('p.sprints', 'ps')
-            ->leftJoin('ps.sprint', 's')
+        $lignes = [];
+        foreach ($this->createQueryBuilder('p')
+            ->select('p.id', 'p.nom')
             ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
-            ->getArrayResult();
+            ->getArrayResult() as $ligne) {
+            $id = (int) $ligne['id'];
+            $lignes[$id] = [
+                'id' => $id,
+                'nom' => $ligne['nom'],
+                'sprintId' => null,
+                'sprintNumero' => null,
+                'cibleIds' => [],
+                'categorieIds' => [],
+            ];
+        }
+
+        if ([] === $lignes) {
+            return [];
+        }
+
+        // Vague courante : le numéro le plus élevé l'emporte.
+        $vagues = $this->getEntityManager()->createQuery(
+            'SELECT IDENTITY(ps.prospect) pid, s.id sid, s.numero num
+             FROM App\Entity\ProspectSprint ps
+             JOIN ps.sprint s'
+        )->getArrayResult();
+
+        foreach ($vagues as $vague) {
+            $id = (int) $vague['pid'];
+            if (!isset($lignes[$id])) {
+                continue;
+            }
+            $numeroCourant = $lignes[$id]['sprintNumero'];
+            if (null === $numeroCourant || (int) $vague['num'] > $numeroCourant) {
+                $lignes[$id]['sprintId'] = (int) $vague['sid'];
+                $lignes[$id]['sprintNumero'] = (int) $vague['num'];
+            }
+        }
+
+        $cibles = $this->getEntityManager()->createQuery(
+            'SELECT IDENTITY(pc.prospect) pid, c.id cid
+             FROM App\Entity\ProspectCible pc
+             JOIN pc.cible c'
+        )->getArrayResult();
+
+        foreach ($cibles as $cible) {
+            $id = (int) $cible['pid'];
+            if (isset($lignes[$id])) {
+                $lignes[$id]['cibleIds'][] = (int) $cible['cid'];
+            }
+        }
+
+        $categories = $this->getEntityManager()->createQuery(
+            'SELECT p.id pid, cat.id cid
+             FROM App\Entity\Prospect p
+             JOIN p.categories cat'
+        )->getArrayResult();
+
+        foreach ($categories as $categorie) {
+            $id = (int) $categorie['pid'];
+            if (isset($lignes[$id])) {
+                $lignes[$id]['categorieIds'][] = (int) $categorie['cid'];
+            }
+        }
+
+        return array_values($lignes);
     }
 
     /**

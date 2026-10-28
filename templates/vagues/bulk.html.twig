@@ -2,60 +2,119 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block localstyle %}
+    <style>
+        /* Tableau de gauche plus large : il porte les filtres et le listing
+           complet ; celui de droite ne contient que la sélection. */
+        .bulk-filtres { display: flex; flex-wrap: wrap; gap: .5rem; }
+        .bulk-filtres .form-select,
+        .bulk-filtres .form-control { min-width: 130px; width: auto; }
+        .bulk-table-scroll { max-height: 65vh; overflow-y: auto; }
+        .bulk-table-scroll thead th {
+            position: sticky; top: 0; z-index: 1;
+            background: var(--bs-body-bg, #fff);
+        }
+    </style>
+{% endblock %}
+
 {% block body %}
     <h1>{{ title }}</h1>
 
-    <a href="{{ path('app_user_vagues') }}" class="btn btn-secondary mb-3">Retour</a>
+    <a href="{{ retour }}" class="btn btn-secondary mb-3">Retour</a>
 
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-12 col-xl-7">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Prospects</span>
-                    <div class="d-flex gap-2">
-                        <select id="js-sprint-filter" class="form-select form-select-sm" style="width: auto;">
-                            <option value="">Tous les prospects</option>
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Prospects <span class="text-muted small" id="js-count-left"></span></span>
+                        <input type="text" id="js-search" class="form-control form-control-sm" style="width: 180px;" placeholder="Rechercher...">
+                    </div>
+                    <div class="bulk-filtres">
+                        <select id="js-sprint-filter" class="form-select form-select-sm">
+                            <option value="">Toutes les vagues</option>
                             <option value="without" selected>Sans vague</option>
                             {% for sprint in sprints %}
                                 <option value="{{ sprint.id }}">Vague {{ sprint.numero }}{% if sprint.libelle %} — {{ sprint.libelle }}{% endif %}</option>
                             {% endfor %}
                         </select>
-                        <input type="text" id="js-search" class="form-control form-control-sm" style="width: 200px;" placeholder="Rechercher...">
+                        <select id="js-cible-filter" class="form-select form-select-sm">
+                            <option value="">Toutes les cibles</option>
+                            {% for cible in cibles %}
+                                <option value="{{ cible.id }}">{{ cible.titre }}</option>
+                            {% endfor %}
+                        </select>
+                        <select id="js-categorie-filter" class="form-select form-select-sm">
+                            <option value="">Toutes les catégories</option>
+                            {% for categorie in categories %}
+                                <option value="{{ categorie.id }}">{{ categorie.nom }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" id="js-reset-filters" class="btn btn-sm btn-outline-secondary">Réinitialiser</button>
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-sm table-striped mb-0" id="js-prospects-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 40px;"></th>
-                                <th>Prospect</th>
-                                <th>Vague</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for prospect in prospectsAll %}
-                                <tr data-search="{{ prospect.nom|lower }}" data-sprint="{{ prospect.sprintId ?: 'without' }}">
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-success js-add-prospect"
-                                                data-prospect-id="{{ prospect.id }}"
-                                                data-prospect-nom="{{ prospect.nom }}">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </td>
-                                    <td>{{ prospect.nom }}</td>
-                                    <td>{% if prospect.sprintId %}Vague {{ prospect.sprintNumero }}{% else %}—{% endif %}</td>
+                    <div class="bulk-table-scroll">
+                        <table class="table table-sm table-striped mb-0" id="js-prospects-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th>Prospect</th>
+                                    <th>Vague</th>
+                                    <th>Cibles</th>
+                                    <th>Catégories</th>
                                 </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {% for prospect in prospectsAll %}
+                                    <tr data-prospect-id="{{ prospect.id }}"
+                                        data-search="{{ prospect.nom|lower }}"
+                                        data-sprint="{{ prospect.sprintId ?: 'without' }}"
+                                        data-cibles="{{ prospect.cibleIds|join(',') }}"
+                                        data-categories="{{ prospect.categorieIds|join(',') }}">
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-success js-add-prospect"
+                                                    data-prospect-id="{{ prospect.id }}"
+                                                    data-prospect-nom="{{ prospect.nom }}">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </td>
+                                        <td>{{ prospect.nom }}</td>
+                                        <td>{% if prospect.sprintId %}Vague {{ prospect.sprintNumero }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                        <td>
+                                            {% for id in prospect.cibleIds %}
+                                                {% for cible in cibles %}
+                                                    {% if cible.id == id %}<span class="badge text-bg-info">{{ cible.titre }}</span>{% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for id in prospect.categorieIds %}
+                                                {% for categorie in categories %}
+                                                    {% if categorie.id == id %}<span class="badge text-bg-secondary">{{ categorie.nom }}</span>{% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                <tr id="js-empty-left" class="d-none">
+                                    <td colspan="5" class="text-muted">Aucun prospect ne correspond aux filtres.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
+        <div class="col-12 col-xl-5">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Prospects à affecter</span>
+                    <span>Prospects à affecter <span class="text-muted small" id="js-count-right"></span></span>
                     <div class="d-flex align-items-center gap-2">
                         <select id="js-sprint-select" class="form-select form-select-sm" style="width: auto;">
                             {% for sprint in sprints %}
@@ -70,16 +129,18 @@
                 <div class="card-body p-0">
                     <form id="js-bulk-form" method="post" action="{{ path('app_user_vagues_bulk_submit') }}">
                         <input type="hidden" name="sprint_id" id="js-sprint-id" value="{{ lastSprint ? lastSprint.id : '' }}">
-                        <table class="table table-sm table-striped mb-0" id="js-prospects-right">
-                            <thead>
-                                <tr>
-                                    <th style="width: 40px;"></th>
-                                    <th>Prospect</th>
-                                </tr>
-                            </thead>
-                            <tbody id="js-selected-list">
-                            </tbody>
-                        </table>
+                        <div class="bulk-table-scroll">
+                            <table class="table table-sm table-striped mb-0" id="js-prospects-right">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;"></th>
+                                        <th>Prospect</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="js-selected-list">
+                                </tbody>
+                            </table>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -97,75 +158,122 @@
             }
 
             ready(function() {
-                const selected = {};
+                const selected = new Set();
 
-                function updateSubmitBtn() {
-                    const btn = document.getElementById('js-submit-btn');
-                    const input = document.getElementById('js-sprint-id');
-                    const sprintSelect = document.getElementById('js-sprint-select');
-                    const count = Object.keys(selected).length;
-                    btn.disabled = count === 0;
-                    input.value = sprintSelect.value;
+                const tableGauche = document.getElementById('js-prospects-table');
+                const tbodyGauche = tableGauche.querySelector('tbody');
+                const tbodyDroite = document.getElementById('js-selected-list');
+                const filtreVague = document.getElementById('js-sprint-filter');
+                const filtreCible = document.getElementById('js-cible-filter');
+                const filtreCategorie = document.getElementById('js-categorie-filter');
+                const recherche = document.getElementById('js-search');
+                const btnSubmit = document.getElementById('js-submit-btn');
+
+                function majBouton() {
+                    document.getElementById('js-sprint-id').value = document.getElementById('js-sprint-select').value;
+                    btnSubmit.disabled = selected.size === 0;
+                    document.getElementById('js-count-right').textContent = selected.size ? '(' + selected.size + ')' : '';
                 }
 
-                function addRowToTable(id, nom) {
-                    const tbody = document.getElementById('js-selected-list');
+                // Un prospect déjà placé à droite n'a plus rien à faire à
+                // gauche : on masque sa ligne sans la détruire, pour pouvoir
+                // la réafficher telle quelle au retrait.
+                function masquerLigneGauche(id, masquer) {
+                    const tr = tableGauche.querySelector('tr[data-prospect-id="' + id + '"]');
+                    if (tr) tr.dataset.selectionne = masquer ? '1' : '';
+                }
+
+                function ajouter(id, nom) {
+                    if (selected.has(id)) return;
+                    selected.add(id);
+
                     const tr = document.createElement('tr');
                     tr.dataset.prospectId = id;
-                    tr.innerHTML = 
-                        '<td><button type="button" class="btn btn-sm btn-danger js-remove-prospect"><i class="fas fa-minus"></i></button></td>' +
+                    tr.innerHTML =
+                        '<td><button type="button" class="btn btn-sm btn-danger js-remove-prospect" title="Retirer"><i class="fas fa-minus"></i></button></td>' +
                         '<td>' + nom + '</td>' +
                         '<input type="hidden" name="prospect_ids[]" value="' + id + '">';
-                    tbody.appendChild(tr);
+                    tbodyDroite.appendChild(tr);
+
+                    masquerLigneGauche(id, true);
+                    appliquerFiltres();
+                    majBouton();
                 }
 
-                function removeRowFromTable(id) {
-                    const tr = document.querySelector('#js-selected-list tr[data-prospect-id="' + id + '"]');
+                function retirer(id) {
+                    selected.delete(id);
+                    const tr = tbodyDroite.querySelector('tr[data-prospect-id="' + id + '"]');
                     if (tr) tr.remove();
+
+                    masquerLigneGauche(id, false);
+                    appliquerFiltres();
+                    majBouton();
                 }
 
-                function applyFilters() {
-                    const sprintFilter = document.getElementById('js-sprint-filter').value;
-                    const search = document.getElementById('js-search').value.toLowerCase();
-                    document.querySelectorAll('#js-prospects-table tbody tr').forEach(function(tr) {
-                        const sprint = tr.dataset.sprint;
-                        const text = tr.dataset.search;
-                        let show = true;
-                        if (sprintFilter === 'without' && sprint !== 'without') show = false;
-                        else if (sprintFilter !== '' && sprintFilter !== 'without' && sprint !== sprintFilter) show = false;
-                        if (search && !text.includes(search)) show = false;
-                        tr.style.display = show ? '' : 'none';
-                    });
+                function correspond(tr) {
+                    if (tr.dataset.selectionne === '1') return false;
+
+                    const vague = filtreVague.value;
+                    if ('without' === vague && tr.dataset.sprint !== 'without') return false;
+                    if (vague !== '' && vague !== 'without' && tr.dataset.sprint !== vague) return false;
+
+                    const cible = filtreCible.value;
+                    if (cible !== '' && !listeIds(tr.dataset.cibles).includes(cible)) return false;
+
+                    const categorie = filtreCategorie.value;
+                    if (categorie !== '' && !listeIds(tr.dataset.categories).includes(categorie)) return false;
+
+                    const texte = recherche.value.trim().toLowerCase();
+                    if (texte !== '' && !tr.dataset.search.includes(texte)) return false;
+
+                    return true;
                 }
 
-                document.getElementById('js-sprint-select').addEventListener('change', function() {
-                    document.getElementById('js-sprint-id').value = this.value;
-                });
+                function listeIds(valeur) {
+                    return valeur ? valeur.split(',') : [];
+                }
 
-                document.querySelectorAll('.js-add-prospect').forEach(function(btn) {
-                    btn.addEventListener('click', function() {
-                        const id = this.dataset.prospectId;
-                        const nom = this.dataset.prospectNom;
-                        if (selected[id]) return;
-                        selected[id] = true;
-                        addRowToTable(id, nom);
-                        updateSubmitBtn();
+                function appliquerFiltres() {
+                    let visibles = 0;
+                    tbodyGauche.querySelectorAll('tr[data-prospect-id]').forEach(function(tr) {
+                        const visible = correspond(tr);
+                        tr.style.display = visible ? '' : 'none';
+                        if (visible) visibles++;
                     });
+                    document.getElementById('js-count-left').textContent = '(' + visibles + ')';
+                    document.getElementById('js-empty-left').classList.toggle('d-none', visibles > 0);
+                }
+
+                tbodyGauche.addEventListener('click', function(e) {
+                    const btn = e.target.closest('.js-add-prospect');
+                    if (!btn) return;
+                    ajouter(btn.dataset.prospectId, btn.dataset.prospectNom);
                 });
 
-                document.addEventListener('click', function(e) {
-                    if (e.target.closest('.js-remove-prospect')) {
-                        const btn = e.target.closest('.js-remove-prospect');
-                        const tr = btn.closest('tr');
-                        const id = tr.dataset.prospectId;
-                        delete selected[id];
-                        removeRowFromTable(id);
-                        updateSubmitBtn();
-                    }
+                // Délégation : les lignes de droite sont créées dynamiquement.
+                tbodyDroite.addEventListener('click', function(e) {
+                    const btn = e.target.closest('.js-remove-prospect');
+                    if (!btn) return;
+                    retirer(btn.closest('tr').dataset.prospectId);
                 });
 
-                document.getElementById('js-sprint-filter').addEventListener('change', applyFilters);
-                document.getElementById('js-search').addEventListener('keyup', applyFilters);
+                filtreVague.addEventListener('change', appliquerFiltres);
+                filtreCible.addEventListener('change', appliquerFiltres);
+                filtreCategorie.addEventListener('change', appliquerFiltres);
+                recherche.addEventListener('input', appliquerFiltres);
+
+                document.getElementById('js-reset-filters').addEventListener('click', function() {
+                    filtreVague.value = '';
+                    filtreCible.value = '';
+                    filtreCategorie.value = '';
+                    recherche.value = '';
+                    appliquerFiltres();
+                });
+
+                document.getElementById('js-sprint-select').addEventListener('change', majBouton);
+
+                appliquerFiltres();
+                majBouton();
             });
         })();
     </script>

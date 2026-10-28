@@ -9,6 +9,8 @@ use App\Entity\ProspectSprint;
 use App\Entity\Sprint;
 use App\Form\SprintType;
 use App\Http\ContexteRetour;
+use App\Repository\CategoryRepository;
+use App\Repository\CibleRepository;
 use App\Repository\PipelineRepository;
 use App\Repository\ProspectRepository;
 use App\Repository\SprintRepository;
@@ -33,6 +35,8 @@ class SprintController extends AbstractController
         private ProspectRepository $prospects,
         private PipelineRepository $pipelines,
         private EntityManagerInterface $em,
+        private CibleRepository $cibles,
+        private CategoryRepository $categories,
         protected ContexteRetour $contexteRetour,
     ) {
     }
@@ -57,16 +61,18 @@ class SprintController extends AbstractController
     }
 
     #[Route('/bulk', name: 'app_user_vagues_bulk')]
-    public function bulk(): Response
+    public function bulk(Request $request): Response
     {
         $sprints = $this->sprints->findAllOrdered();
         $lastSprint = !empty($sprints) ? $sprints[0] : null;
-        $prospectsAll = $this->prospects->findAllWithCurrentSprint();
 
         return $this->renderLayout('vagues/bulk.html.twig', 'Affecter en masse', [
             'sprints' => $sprints,
             'lastSprint' => $lastSprint,
-            'prospectsAll' => $prospectsAll,
+            'prospectsAll' => $this->prospects->findAllPourAffectation(),
+            'cibles' => $this->cibles->findAllOrdered(),
+            'categories' => $this->categories->findAllOrdered(),
+            'retour' => $this->contexteRetour->url($request, 'app_user_vagues'),
         ]);
     }
 

@@ -102,6 +102,19 @@ il ne supprime jamais d'enregistrement. Avoir un prospect dans plusieurs vagues 
   vers `/user/prospects?sprint={id}`. Le numéro de vague est **unique** : un doublon
   devient une erreur de formulaire (422, « Ce numéro de vague est déjà utilisé. »)
   au lieu d'une exception SQL.
+- **Affecter en masse** (`/user/vagues/bulk`) : deux panneaux. À gauche le
+  listing des prospects avec ses filtres (vague, **cible**, **catégorie**,
+  recherche) ; à droite la sélection à affecter. Le tableau de gauche est le
+  plus large (7/5 en ≥ xl, empilés en dessous). Un prospect placé à droite
+  **disparaît de gauche** et le réintègre au retrait : la ligne est masquée
+  (`data-selectionne`), pas détruite, pour rester cohérente avec les filtres.
+  Compteurs `(n)` de part et d'autre, en-têtes collants au scroll, état vide
+  « Aucun prospect ne correspond aux filtres ». Le filtrage est **client** :
+  chaque ligne porte `data-sprint`, `data-cibles` et `data-categories`
+  (ids séparés par des virgules), alimentés par
+  `ProspectRepository::findAllPourAffectation()` — une ligne par prospect,
+  vague courante la plus haute (règle de `Prospect::vagueCourante()`), une
+  requête par dimension pour éviter de dupliquer les lignes.
 - Formulaire prospect : sélection multi-vagues (`prospect[sprints][]`) + section
   **Pipeline** générée depuis les étapes de la vague ciblée (`prospect[etape{ID}]` +
   `prospect[dateEtape{ID}]`, optionnelles). Une valeur soumise sans vague est refusée
@@ -503,10 +516,11 @@ docker compose exec -T nineprospect php bin/console lint:twig templates
 docker compose exec -T nineprospect php vendor/bin/phpunit
 ```
 
-Le projet vise **200 tests verts** (8 skipped quand la base de test n'est pas
+Le projet vise **203 tests verts** (8 skipped quand la base de test n'est pas
 disponible) couvrant : prospection, contacts, CRUD générique, contexte de
 retour (`tests/Http/ContexteRetourTest.php`,
-`tests/RetourNavigationTest.php`), agenda, agenda CSRF/déplacement,
+`tests/RetourNavigationTest.php`), affectation en masse des vagues
+(`tests/VaguesBulkTest.php`), agenda, agenda CSRF/déplacement,
 AnnuaireEntreprises, AdresseApi, services, etc.
 
 ## Base de test
