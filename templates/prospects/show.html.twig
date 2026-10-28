@@ -5,30 +5,25 @@
 {% block body %}
     <h1 class="mb-1">{{ title }}</h1>
 
-    {% set backUrl = app.request.query.get('redirect')|default('') %}
-    {% if backUrl|default('')|length == 0 %}
-        {# Sans redirect explicite, l'annulation du formulaire de modification
-           ramène sur la fiche (et « Retour à la liste » ci-dessous reste
-           explicite). #}
-        {% set backUrl = path('app_user_prospects') %}
-    {% endif %}
-    <a href="{{ path(routeupdate, {id: prospect.id, redirect: backUrl}) }}" class="btn btn-primary mb-3">Modifier</a>
+    {# Toutes les URLs de retour viennent de la session : la fiche se contente
+       de les relayer à ses liens enfants, sans les transporter en query string. #}
+    <a href="{{ path(routeupdate, {id: prospect.id}) }}" class="btn btn-primary mb-3">Modifier</a>
     <button type="button"
             class="btn btn-outline-primary mb-3 ms-1 js-verify-prospect"
             data-prospect="{{ prospect.id }}">
         <i class="fas fa-magnifying-glass me-1"></i>Vérifier les données
     </button>
-    <a href="{{ backUrl }}" class="btn btn-secondary ms-1 mb-3">Retour à la liste</a>
+    <a href="{{ listeUrl }}" class="btn btn-secondary ms-1 mb-3">Retour à la liste</a>
     {% if prevNext and (prevNext[0] is not null or prevNext[1] is not null) %}
         {% set vague = prospect.vagueCourante() %}
         <div class="float-end">
             Navigation sur <a href="{{ path('app_user_prospects', {sprint: vague.sprint.id}) }}">Vague {{ vague.sprint.numero }}{% if vague.sprint.libelle %} — {{ vague.sprint.libelle }}{% endif %}</a>
             &nbsp;
             {% if prevNext[0] is not null %}
-                <a href="{{ path('app_user_prospects_show', {id: prevNext[0], redirect: backUrl}) }}" class="btn btn-secondary" title="Précédent"><i class="fas fa-chevron-left"></i></a>
+                <a href="{{ path('app_user_prospects_show', {id: prevNext[0]}) }}" class="btn btn-secondary" title="Précédent"><i class="fas fa-chevron-left"></i></a>
             {% endif %}
             {% if prevNext[1] is not null %}
-                <a href="{{ path('app_user_prospects_show', {id: prevNext[1], redirect: backUrl}) }}" class="btn btn-secondary" title="Suivant"><i class="fas fa-chevron-right"></i></a>
+                <a href="{{ path('app_user_prospects_show', {id: prevNext[1]}) }}" class="btn btn-secondary" title="Suivant"><i class="fas fa-chevron-right"></i></a>
             {% endif %}
         </div>
     {% endif %}
@@ -162,28 +157,30 @@
         <div class="col-md-8">
             <div class="card mb-2">
                 <div class="card-header">Contacts ({{ prospect.contacts|length }})
-                    <a href="{{ path('app_user_contacts_submit', {prospect: prospect.id, redirect: path('app_user_prospects_show', {id: prospect.id})}) }}" class="btn btn-sm btn-success float-end">Ajouter un contact</a>
+                    <a href="{{ path('app_user_contacts_submit', {prospect: prospect.id}) }}" class="btn btn-sm btn-success float-end">Ajouter un contact</a>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm table-striped mb-0">
                         <thead>
                             <tr>
                                 <th>Nom</th>
+                                <th>Fonction</th>
                                 <th>Email</th>
                                 <th>Téléphone</th>
-                                <th>Principal</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for contact in prospect.contacts %}
                                 <tr>
-                                    <td><a href="{{ path('app_user_contacts_update', {id: contact.id, redirect: path('app_user_prospects_show', {id: prospect.id})}) }}">{{ contact.nomComplet }}</a></td>
-                                    <td>{{ contact.email ?: '—' }}</td>
+                                    <td><a href="{{ path('app_user_contacts_update', {id: contact.id}) }}">{{ contact.nomComplet }}</a></td>
+                                    <td>{{ contact.poste ?: '—' }}</td>
+                                    <td>{% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% else %}—{% endif %}</td>
                                     <td>{{ contact.telephone ?: contact.telephoneBrut }}</td>
                                     <td>{% if contact.estPrincipal %}<i class="fas fa-star text-warning"></i>{% endif %}</td>
                                 </tr>
                             {% else %}
-                                <tr><td colspan="4" class="text-muted">Aucun contact</td></tr>
+                                <tr><td colspan="5" class="text-muted">Aucun contact</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -267,8 +264,7 @@
             <div class="card mb-2">
                 <div class="card-header">
                     Actions
-                    {% set prospectShowUrl = path('app_user_prospects_show', {id: prospect.id}) %}
-                    <a href="{{ path('app_user_actions_submit', {prospect: prospect.id, redirect: prospectShowUrl}) }}" class="btn btn-sm btn-success float-end">Ajouter une action</a>
+                    <a href="{{ path('app_user_actions_submit', {prospect: prospect.id}) }}" class="btn btn-sm btn-success float-end">Ajouter une action</a>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm table-striped mb-0">
@@ -288,7 +284,7 @@
                             {% for action in prospect.actions %}
                                 <tr data-action-id="{{ action.id }}">
                                     <td>
-                                        <a href="{{ path('app_user_actions_update', {id: action.id, redirect: path('app_user_prospects_show', {id: prospect.id})}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
+                                        <a href="{{ path('app_user_actions_update', {id: action.id}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
                                     </td>
                                     <td>
                                         <span class="badge text-bg-{{ action.statutColor }}">{{ action.statutLabel }}</span>

@@ -6,6 +6,7 @@ use App\Controller\Trait\CrudDeleteTrait;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Category;
 use App\Form\CategoryType;
+use App\Http\ContexteRetour;
 use App\Repository\CategoryRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,6 +23,7 @@ class CategoryController extends AbstractController
     public function __construct(
         private CategoryRepository $categories,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -49,8 +51,10 @@ class CategoryController extends AbstractController
             return $this->redirectToRoute('app_user_categories_update', ['id' => $category->getId()]);
         }
 
+        $retour = $this->contexteRetour->url($request, 'app_user_categories');
+
         return $this->renderLayout('categories/edit.html.twig', 'Nouvelle catégorie', [
-            'routecancel' => 'app_user_categories',
+            'retour' => $retour,
             'form' => $form,
         ]);
     }
@@ -60,7 +64,7 @@ class CategoryController extends AbstractController
     {
         $category = $this->categories->find($id);
         if (!$category) {
-            return $this->redirectToRoute('app_user_categories');
+            return $this->contexteRetour->redirection($request, 'app_user_categories');
         }
 
         $form = $this->createForm(CategoryType::class, $category);
@@ -68,11 +72,13 @@ class CategoryController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->redirectToRoute('app_user_categories');
+            return $this->contexteRetour->redirection($request, 'app_user_categories');
         }
 
+        $retour = $this->contexteRetour->url($request, 'app_user_categories');
+
         return $this->renderLayout('categories/edit.html.twig', 'Modification = '.$category->getNom(), [
-            'routecancel' => 'app_user_categories',
+            'retour' => $retour,
             'routedelete' => 'app_user_categories_delete',
             'form' => $form,
             'category' => $category,
@@ -84,7 +90,7 @@ class CategoryController extends AbstractController
     {
         $category = $this->categories->find($id);
         if (!$category) {
-            return $this->redirectToRoute('app_user_categories');
+            return $this->contexteRetour->redirection($request, 'app_user_categories');
         }
 
         return $this->deleteEntity($request, $category, $id, 'delete-category', 'categories', $this->em, [

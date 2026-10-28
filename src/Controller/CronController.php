@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Controller\Trait\CrudDeleteTrait;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Form\CronType;
+use App\Http\ContexteRetour;
 use App\Repository\CronRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,6 +21,7 @@ class CronController extends AbstractController
     public function __construct(
         private CronRepository $cronRepository,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -39,7 +41,7 @@ class CronController extends AbstractController
     {
         $cron = $this->cronRepository->find($id);
         if (!$cron) {
-            return $this->redirectToRoute('app_admin_cron');
+            return $this->contexteRetour->redirection($request, 'app_admin_cron');
         }
 
         $form = $this->createForm(CronType::class, $cron, ['mode' => 'update']);
@@ -47,11 +49,13 @@ class CronController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->redirectToRoute('app_admin_cron');
+            return $this->contexteRetour->redirection($request, 'app_admin_cron');
         }
 
+        $retour = $this->contexteRetour->url($request, 'app_admin_cron');
+
         return $this->renderLayout('cron/edit.html.twig', 'Modification Cron = '.$cron->getCommand(), [
-            'routecancel' => 'app_admin_cron',
+            'retour' => $retour,
             'routedelete' => 'app_admin_cron_delete',
             'mode' => 'update',
             'form' => $form,
@@ -63,7 +67,7 @@ class CronController extends AbstractController
     {
         $cron = $this->cronRepository->find($id);
         if (!$cron) {
-            return $this->redirectToRoute('app_admin_cron');
+            return $this->contexteRetour->redirection($request, 'app_admin_cron');
         }
 
         return $this->deleteEntity($request, $cron, $id, 'delete-cron', 'cron', $this->em, [

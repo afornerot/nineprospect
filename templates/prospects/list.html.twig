@@ -91,7 +91,7 @@
         </div>
     </form>
 
-    <a href="{{ path(routesubmit, {redirect: path('app_user_prospects')}) }}" class="btn btn-success mb-3">Ajouter</a>
+    <a href="{{ path(routesubmit) }}" class="btn btn-success mb-3">Ajouter</a>
     <a href="{{ path('app_user_prospects_from_annuaire') }}" class="btn btn-outline-success mb-3 ms-1">
         <i class="fas fa-magnifying-glass me-1"></i>Créer depuis l'Annuaire
     </a>
@@ -121,11 +121,11 @@
                     {% set courant = liens|last %}
                     <tr id="prospect-{{ prospect.id }}">
                         <td>
-                            <a href="{{ path(routeshow, {id: prospect.id, redirect: prospects_list_url(prospect.id)}) }}" title="Fiche"><i class="fas fa-eye fa-2x"></i></a>
-                            <a href="{{ path(routeupdate, {id: prospect.id, redirect: prospects_list_url(prospect.id)}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
+                            <a href="{{ path(routeshow, {id: prospect.id}) }}" title="Fiche"><i class="fas fa-eye fa-2x"></i></a>
+                            <a href="{{ path(routeupdate, {id: prospect.id}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
                         </td>
                         <td>
-                            <a href="{{ path(routeshow, {id: prospect.id, redirect: prospects_list_url(prospect.id)}) }}">{{ prospect.nom }}</a>
+                            <a href="{{ path(routeshow, {id: prospect.id}) }}">{{ prospect.nom }}</a>
                             {% if prospect.ville or prospect.codePostal or prospect.departement %}
                                 <br><small class="text-muted">{{- prospect.ville -}}
                                     {%- if prospect.codePostal %} ({{ prospect.codePostal }}){% endif -%}
@@ -209,12 +209,12 @@
                         <td class="text-center">
                             {% set actionSuivi = prospect.derniereAction %}
                             {% if actionSuivi %}
-                                <a href="{{ path('app_user_actions_update', {id: actionSuivi.id, redirect: prospects_list_url(prospect.id)}) }}" title="{{ actionSuivi.typeAction ?: '—' }}">
+                                <a href="{{ path('app_user_actions_update', {id: actionSuivi.id}) }}" title="{{ actionSuivi.typeAction ?: '—' }}">
                                     <span class="badge text-bg-{{ actionSuivi.statutColor }} d-block">{{ actionSuivi.statutLabel }}</span>
                                     {{ actionSuivi.dateAffichee ? actionSuivi.dateAffichee|date('d/m/Y') : '—' }}
                                 </a>
                             {% else %}
-                                <a href="{{ path('app_user_actions_submit', {prospect: prospect.id, redirect: prospects_list_url(prospect.id)}) }}" class="btn btn-sm btn-outline-primary" title="Créer une action"><i class="fas fa-plus"></i></a>
+                                <a href="{{ path('app_user_actions_submit', {prospect: prospect.id}) }}" class="btn btn-sm btn-outline-primary" title="Créer une action"><i class="fas fa-plus"></i></a>
                             {% endif %}
                         </td>
                     </tr>

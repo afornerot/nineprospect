@@ -12,18 +12,13 @@
             id: action.id,
             tokenId: 'delete-action' ~ action.id,
             classes: 'delete-abs',
-            hidden: {redirect: redirect|default('')}
         } %}
     {% endif %}
 
     {{ form_start(form) }}
 
     {{ form_widget(form.submit) }}
-        {% if redirect is defined and redirect %}
-            <a href="{{ redirect }}" class="btn btn-secondary ms-1">Annuler</a>
-        {% else %}
-            <a href="{{ path('app_user_actions') }}" class="btn btn-secondary ms-1">Annuler</a>
-        {% endif %}
+        <a href="{{ retour }}" class="btn btn-secondary ms-1">Annuler</a>
         {% if mode == 'update' and action.prospect %}<a href="{{ path('app_user_prospects_show', {id: action.prospect.id}) }}" class="btn btn-secondary ms-1">Fiche prospect</a>{% endif %}
 
         {% include('include/error.html.twig') %}

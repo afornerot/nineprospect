@@ -6,6 +6,7 @@ use App\Controller\Trait\CrudDeleteTrait;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Groupe;
 use App\Form\GroupeType;
+use App\Http\ContexteRetour;
 use App\Repository\GroupeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,6 +22,7 @@ class GroupeController extends AbstractController
     public function __construct(
         private GroupeRepository $groupeRepository,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -47,11 +49,13 @@ class GroupeController extends AbstractController
             $this->em->persist($groupe);
             $this->em->flush();
 
-            return $this->redirectToRoute('app_admin_groupe');
+            return $this->contexteRetour->redirection($request, 'app_admin_groupe');
         }
 
+        $retour = $this->contexteRetour->url($request, 'app_admin_groupe');
+
         return $this->renderLayout('groupe/edit.html.twig', 'Création Groupe', [
-            'routecancel' => 'app_admin_groupe',
+            'retour' => $retour,
             'mode' => 'submit',
             'form' => $form,
         ]);
@@ -62,7 +66,7 @@ class GroupeController extends AbstractController
     {
         $groupe = $this->groupeRepository->find($id);
         if (!$groupe) {
-            return $this->redirectToRoute('app_admin_groupe');
+            return $this->contexteRetour->redirection($request, 'app_admin_groupe');
         }
 
         $form = $this->createForm(GroupeType::class, $groupe, ['mode' => 'update']);
@@ -70,11 +74,13 @@ class GroupeController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->redirectToRoute('app_admin_groupe');
+            return $this->contexteRetour->redirection($request, 'app_admin_groupe');
         }
 
+        $retour = $this->contexteRetour->url($request, 'app_admin_groupe');
+
         return $this->renderLayout('groupe/edit.html.twig', 'Modification Groupe = '.$groupe->getName(), [
-            'routecancel' => 'app_admin_groupe',
+            'retour' => $retour,
             'routedelete' => 'app_admin_groupe_delete',
             'mode' => 'update',
             'form' => $form,
@@ -86,7 +92,7 @@ class GroupeController extends AbstractController
     {
         $groupe = $this->groupeRepository->find($id);
         if (!$groupe) {
-            return $this->redirectToRoute('app_admin_groupe');
+            return $this->contexteRetour->redirection($request, 'app_admin_groupe');
         }
 
         return $this->deleteEntity($request, $groupe, $id, 'delete-groupe', 'groupe', $this->em, [

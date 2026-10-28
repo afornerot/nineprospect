@@ -6,6 +6,7 @@ use App\Controller\Trait\CrudDeleteTrait;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\ActionTypeDefaut;
 use App\Form\ActionTypeDefautType;
+use App\Http\ContexteRetour;
 use App\Repository\ActionTypeDefautRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -22,6 +23,7 @@ class ActionTypeDefautController extends AbstractController
     public function __construct(
         private ActionTypeDefautRepository $types,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -47,11 +49,13 @@ class ActionTypeDefautController extends AbstractController
             $this->em->persist($type);
             $this->em->flush();
 
-            return $this->redirectToRoute('app_user_action_types');
+            return $this->contexteRetour->redirection($request, 'app_user_action_types');
         }
 
+        $retour = $this->contexteRetour->url($request, 'app_user_action_types');
+
         return $this->renderLayout('action_types/edit.html.twig', "Nouveau type d'action", [
-            'routecancel' => 'app_user_action_types',
+            'retour' => $retour,
             'mode' => 'submit',
             'form' => $form,
         ]);
@@ -62,7 +66,7 @@ class ActionTypeDefautController extends AbstractController
     {
         $type = $this->types->find($id);
         if (!$type) {
-            return $this->redirectToRoute('app_user_action_types');
+            return $this->contexteRetour->redirection($request, 'app_user_action_types');
         }
 
         $form = $this->createForm(ActionTypeDefautType::class, $type);
@@ -70,11 +74,13 @@ class ActionTypeDefautController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->redirectToRoute('app_user_action_types');
+            return $this->contexteRetour->redirection($request, 'app_user_action_types');
         }
 
+        $retour = $this->contexteRetour->url($request, 'app_user_action_types');
+
         return $this->renderLayout('action_types/edit.html.twig', 'Modification = '.$type, [
-            'routecancel' => 'app_user_action_types',
+            'retour' => $retour,
             'routedelete' => 'app_user_action_types_delete',
             'mode' => 'update',
             'form' => $form,
@@ -87,7 +93,7 @@ class ActionTypeDefautController extends AbstractController
     {
         $type = $this->types->find($id);
         if (!$type) {
-            return $this->redirectToRoute('app_user_action_types');
+            return $this->contexteRetour->redirection($request, 'app_user_action_types');
         }
 
         return $this->deleteEntity($request, $type, $id, 'delete-action-type', 'action_types', $this->em, [

@@ -10,6 +10,7 @@ use App\Entity\ProspectSprint;
 use App\Entity\Sprint;
 use App\Enum\PipelineStatut;
 use App\Form\ProspectType;
+use App\Http\ContexteRetour;
 use App\Repository\ActionTypeDefautRepository;
 use App\Repository\CampagneRepository;
 use App\Repository\CategoryRepository;
@@ -29,7 +30,6 @@ use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -56,6 +56,7 @@ class ProspectController extends AbstractController
         private AnnuaireEntreprises $annuaire,
         private AdresseApi $adresseApi,
         private ActionTypeDefautRepository $types,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -79,13 +80,13 @@ class ProspectController extends AbstractController
     }
 
     #[Route('/show/{id}', name: 'app_user_prospects_show')]
-    public function show(int $id): Response
+    public function show(int $id, Request $request): Response
     {
         $prospect = $this->prospects->find($id);
         if (!$prospect) {
             $this->addFlash('error', 'Prospect introuvable.');
 
-            return $this->redirectToRoute('app_user_prospects');
+            return $this->contexteRetour->redirection($request, 'app_user_prospects');
         }
 
         $vagueCourante = $prospect->vagueCourante();
@@ -94,12 +95,23 @@ class ProspectController extends AbstractController
             $prevNext = $this->prospects->findPrevNextInSprint($id, $vagueCourante->getSprint()->getId());
         }
 
+        // « Retour à la liste » = dernière liste prospects consultée, avec ses
+        // filtres et le scroll sur la ligne courante. Les écrans de saisie
+        // ouverts depuis cette fiche reviennent ici via la session, sans
+        // transport d'URL.
         return $this->renderLayout('prospects/show.html.twig', $prospect->getNom() ?? 'Prospect', [
             'prospect' => $prospect,
             'routeupdate' => 'app_user_prospects_update',
             'mapboxToken' => $this->mapboxPublicToken,
             'typesSuggestions' => $this->types->findActifsOrdonnes(),
             'prevNext' => $prevNext,
+            'listeUrl' => $this->contexteRetour->listeOu(
+                $request,
+                '/user/prospects',
+                'app_user_prospects',
+                [],
+                'prospect-'.$id,
+            ),
         ]);
     }
 
@@ -137,14 +149,11 @@ class ProspectController extends AbstractController
         $csrf = $this->container->get('security.csrf.token_manager')
             ->getToken('verify-prospect'.$id)->getValue();
 
-        $redirect = $this->generateUrl('app_user_prospects_show', ['id' => $id]);
-
         return $this->render('prospects/_verify_modal.html.twig', [
             'prospect' => $prospect,
             'rows' => $rows,
             'apiError' => $response['error'],
             'csrf' => $csrf,
-            'redirect' => $redirect,
             'applyUrl' => $this->generateUrl('app_user_prospects_verify_apply', ['id' => $id]),
             'searchUrl' => $this->generateUrl('app_user_prospects_verify', ['id' => $id]),
             'query' => $q,
@@ -195,9 +204,10 @@ class ProspectController extends AbstractController
         $this->applyAnnuaire($prospect, $row);
         $this->em->flush();
 
-        $redirect = (string) ($body['redirect'] ?? $this->generateUrl('app_user_prospects_show', ['id' => $id]));
-
-        return new JsonResponse(['ok' => true, 'redirect' => $redirect]);
+        return new JsonResponse([
+            'ok' => true,
+            'redirect' => $this->contexteRetour->url($request, 'app_user_prospects_show', ['id' => $id]),
+        ]);
     }
 
     /**
@@ -333,8 +343,8 @@ class ProspectController extends AbstractController
 
         $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'submit', 'etapes' => $etapes, 'prospect_id' => 0]);
         $this->initialiserFormulaire($form, $prospect, $etapes);
-        $redirect = $this->resolveRedirect($request);
-        $form->get('redirect')->setData($redirect);
+        $retour = $this->contexteRetour->url($request, 'app_user_prospects');
+        $form->get('retour')->setData($retour);
         $form->handleRequest($request);
         $this->appliquerContacteEtDate($form);
         if ($form->isSubmitted() && $form->isValid() && $this->appliquerVaguesEtPipeline($prospect, $form, $etapes)) {
@@ -342,23 +352,18 @@ class ProspectController extends AbstractController
             $this->em->persist($prospect);
             $this->em->flush();
 
-            // Après création, le comportement historique envoie vers la fiche
-            // d'update pour finaliser (ajout d'étapes pipeline, etc.). Si un
-            // redirect explicite est passé, on le respecte.
-            if ('' !== trim((string) $request->query->get('redirect', ''))) {
-                return $this->redirectTo($redirect, $prospect->getId());
-            }
-
+            // Après création, on ouvre la fiche de modification pour finaliser
+            // (étapes pipeline, cibles…). Le contexte de retour y mène ensuite
+            // naturellement.
             return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospect->getId()]);
         }
 
         return $this->renderLayout('prospects/edit.html.twig', 'Nouveau prospect', [
-            'routecancel' => 'app_user_prospects',
             'mode' => 'submit',
             'form' => $form,
             'etapes' => $etapes,
             'vagueCourante' => $prospect->vagueCourante(),
-            'redirect' => $redirect,
+            'retour' => $retour,
         ]);
     }
 
@@ -367,15 +372,15 @@ class ProspectController extends AbstractController
     {
         $prospect = $this->prospects->find($id);
         if (!$prospect) {
-            return $this->redirectToRoute('app_user_prospects');
+            return $this->contexteRetour->redirection($request, 'app_user_prospects');
         }
 
         $etapes = $this->etapesCible($request, $prospect);
 
         $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'update', 'etapes' => $etapes, 'prospect_id' => $prospect->getId()]);
         $this->initialiserFormulaire($form, $prospect, $etapes);
-        $redirect = $this->resolveRedirect($request, $prospect);
-        $form->get('redirect')->setData($redirect);
+        $retour = $this->contexteRetour->url($request, 'app_user_prospects_show', ['id' => $id]);
+        $form->get('retour')->setData($retour);
         $form->handleRequest($request);
         if ('' === $form->get('logo')->getData()) {
             $prospect->setLogo(null);
@@ -387,11 +392,10 @@ class ProspectController extends AbstractController
         if ($form->isSubmitted() && $form->isValid() && $this->appliquerVaguesEtPipeline($prospect, $form, $etapes)) {
             $this->em->flush();
 
-            return $this->redirectTo($redirect, $prospect->getId());
+            return $this->contexteRetour->redirectionVers($form->get('retour')->getData(), 'app_user_prospects_show', ['id' => $id]);
         }
 
         return $this->renderLayout('prospects/edit.html.twig', 'Modification = '.$prospect->getNom(), [
-            'routecancel' => 'app_user_prospects',
             'routedelete' => 'app_user_prospects_delete',
             'routeshow' => 'app_user_prospects_show',
             'routeCibleDelete' => 'app_user_prospects_cibles_delete',
@@ -400,7 +404,7 @@ class ProspectController extends AbstractController
             'etapes' => $etapes,
             'prospect' => $prospect,
             'vagueCourante' => $prospect->vagueCourante(),
-            'redirect' => $redirect,
+            'retour' => $retour,
             'formCibles' => $this->formCibles($prospect),
             'formAjoutCible' => $this->formAjoutCible($prospect),
         ]);
@@ -411,7 +415,7 @@ class ProspectController extends AbstractController
     {
         $prospect = $this->prospects->find($id);
         if (!$prospect) {
-            return $this->redirectToRoute('app_user_prospects');
+            return $this->contexteRetour->redirection($request, 'app_user_prospects');
         }
 
         return $this->deleteEntity($request, $prospect, $id, 'delete-prospect', 'prospects', $this->em, [
@@ -873,37 +877,6 @@ class ProspectController extends AbstractController
     }
 
     /**
-     * Détermine l'URL de retour (query param redirect, ou fallback liste).
-     */
-    private function resolveRedirect(Request $request, ?Prospect $prospect = null): string
-    {
-        $requested = trim((string) $request->query->get('redirect', ''));
-        if ('' !== $requested) {
-            return $requested;
-        }
-
-        return $this->generateUrl('app_user_prospects');
-    }
-
-    /**
-     * Redirige vers l'URL stockée. Pour un prospect venant d'être créé, ?id=X
-     * dans l'URL est remplacé par l'id réel (cas submit depuis la fiche d'un
-     * autre prospect, peu probable, mais sécurisé).
-     */
-    private function redirectTo(string $url, ?int $prospectId): RedirectResponse
-    {
-        if ('' === $url) {
-            $url = $this->generateUrl('app_user_prospects');
-        }
-        // Refuse tout chemin non-interne (sécurité open-redirect).
-        if (!str_starts_with($url, '/') && !str_starts_with($url, 'http')) {
-            $url = $this->generateUrl('app_user_prospects');
-        }
-
-        return new RedirectResponse($url);
-    }
-
-    /**
      * Synchronise datePremierContact avec contacte lors de la soumission :
      *  - contacte = true  + date vide → pose aujourd'hui
      *  - contacte = false              → vide la date
@@ -1075,7 +1048,7 @@ class ProspectController extends AbstractController
     {
         $prospectCible = $this->em->find(\App\Entity\ProspectCible::class, $linkId);
         if (!$prospectCible) {
-            return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospectId]);
+            return $this->contexteRetour->redirection($request, 'app_user_prospects_update', ['id' => $prospectId]);
         }
 
         return $this->deleteEntity($request, $prospectCible, $linkId, 'prospect-cible', 'cible', $this->em, [
@@ -1083,7 +1056,6 @@ class ProspectController extends AbstractController
             'update' => 'app_user_prospects_cibles_update',
             'successRoute' => 'app_user_prospects_update',
             'successRouteParams' => ['id' => $prospectId],
-            'redirectParams' => ['id' => $prospectId],
         ]);
     }
 

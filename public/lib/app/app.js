@@ -612,7 +612,6 @@ $(document).ready(function () {
 			return;
 		}
 		const csrf = $form.find('input[name="_csrf_token"]').val();
-		const redirect = $form.find('input[name="redirect"]').val();
 		const url = $form.data('apply-url');
 
 		$btn.prop('disabled', true);
@@ -624,7 +623,7 @@ $(document).ready(function () {
 				'X-Requested-With': 'XMLHttpRequest',
 				'Origin': window.location.origin,
 			},
-			body: JSON.stringify({ siren: siren, csrf_token: csrf, redirect: redirect }),
+			body: JSON.stringify({ siren: siren, csrf_token: csrf }),
 		}).then(function (resp) {
 			return resp.json().then(function (data) {
 				return { ok: resp.ok, status: resp.status, data: data };

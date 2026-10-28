@@ -7,6 +7,7 @@ use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Campagne;
 use App\Entity\Prospect;
 use App\Form\CampagneType;
+use App\Http\ContexteRetour;
 use App\Repository\CampagneRepository;
 use App\Repository\ProspectRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,6 +28,7 @@ class CampagneController extends AbstractController
         private CampagneRepository $campagnes,
         private ProspectRepository $prospects,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -107,6 +109,7 @@ class CampagneController extends AbstractController
         $campagne = new Campagne();
 
         $form = $this->createForm(CampagneType::class, $campagne);
+        $retour = $this->contexteRetour->url($request, 'app_user_campagnes');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->persist($campagne);
@@ -118,9 +121,9 @@ class CampagneController extends AbstractController
         }
 
         return $this->renderLayout('campagnes/edit.html.twig', 'Nouvelle campagne', [
-            'routecancel' => 'app_user_campagnes',
             'mode' => 'submit',
             'form' => $form,
+            'retour' => $retour,
         ]);
     }
 
@@ -129,27 +132,28 @@ class CampagneController extends AbstractController
     {
         $campagne = $this->campagnes->find($id);
         if (!$campagne) {
-            return $this->redirectToRoute('app_user_campagnes');
+            return $this->contexteRetour->redirection($request, 'app_user_campagnes');
         }
 
         $form = $this->createForm(CampagneType::class, $campagne, ['afficherProspects' => true]);
         $form->get('prospects')->setData($this->prospectsDe($campagne));
+        $retour = $this->contexteRetour->url($request, 'app_user_campagnes');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid() && $this->sauverCampagne($campagne, $form)) {
-            return $this->redirectToRoute('app_user_campagnes');
+            return $this->contexteRetour->redirection($request, 'app_user_campagnes');
         }
 
         $allProspects = $this->prospects->findBy([], ['nom' => SortDirection::Ascending]);
         $campagneProspects = $this->prospectsDe($campagne);
 
         return $this->renderLayout('campagnes/edit.html.twig', 'Modification = '.$campagne->getLibelle(), [
-            'routecancel' => 'app_user_campagnes',
             'routedelete' => 'app_user_campagnes_delete',
             'mode' => 'update',
             'form' => $form,
             'campagne' => $campagne,
             'allProspects' => $allProspects,
             'campagneProspects' => $campagneProspects,
+            'retour' => $retour,
         ]);
     }
 
@@ -220,7 +224,7 @@ class CampagneController extends AbstractController
     {
         $campagne = $this->campagnes->find($id);
         if (!$campagne) {
-            return $this->redirectToRoute('app_user_campagnes');
+            return $this->contexteRetour->redirection($request, 'app_user_campagnes');
         }
 
         return $this->deleteEntity($request, $campagne, $id, 'delete-campagne', 'campagnes', $this->em, [

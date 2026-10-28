@@ -7,6 +7,7 @@ use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Action;
 use App\Entity\User;
 use App\Form\ActionType;
+use App\Http\ContexteRetour;
 use App\Repository\ActionRepository;
 use App\Repository\ActionTypeDefautRepository;
 use App\Repository\ContactRepository;
@@ -15,7 +16,6 @@ use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -34,6 +34,7 @@ class ActionController extends AbstractController
         private ActionTypeDefautRepository $types,
         private UserRepository $users,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -97,8 +98,8 @@ class ActionController extends AbstractController
         }
 
         $form = $this->createForm(ActionType::class, $action, ['prospectFiltre' => null !== $action->getProspect() ? $action->getProspect()->getId() : null]);
-        $redirect = $this->resolveRedirect($request);
-        $form->get('redirect')->setData($redirect);
+        $retour = $this->contexteRetour->url($request, 'app_user_actions');
+        $form->get('retour')->setData($retour);
         $form->handleRequest($request);
         if ($form->isSubmitted()) {
             if (null !== $user && null === $action->getAFairePar()) {
@@ -109,14 +110,17 @@ class ActionController extends AbstractController
             $this->em->persist($action);
             $this->em->flush();
 
-            return $this->redirectTo($redirect);
+            return $this->contexteRetour->redirectionVers(
+                $this->retourAgendaAJour((string) $form->get('retour')->getData(), $action),
+                'app_user_actions',
+            );
         }
 
         return $this->renderLayout('actions/edit.html.twig', 'Nouvelle action', [
             'mode' => 'submit',
             'form' => $form,
             'typesSuggestions' => $this->types->findActifsOrdonnes(),
-            'redirect' => $redirect,
+            'retour' => $retour,
         ]);
     }
 
@@ -174,28 +178,20 @@ class ActionController extends AbstractController
     {
         $action = $this->actions->find($id);
         if (!$action) {
-            return $this->redirectToRoute('app_user_actions');
+            return $this->contexteRetour->redirection($request, 'app_user_actions');
         }
 
         $form = $this->createForm(ActionType::class, $action, ['prospectFiltre' => null !== $action->getProspect() ? $action->getProspect()->getId() : null]);
-        $redirect = $this->resolveRedirect($request, $action);
-        $form->get('redirect')->setData($redirect);
+        $retour = $this->contexteRetour->url($request, 'app_user_actions');
+        $form->get('retour')->setData($retour);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            // Si le redirect cible l'agenda, on régénère l'URL avec la date
-            // actuelle de l'action (mise à jour si l'user a modifié datePrevue
-            // ou dateRealisee pendant la soumission). Sans cela, le retour
-            // pointerait sur l'ancienne date.
-            if (str_contains($redirect, '/user/agenda')) {
-                $dateCible = $action->getDatePrevue() ?? $action->getDateRealisee();
-                if (null !== $dateCible) {
-                    $redirect = $this->generateUrl('app_user_agenda', ['date' => $dateCible->format('Y-m-d')]);
-                }
-            }
-
-            return $this->redirectTo($redirect);
+            return $this->contexteRetour->redirectionVers(
+                $this->retourAgendaAJour((string) $form->get('retour')->getData(), $action),
+                'app_user_actions',
+            );
         }
 
         return $this->renderLayout('actions/edit.html.twig', 'Modification de l\'action', [
@@ -204,8 +200,28 @@ class ActionController extends AbstractController
             'form' => $form,
             'action' => $action,
             'typesSuggestions' => $this->types->findActifsOrdonnes(),
-            'redirect' => $redirect,
+            'retour' => $retour,
         ]);
+    }
+
+    /**
+     * Retour vers l'agenda : l'URL mémorisée porte la date consultée avant la
+     * modification. Si l'utilisateur a changé `datePrevue` (ou clôturé
+     * l'action), on recale l'agenda sur la nouvelle date pour qu'il retrouve
+     * l'action à l'écran.
+     */
+    private function retourAgendaAJour(string $retour, Action $action): string
+    {
+        if (!str_starts_with($retour, '/user/agenda')) {
+            return $retour;
+        }
+
+        $dateCible = $action->getDatePrevue() ?? $action->getDateRealisee();
+        if (null === $dateCible) {
+            return $retour;
+        }
+
+        return $this->generateUrl('app_user_agenda', ['date' => $dateCible->format('Y-m-d')]);
     }
 
     #[Route('/contacts', name: 'app_user_actions_contacts', methods: ['GET'])]
@@ -314,27 +330,23 @@ class ActionController extends AbstractController
     {
         $action = $this->actions->find($id);
         if (!$action) {
-            return $this->redirectToRoute('app_user_actions');
+            return $this->contexteRetour->redirection($request, 'app_user_actions');
         }
-
-        $redirect = $this->resolveRedirect($request, $action);
 
         if (!$this->isCsrfTokenValid('delete-action'.$id, (string) $request->request->get('_csrf_token'))) {
             $this->addFlash('error', 'Token CSRF invalide — suppression non effectuée.');
 
-            return $this->redirectTo($redirect);
+            return $this->contexteRetour->redirection($request, 'app_user_actions');
         }
 
         try {
             $this->em->remove($action);
             $this->em->flush();
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             $this->addFlash('error', 'Suppression impossible : erreur technique.');
-
-            return $this->redirectTo($redirect);
         }
 
-        return $this->redirectTo($redirect);
+        return $this->contexteRetour->redirection($request, 'app_user_actions');
     }
 
     #[Route('/cloturer/{id}', name: 'app_user_actions_cloturer', methods: ['POST'])]
@@ -477,33 +489,5 @@ class ActionController extends AbstractController
         $entier = filter_var($texte, FILTER_VALIDATE_INT, ['flags' => FILTER_NULL_ON_FAILURE]);
 
         return null === $entier ? null : $entier;
-    }
-
-    /**
-     * Détermine l'URL de retour :
-     *  - priorité au query param `redirect` (URL absolue ou chemin interne),
-     *  - sinon, liste des prospects.
-     */
-    private function resolveRedirect(Request $request, ?Action $action = null): string
-    {
-        $requested = trim((string) ($request->query->get('redirect') ?? $request->request->get('redirect', '')));
-        if ('' === $requested) {
-            $requested = $this->generateUrl('app_user_prospects');
-        }
-
-        return $requested;
-    }
-
-    /**
-     * Redirige vers l'URL stockée (query param `redirect` ou fiche prospect).
-     * Refuse tout chemin non-interne (sécurité open-redirect).
-     */
-    private function redirectTo(string $url): RedirectResponse
-    {
-        if ('' === $url || (!str_starts_with($url, '/') && !str_starts_with($url, 'http'))) {
-            $url = $this->generateUrl('app_user_actions');
-        }
-
-        return new RedirectResponse($url);
     }
 }

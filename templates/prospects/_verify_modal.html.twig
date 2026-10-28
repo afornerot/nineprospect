@@ -56,7 +56,6 @@
 
                 <form id="js-verify-form-{{ prospect.id }}" data-apply-url="{{ applyUrl }}" {% if rows is empty %}class="d-none"{% endif %}>
                     <input type="hidden" name="_csrf_token" value="{{ csrf }}">
-                    <input type="hidden" name="redirect" value="{{ redirect }}">
 
                     {% if rows is not empty %}
                         <div class="list-group">
@@ -92,7 +91,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <a href="{{ path('app_user_prospects') }}" class="btn btn-secondary">Annuler</a>
+                <a href="{{ path('app_user_prospects') }}" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</a>
                 {% if rows is not empty %}
                     <button type="button" class="btn btn-primary js-verify-apply" data-form="#js-verify-form-{{ prospect.id }}">
                         <i class="fas fa-check me-1"></i>Appliquer ce résultat

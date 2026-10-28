@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Cible;
 use App\Entity\ProspectCible;
+use App\Http\ContexteRetour;
 use App\Repository\CibleRepository;
 use App\Repository\ProspectCibleRepository;
 use App\Repository\ProspectRepository;
@@ -24,6 +25,7 @@ class CibleBulkController extends AbstractController
         private ProspectRepository $prospects,
         private ProspectCibleRepository $prospectCibles,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -51,7 +53,7 @@ class CibleBulkController extends AbstractController
             'cibles' => $cibles,
             'cibleId' => $cibleId,
             'prospectsHors' => $prospectsHors,
-            'routecancel' => 'app_user_cibles',
+            'retour' => $this->contexteRetour->url($request, 'app_user_cibles'),
         ]);
     }
 

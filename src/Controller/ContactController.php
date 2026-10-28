@@ -5,12 +5,15 @@ namespace App\Controller;
 use App\Controller\Trait\CrudDeleteTrait;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Contact;
+use App\Entity\Prospect;
 use App\Entity\User;
 use App\Form\ContactType;
+use App\Http\ContexteRetour;
 use App\Repository\ContactRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +30,7 @@ class ContactController extends AbstractController
         private ContactRepository $contacts,
         private UserRepository $users,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -61,23 +65,30 @@ class ContactController extends AbstractController
     public function submit(Request $request): Response
     {
         $contact = new Contact();
-        $redirect = $this->resolveRedirect($request, $contact);
+
+        // Pré-remplissage quand le formulaire est ouvert depuis une fiche
+        // prospect : le contact appartient alors à ce prospect.
+        $prospectId = $request->query->getInt('prospect');
+        if (0 !== $prospectId && null !== ($prospect = $this->em->find(Prospect::class, $prospectId))) {
+            $contact->setProspect($prospect);
+        }
 
         $form = $this->createForm(ContactType::class, $contact);
-        $form->get('redirect')->setData($redirect);
+        $retour = $this->contexteRetour->url($request, 'app_user_contacts');
+        $form->get('retour')->setData($retour);
         $form->handleRequest($request);
+
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->persist($contact);
             $this->em->flush();
 
-            return $this->redirectTo($redirect, $contact->getProspect()?->getId());
+            return $this->redirectionRetour($form, 'app_user_contacts');
         }
 
         return $this->renderLayout('contacts/edit.html.twig', 'Nouveau contact', [
-            'routecancel' => 'app_user_contacts',
             'mode' => 'submit',
             'form' => $form,
-            'redirect' => $redirect,
+            'retour' => $retour,
         ]);
     }
 
@@ -86,27 +97,26 @@ class ContactController extends AbstractController
     {
         $contact = $this->contacts->find($id);
         if (!$contact) {
-            return $this->redirectToRoute('app_user_contacts');
+            return $this->contexteRetour->redirection($request, 'app_user_contacts');
         }
 
-        $redirect = $this->resolveRedirect($request, $contact);
-
         $form = $this->createForm(ContactType::class, $contact);
-        $form->get('redirect')->setData($redirect);
+        $retour = $this->contexteRetour->url($request, 'app_user_contacts');
+        $form->get('retour')->setData($retour);
         $form->handleRequest($request);
+
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->redirectTo($redirect, $contact->getProspect()?->getId());
+            return $this->redirectionRetour($form, 'app_user_contacts');
         }
 
         return $this->renderLayout('contacts/edit.html.twig', 'Modification = '.$contact->getNomComplet(), [
-            'routecancel' => 'app_user_contacts',
             'routedelete' => 'app_user_contacts_delete',
             'mode' => 'update',
             'form' => $form,
             'contact' => $contact,
-            'redirect' => $redirect,
+            'retour' => $retour,
         ]);
     }
 
@@ -115,7 +125,7 @@ class ContactController extends AbstractController
     {
         $contact = $this->contacts->find($id);
         if (!$contact) {
-            return $this->redirectToRoute('app_user_contacts');
+            return $this->contexteRetour->redirection($request, 'app_user_contacts');
         }
 
         return $this->deleteEntity($request, $contact, $id, 'delete-contact', 'contacts', $this->em, [
@@ -126,33 +136,15 @@ class ContactController extends AbstractController
     }
 
     /**
-     * Détermine l'URL de retour :
-     *  - priorité à ?redirect= si présent (URL encodée ou chemin relatif interne)
-     *  - sinon, liste des prospects.
+     * Le retour voyage dans le champ caché `retour` : figé au GET, il reste
+     * valable même si l'utilisateur a navigué dans un autre onglet entre la
+     * saisie et la validation.
+     *
+     * @param FormInterface<Contact> $form
      */
-    private function resolveRedirect(Request $request, ?Contact $contact): string
+    private function redirectionRetour(FormInterface $form, string $routeFallback): RedirectResponse
     {
-        $requested = (string) $request->query->get('redirect', '');
-        if ('' !== $requested) {
-            return $requested;
-        }
-
-        return $this->generateUrl('app_user_prospects');
-    }
-
-    /**
-     * Redirige vers l'URL stockée. Si l'URL est externe ou invalide, fallback
-     * sur la fiche prospect ou la liste.
-     */
-    private function redirectTo(string $url, ?int $prospectId): RedirectResponse
-    {
-        // Refuse les URL externes non sécurisées : on n'accepte que les chemins
-        // internes (commencent par "/") ou les URL absolues du même hôte.
-        if (!str_starts_with($url, '/') && !str_starts_with($url, 'http')) {
-            $url = $this->generateUrl('app_user_contacts');
-        }
-
-        return new RedirectResponse($url);
+        return $this->contexteRetour->redirectionVers($form->get('retour')->getData(), $routeFallback);
     }
 
     /**

@@ -122,6 +122,39 @@ il ne supprime jamais d'enregistrement. Avoir un prospect dans plusieurs vagues 
   **par nom normalisé** (accents/espaces/casse ignorés) ; une colonne sans étape
   correspondante produit une anomalie.
 
+## Contexte de retour (navigation)
+
+Aucune URL de retour ne circule dans la query string. La session retient la
+navigation, et les formulaires ne transportent qu'un champ caché `retour`
+figé au GET.
+
+- `App\Http\ContexteRetour` mémorise en session `_retour` :
+  - `page` : la dernière page affichable consultée (liste, fiche, agenda…) ;
+  - `listes` : la dernière URL de **chaque** liste, indexée par son chemin.
+    L'indexation par section évite qu'un onglet consulté entre-temps
+    n'écrase le retour d'un autre.
+- `App\EventSubscriber\MemoriserContexteRetour` (sur `kernel.response`)
+  mémorise toute réponse GET 200 hors redirection, hors XHR, hors format
+  non HTML. Les actions `list()` / `index()` alimentent `listes` ; les
+  formulaires et endpoints AJAX (`submit`, `update`, `delete`, `verify`,
+  `events`…) sont explicitement exclus.
+- Résolution d'une destination de retour :
+  1. `page` si elle diffère de l'URL courante (on ne renvoie jamais un
+     formulaire sur lui-même) ;
+  2. sinon la route de repli du module.
+- « Retour à la liste » d'une fiche utilise `listeOu('/user/prospects', …)` :
+  la liste prospects retrouve ses filtres et l'ancre `#prospect-{id}`, et ne
+  peut pas ramener dans une autre section.
+- Après suppression, `CrudDeleteTrait` revient sur la page d'où l'action a
+  été déclenchée ; en cas d'absence de contexte, sur la liste du module.
+- `ContexteRetour::assainir()` n'accepte qu'un chemin interne absolu : ni
+  schéma, ni hôte (`//hote`, `/\hote`), ni caractère de contrôle, ni CRLF
+  encodé. Toute valeur refusée retombe sur la route de repli
+  (protection open-redirect).
+- Spécificité agenda : après modification d'une action ouverte depuis
+  l'agenda, `ActionController` recale le retour sur `?date=YYYY-MM-DD` avec
+  la date à jour, pour que l'utilisateur retrouve l'action déplacée.
+
 ## Liste des prospects — filtres et tri
 
 La liste (`/user/prospects`, `templates/prospects/list.html.twig`) supporte
@@ -188,7 +221,7 @@ Mécanisme d'enrichissement automatique des prospects via l'API publique
   radio de résultats (SIREN, SIRET, NAF, adresse, ville), bouton
   **« Appliquer ce résultat »** (`js-verify-apply`).
 - Submit → fetch POST `/user/prospects/verify/{id}/apply` (JSON :
-  `{siren, csrf_token, redirect}`). Le serveur re-vérifie le SIREN côté API
+  `{siren, csrf_token}`). Le serveur re-vérifie le SIREN côté API
   avant d'écrire, et applique via `ProspectController::applyAnnuaire()` qui :
   - écrase SIREN, SIRET, NAF, adresse, code postal, ville, pays (`FR`), RCS/RM,
     TVA, **nom** et **latitude/longitude** (re-géocodage via AdresseApi si
@@ -281,11 +314,11 @@ Bouton **« Créer depuis l'Annuaire »** dans la liste prospects à côté de
   `/user/actions/reaffecter/{id}` (JSON `{versUser, csrf_token}`, token
   `reaffecter-action{id}` via `GET /user/agenda/reaffecter-csrf/{id}`) : met à
   jour `aFairePar` de l'action.
-- **Retour à l'agenda** : `redirect=/user/agenda?date=YYYY-MM-DD` où la
-  date est la date prévue (ou réalisée) de l'action. Le contrôleur
-  `ActionController::update()` **régénère** ce redirect avec la date
-  actuelle si l'utilisateur a modifié `datePrevue` (ou `dateRealisee`) — le
-  retour cible la date mise à jour, pas l'ancienne.
+- **Retour à l'agenda** : la session retient que l'agenda était la dernière
+  page consultée (voir « Contexte de retour »). Après modification d'une
+  action, `ActionController` **récale** ce retour sur `?date=YYYY-MM-DD` avec
+  la date prévue (ou réalisée) à jour — sans quoi l'utilisateur retomberait
+  sur l'ancienne date de l'agenda.
 - `initialDate` du calendrier lit `?date=YYYY-MM-DD` au load.
 
 ## Champs étendus du prospect
@@ -470,9 +503,11 @@ docker compose exec -T nineprospect php bin/console lint:twig templates
 docker compose exec -T nineprospect php vendor/bin/phpunit
 ```
 
-Le projet vise **117 tests verts** (3 skipped quand la base de test n'est pas
-disponible) couvrant : prospection, contacts, CRUD générique, agenda, agenda
-CSRF/déplacement, AnnuaireEntreprises, AdresseApi, services, etc.
+Le projet vise **200 tests verts** (8 skipped quand la base de test n'est pas
+disponible) couvrant : prospection, contacts, CRUD générique, contexte de
+retour (`tests/Http/ContexteRetourTest.php`,
+`tests/RetourNavigationTest.php`), agenda, agenda CSRF/déplacement,
+AnnuaireEntreprises, AdresseApi, services, etc.
 
 ## Base de test
 

@@ -108,10 +108,10 @@
                     // Clic sur une date → pré-remplit le formulaire de
                     // création d'action avec cette date.
                     dateClick: function (info) {
+                        // Le retour vers l'agenda daté vient de la session :
+                        // aucun paramètre à transporter.
                         const d = info.dateStr.slice(0, 10);
-                        const target = '{{ path('app_user_actions_submit') }}?date=' + d
-                            + '&redirect=' + encodeURIComponent('{{ path('app_user_agenda') }}?date=' + d);
-                        window.location.href = target;
+                        window.location.href = '{{ path('app_user_actions_submit') }}?date=' + d;
                     },
                     // Drag & drop d'un événement → met à jour la date de
                     // l'action côté serveur via l'endpoint AJAX.

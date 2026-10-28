@@ -6,6 +6,7 @@ use App\Controller\Trait\CrudDeleteTrait;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\User;
 use App\Form\UserType;
+use App\Http\ContexteRetour;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Ramsey\Uuid\Uuid;
@@ -19,6 +20,11 @@ class UserController extends AbstractController
 {
     use CrudDeleteTrait;
     use LayoutRenderTrait;
+
+    public function __construct(
+        protected ContexteRetour $contexteRetour,
+    ) {
+    }
 
     #[Route('/admin/user', name: 'app_admin_user')]
     public function list(UserRepository $userRepository): Response
@@ -38,6 +44,7 @@ class UserController extends AbstractController
         $user = new User();
 
         $form = $this->createForm(UserType::class, $user, ['mode' => 'submit', 'modeAuth' => $this->getParameter('modeAuth')]);
+        $retour = $this->contexteRetour->url($request, 'app_admin_user');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $user = $form->getData();
@@ -58,11 +65,11 @@ class UserController extends AbstractController
             $em->persist($user);
             $em->flush();
 
-            return $this->redirectToRoute('app_admin_user');
+            return $this->contexteRetour->redirection($request, 'app_admin_user');
         }
 
         return $this->renderLayout('user/edit.html.twig', 'Création Utilisateur', [
-            'routecancel' => 'app_admin_user',
+            'retour' => $retour,
             'routedelete' => 'app_admin_user_delete',
             'mode' => 'submit',
             'form' => $form,
@@ -74,11 +81,12 @@ class UserController extends AbstractController
     {
         $user = $em->getRepository(User::class)->find($id);
         if (!$user) {
-            return $this->redirectToRoute('app_admin_user');
+            return $this->contexteRetour->redirection($request, 'app_admin_user');
         }
         $hashedPassword = $user->getPassword();
 
         $form = $this->createForm(UserType::class, $user, ['mode' => 'update', 'modeAuth' => $this->getParameter('modeAuth')]);
+        $retour = $this->contexteRetour->url($request, 'app_admin_user');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $user = $form->getData();
@@ -91,11 +99,11 @@ class UserController extends AbstractController
             $user->setPassword($hashedPassword);
             $em->flush();
 
-            return $this->redirectToRoute('app_admin_user');
+            return $this->contexteRetour->redirection($request, 'app_admin_user');
         }
 
         return $this->renderLayout('user/edit.html.twig', 'Modification Utilisateur = '.$user->getUsername(), [
-            'routecancel' => 'app_admin_user',
+            'retour' => $retour,
             'routedelete' => 'app_admin_user_delete',
             'mode' => 'update',
             'form' => $form,
@@ -107,7 +115,7 @@ class UserController extends AbstractController
     {
         $user = $em->getRepository(User::class)->find($id);
         if (!$user) {
-            return $this->redirectToRoute('app_admin_user');
+            return $this->contexteRetour->redirection($request, 'app_admin_user');
         }
 
         return $this->deleteEntity($request, $user, $id, 'delete-user', 'utilisateur', $em, [
@@ -122,11 +130,12 @@ class UserController extends AbstractController
     {
         $user = $em->getRepository(User::class)->find($this->getUser());
         if (!$user) {
-            return $this->redirectToRoute('app_home');
+            return $this->contexteRetour->redirection($request, 'app_home');
         }
         $hashedPassword = $user->getPassword();
 
         $form = $this->createForm(UserType::class, $user, ['mode' => 'profil', 'modeAuth' => $this->getParameter('modeAuth')]);
+        $retour = $this->contexteRetour->url($request, 'app_home');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $user = $form->getData();
@@ -140,14 +149,14 @@ class UserController extends AbstractController
 
             $em->flush();
 
-            return $this->redirectToRoute('app_home');
+            return $this->contexteRetour->redirection($request, 'app_home');
         }
 
         return $this->render('user/edit.html.twig', [
             'usemenu' => true,
             'usesidebar' => false,
             'title' => 'Profil = '.$user->getUsername(),
-            'routecancel' => 'app_home',
+            'retour' => $retour,
             'routedelete' => '',
             'mode' => 'profil',
             'form' => $form,

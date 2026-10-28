@@ -8,6 +8,7 @@ use App\Entity\Prospect;
 use App\Entity\ProspectSprint;
 use App\Entity\Sprint;
 use App\Form\SprintType;
+use App\Http\ContexteRetour;
 use App\Repository\PipelineRepository;
 use App\Repository\ProspectRepository;
 use App\Repository\SprintRepository;
@@ -32,6 +33,7 @@ class SprintController extends AbstractController
         private ProspectRepository $prospects,
         private PipelineRepository $pipelines,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -115,6 +117,7 @@ class SprintController extends AbstractController
         $sprint->setNumero($this->sprints->nextNumero());
 
         $form = $this->createForm(SprintType::class, $sprint, ['numeroLectureSeule' => true]);
+        $retour = $this->contexteRetour->url($request, 'app_user_vagues');
         $form->handleRequest($request);
         // Toujours recalculer : le champ est `readonly` côté navigateur mais
         // rien n'empêche un client malveillant de poster une autre valeur.
@@ -126,9 +129,9 @@ class SprintController extends AbstractController
         }
 
         return $this->renderLayout('vagues/edit.html.twig', 'Nouvelle vague', [
-            'routecancel' => 'app_user_vagues',
             'mode' => 'submit',
             'form' => $form,
+            'retour' => $retour,
         ]);
     }
 
@@ -137,25 +140,26 @@ class SprintController extends AbstractController
     {
         $sprint = $this->sprints->find($id);
         if (!$sprint) {
-            return $this->redirectToRoute('app_user_vagues');
+            return $this->contexteRetour->redirection($request, 'app_user_vagues');
         }
 
         $form = $this->createForm(SprintType::class, $sprint, ['afficherProspects' => true]);
         $form->get('prospects')->setData($this->prospectsDe($sprint));
+        $retour = $this->contexteRetour->url($request, 'app_user_vagues');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid() && $this->sauverSprint($sprint, $form)) {
-            return $this->redirectToRoute('app_user_vagues');
+            return $this->contexteRetour->redirection($request, 'app_user_vagues');
         }
 
         $allProspects = $this->prospects->findBy([], ['nom' => SortDirection::Ascending]);
 
         return $this->renderLayout('vagues/edit.html.twig', 'Modification = Vague '.$sprint->getNumero(), [
-            'routecancel' => 'app_user_vagues',
             'routedelete' => 'app_user_vagues_delete',
             'mode' => 'update',
             'form' => $form,
             'sprint' => $sprint,
             'allProspects' => $allProspects,
+            'retour' => $retour,
         ]);
     }
 
@@ -250,7 +254,7 @@ class SprintController extends AbstractController
     {
         $sprint = $this->sprints->find($id);
         if (!$sprint) {
-            return $this->redirectToRoute('app_user_vagues');
+            return $this->contexteRetour->redirection($request, 'app_user_vagues');
         }
 
         return $this->deleteEntity($request, $sprint, $id, 'delete-vague', 'vagues', $this->em, [

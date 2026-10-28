@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Config;
 use App\Form\ConfigType;
+use App\Http\ContexteRetour;
 use App\Repository\ConfigRepository;
 use App\Service\ConfigParameterBag;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,6 +24,7 @@ class ConfigController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private ConfigRepository $configRepository,
+        protected ContexteRetour $contexteRetour,
     ) {}
 
     #[Route('/admin/config', name: self::ROUTE_PREFIX)]
@@ -41,7 +43,7 @@ class ConfigController extends AbstractController
     {
         $config = $this->configRepository->find($id);
         if (!$config) {
-            return $this->redirectToRoute(self::ROUTE_PREFIX);
+            return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
         }
 
         $form = $this->createForm(ConfigType::class, $config);
@@ -52,12 +54,14 @@ class ConfigController extends AbstractController
             $this->em->flush();
             $configParameterBag->reload();
 
-            return $this->redirectToRoute(self::ROUTE_PREFIX);
+            return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
         }
+
+        $retour = $this->contexteRetour->url($request, self::ROUTE_PREFIX);
 
         return $this->renderLayout('config/edit.html.twig', 'Modifier Configuration = '.$config->getCode(), [
             'config' => $config,
-            'routecancel' => self::ROUTE_PREFIX,
+            'retour' => $retour,
             'routedelete' => self::ROUTE_PREFIX.'_delete',
             'form' => $form,
         ]);
@@ -68,17 +72,17 @@ class ConfigController extends AbstractController
     {
         $config = $this->configRepository->find($id);
         if (!$config) {
-            return $this->redirectToRoute(self::ROUTE_PREFIX);
+            return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
         }
 
         if (!$this->isCsrfTokenValid('delete-config-'.$id, $request->request->get('_token'))) {
-            return $this->redirectToRoute(self::ROUTE_PREFIX);
+            return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
         }
 
         $config->setRawValue(null);
         $this->em->flush();
         $configParameterBag->reload();
 
-        return $this->redirectToRoute(self::ROUTE_PREFIX);
+        return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
     }
 }

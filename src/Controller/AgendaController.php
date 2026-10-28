@@ -162,24 +162,16 @@ class AgendaController extends AbstractController
             $titre .= ' — '.$prospect->getNom();
         }
 
-        // Redirection vers l'agenda centrée sur la date de l'action : quand
-        // l'utilisateur modifie l'action, il revient au bon endroit de
-        // l'agenda même s'il a changé la date.
-        $redirectParams = [];
-        if (null !== $date) {
-            $redirectParams['date'] = $date->format('Y-m-d');
-        }
-
+        // L'URL de modification ne porte aucun paramètre de retour : c'est la
+        // page courante (l'agenda) que le contexte de session restitue. Après
+        // modification, l'action recale l'agenda sur la nouvelle date.
         return [
             'id' => $a->getId(),
             'title' => $titre,
             'start' => $date?->format('Y-m-d'),
             'allDay' => true,
             'color' => $couleur,
-            'url' => $this->generateUrl('app_user_actions_update', [
-                'id' => $a->getId(),
-                'redirect' => $this->generateUrl('app_user_agenda', $redirectParams),
-            ]),
+            'url' => $this->generateUrl('app_user_actions_update', ['id' => $a->getId()]),
             'extendedProps' => [
                 'contact' => $a->getContact()?->getNomComplet(),
                 'aFairePar' => $a->getAFairePar()?->getUsername(),

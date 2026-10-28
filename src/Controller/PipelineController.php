@@ -8,6 +8,7 @@ use App\Entity\Pipeline;
 use App\Entity\PipelineEtape;
 use App\Form\PipelineEtapeType;
 use App\Form\PipelineType;
+use App\Http\ContexteRetour;
 use App\Repository\PipelineRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +29,7 @@ class PipelineController extends AbstractController
     public function __construct(
         private PipelineRepository $pipelines,
         private EntityManagerInterface $em,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -58,6 +60,7 @@ class PipelineController extends AbstractController
         $etaitDefaut = false;
 
         $form = $this->createForm(PipelineType::class, $pipeline);
+        $retour = $this->contexteRetour->url($request, 'app_user_pipelines');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid() && $this->finaliserPipeline($pipeline, $form, $etaitDefaut)) {
             $this->em->persist($pipeline);
@@ -67,12 +70,12 @@ class PipelineController extends AbstractController
         }
 
         return $this->renderLayout('pipelines/edit.html.twig', 'Nouveau pipeline', [
-            'routecancel' => 'app_user_pipelines',
             'mode' => 'submit',
             'form' => $form,
             'pipeline' => $pipeline,
             'formEtapes' => [],
             'formAjout' => null,
+            'retour' => $retour,
         ]);
     }
 
@@ -81,7 +84,7 @@ class PipelineController extends AbstractController
     {
         $pipeline = $this->pipelines->find($id);
         if (!$pipeline) {
-            return $this->redirectToRoute('app_user_pipelines');
+            return $this->contexteRetour->redirection($request, 'app_user_pipelines');
         }
 
         $etaitDefaut = $pipeline->isParDefaut();
@@ -90,10 +93,10 @@ class PipelineController extends AbstractController
         if ($form->isSubmitted() && $form->isValid() && $this->finaliserPipeline($pipeline, $form, $etaitDefaut)) {
             $this->em->flush();
 
-            return $this->redirectToRoute('app_user_pipelines');
+            return $this->contexteRetour->redirection($request, 'app_user_pipelines');
         }
 
-        return $this->vueEdition($pipeline, $form);
+        return $this->vueEdition($request, $pipeline, $form);
     }
 
     #[Route('/delete/{id}', name: 'app_user_pipelines_delete', methods: ['POST'])]
@@ -101,7 +104,7 @@ class PipelineController extends AbstractController
     {
         $pipeline = $this->pipelines->find($id);
         if (!$pipeline) {
-            return $this->redirectToRoute('app_user_pipelines');
+            return $this->contexteRetour->redirection($request, 'app_user_pipelines');
         }
 
         if ($pipeline->isParDefaut()) {
@@ -137,7 +140,7 @@ class PipelineController extends AbstractController
 
         $formPrincipal = $this->createForm(PipelineType::class, $pipeline);
 
-        return $this->vueEdition($pipeline, $formPrincipal, [], $form);
+        return $this->vueEdition($request, $pipeline, $formPrincipal, [], $form);
     }
 
     #[Route('/{id}/etapes/update/{etapeId}', name: 'app_user_pipeline_etapes_update', methods: ['POST'])]
@@ -161,7 +164,7 @@ class PipelineController extends AbstractController
 
         $formPrincipal = $this->createForm(PipelineType::class, $pipeline);
 
-        return $this->vueEdition($pipeline, $formPrincipal, [$etapeId => $form]);
+        return $this->vueEdition($request, $pipeline, $formPrincipal, [$etapeId => $form]);
     }
 
     #[Route('/{id}/etapes/delete/{etapeId}', name: 'app_user_pipeline_etapes_delete', methods: ['POST'])]
@@ -290,7 +293,7 @@ class PipelineController extends AbstractController
      * @param array<int, FormInterface<PipelineEtape>> $formEtapesSoumis
      * @param FormInterface<PipelineEtape>|null        $formAjout
      */
-    private function vueEdition(Pipeline $pipeline, FormInterface $form, array $formEtapesSoumis = [], ?FormInterface $formAjout = null): Response
+    private function vueEdition(Request $request, Pipeline $pipeline, FormInterface $form, array $formEtapesSoumis = [], ?FormInterface $formAjout = null): Response
     {
         if (null === $formAjout) {
             $nouvelle = new PipelineEtape();
@@ -301,7 +304,6 @@ class PipelineController extends AbstractController
         }
 
         $response = $this->renderLayout('pipelines/edit.html.twig', null !== $pipeline->getId() ? 'Pipeline — '.$pipeline->getNom() : 'Nouveau pipeline', [
-            'routecancel' => 'app_user_pipelines',
             'routedelete' => 'app_user_pipelines_delete',
             'routeEtapeDelete' => 'app_user_pipeline_etapes_delete',
             'mode' => 'update',
@@ -309,6 +311,7 @@ class PipelineController extends AbstractController
             'pipeline' => $pipeline,
             'formEtapes' => $this->formEtapes($pipeline, $formEtapesSoumis),
             'formAjout' => $formAjout,
+            'retour' => $this->contexteRetour->url($request, 'app_user_pipelines'),
         ]);
 
         // Le 422 automatique du contrôleur ne couvre que les formulaires de

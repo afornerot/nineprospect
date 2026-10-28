@@ -6,6 +6,7 @@ use App\Controller\Trait\CrudDeleteTrait;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Cible;
 use App\Form\CibleType;
+use App\Http\ContexteRetour;
 use App\Repository\CampagneRepository;
 use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
@@ -42,6 +43,7 @@ class CibleController extends AbstractController
         private ImportAnalyzer $analyzer,
         private ImportExecutor $executor,
         private ImportTemplateGenerator $templateGenerator,
+        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -64,17 +66,20 @@ class CibleController extends AbstractController
         $cible = new Cible();
 
         $form = $this->createForm(CibleType::class, $cible);
+        $retour = $this->contexteRetour->url($request, 'app_user_cibles');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->persist($cible);
             $this->em->flush();
 
+            // La création ouvre la fiche : c'est là que se joignent les
+            // documents de la cible.
             return $this->redirectToRoute('app_user_cibles_update', ['id' => $cible->getId()]);
         }
 
         return $this->renderLayout('cibles/edit.html.twig', 'Nouvelle cible', [
-            'routecancel' => 'app_user_cibles',
             'form' => $form,
+            'retour' => $retour,
         ]);
     }
 
@@ -83,22 +88,23 @@ class CibleController extends AbstractController
     {
         $cible = $this->cibles->find($id);
         if (!$cible) {
-            return $this->redirectToRoute('app_user_cibles');
+            return $this->contexteRetour->redirection($request, 'app_user_cibles');
         }
 
         $form = $this->createForm(CibleType::class, $cible);
+        $retour = $this->contexteRetour->url($request, 'app_user_cibles');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->redirectToRoute('app_user_cibles');
+            return $this->contexteRetour->redirection($request, 'app_user_cibles');
         }
 
         return $this->renderLayout('cibles/edit.html.twig', 'Modification = '.$cible->getTitre(), [
-            'routecancel' => 'app_user_cibles',
             'routedelete' => 'app_user_cibles_delete',
             'form' => $form,
             'cible' => $cible,
+            'retour' => $retour,
         ]);
     }
 
@@ -107,7 +113,7 @@ class CibleController extends AbstractController
     {
         $cible = $this->cibles->find($id);
         if (!$cible) {
-            return $this->redirectToRoute('app_user_cibles');
+            return $this->contexteRetour->redirection($request, 'app_user_cibles');
         }
 
         return $this->deleteEntity($request, $cible, $id, 'delete-cible', 'cibles', $this->em, [
@@ -252,7 +258,7 @@ class CibleController extends AbstractController
         return $this->renderLayout('cibles/import.html.twig', 'Importer une cible', [
             'form' => $form->createView(),
             'routetemplate' => 'app_user_cibles_import_template',
-            'routecancel' => 'app_user_cibles',
+            'retour' => $this->contexteRetour->url($request, 'app_user_cibles'),
             'cibles' => $this->cibles->findAllOrdered(),
             'campagnes' => $this->campagnes->findAll(),
         ]);
@@ -332,7 +338,7 @@ class CibleController extends AbstractController
         return $this->renderLayout('cibles/import_report.html.twig', 'Rapport d\'import', [
             'result' => $result,
             'routecible' => 'app_user_cibles_update',
-            'routecancel' => 'app_user_cibles',
+            'retour' => $this->contexteRetour->url($request, 'app_user_cibles'),
         ]);
     }
 

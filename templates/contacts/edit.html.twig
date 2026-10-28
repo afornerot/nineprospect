@@ -11,11 +11,7 @@
         {{ form_start(form) }}
 
         {{ form_widget(form.submit) }}
-        {% if redirect is defined and redirect %}
-            <a href="{{ redirect }}" class="btn btn-secondary ms-1">Annuler</a>
-        {% else %}
-            <a href="{{ path(routecancel) }}" class="btn btn-secondary ms-1">Annuler</a>
-        {% endif %}
+        <a href="{{ retour }}" class="btn btn-secondary ms-1">Annuler</a>
 
         {% include('include/error.html.twig') %}
 

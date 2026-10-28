@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Category;
+use App\Http\ContexteRetour;
 use App\Repository\CategoryRepository;
 use App\Repository\ProspectRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,6 +22,7 @@ class CategoryBulkController extends AbstractController
         private CategoryRepository $categories,
         private ProspectRepository $prospects,
         private EntityManagerInterface $em,
+        private ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -48,7 +50,9 @@ class CategoryBulkController extends AbstractController
             'categories' => $categories,
             'categorieId' => $categorieId,
             'prospectsHors' => $prospectsHors,
-            'routecancel' => 'app_user_categories',
+            // Cette page n'est pas mémorisée comme destination de retour :
+            // on vise explicitement la liste des catégories.
+            'retour' => $this->contexteRetour->listeOu($request, '/user/categories', 'app_user_categories'),
         ]);
     }
 

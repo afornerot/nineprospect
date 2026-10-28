@@ -15,8 +15,8 @@ use Symfony\Component\HttpFoundation\Response;
  * Règles de validation et comportement des setters de {@see Contact} :
  *  - nom OU prénom obligatoire (au moins un des deux non vide)
  *  - nomComplet recalculé à chaque modification du nom ou du prénom
- *  - URL de retour (champ hidden redirect) préservée entre submit/update
- *    et utilisée par Valider/Annuler.
+ *  - URL de retour transportée par le champ caché `retour` (aucun paramètre
+ *    d'URL), utilisée par Valider/Annuler.
  */
 class ContactValidationTest extends WebTestCase
 {
@@ -77,7 +77,7 @@ class ContactValidationTest extends WebTestCase
         }
 
         $token = $this->csrfContact($client, $prospect->getId(), 'list');
-        $client->request('POST', '/user/contacts/submit?redirect=/user/contacts', [
+        $client->request('POST', '/user/contacts/submit', [
             'contact' => [
                 'prospect' => (string) $prospect->getId(),
                 'nom' => 'ZZTEST NomSeul',
@@ -87,7 +87,6 @@ class ContactValidationTest extends WebTestCase
                 'poste' => '',
                 'linkedinUrl' => '',
                 'estPrincipal' => '',
-                'redirect' => '/user/contacts',
                 'submit' => 'Valider',
                 '_token' => $token,
             ],
@@ -113,7 +112,7 @@ class ContactValidationTest extends WebTestCase
         }
 
         $token = $this->csrfContact($client, $prospect->getId(), 'list');
-        $client->request('POST', '/user/contacts/submit?redirect=/user/contacts', [
+        $client->request('POST', '/user/contacts/submit', [
             'contact' => [
                 'prospect' => (string) $prospect->getId(),
                 'nom' => '',
@@ -123,7 +122,6 @@ class ContactValidationTest extends WebTestCase
                 'poste' => '',
                 'linkedinUrl' => '',
                 'estPrincipal' => '',
-                'redirect' => '/user/contacts',
                 'submit' => 'Valider',
                 '_token' => $token,
             ],
@@ -149,7 +147,7 @@ class ContactValidationTest extends WebTestCase
         }
 
         $token = $this->csrfContact($client, $prospect->getId(), 'list');
-        $client->request('POST', '/user/contacts/submit?redirect=/user/contacts', [
+        $client->request('POST', '/user/contacts/submit', [
             'contact' => [
                 'prospect' => (string) $prospect->getId(),
                 'nom' => '',
@@ -159,7 +157,6 @@ class ContactValidationTest extends WebTestCase
                 'poste' => '',
                 'linkedinUrl' => '',
                 'estPrincipal' => '',
-                'redirect' => '/user/contacts',
                 'submit' => 'Valider',
                 '_token' => $token,
             ],
@@ -191,7 +188,7 @@ class ContactValidationTest extends WebTestCase
         $em->clear();
 
         $token = $this->csrfContact($client, $prospect->getId(), 'update', $contactId);
-        $client->request('POST', '/user/contacts/update/'.$contactId.'?redirect=/user/contacts', [
+        $client->request('POST', '/user/contacts/update/'.$contactId, [
             'contact' => [
                 'prospect' => (string) $prospect->getId(),
                 'nom' => 'Apres',
@@ -201,7 +198,6 @@ class ContactValidationTest extends WebTestCase
                 'poste' => '',
                 'linkedinUrl' => '',
                 'estPrincipal' => '',
-                'redirect' => '/user/contacts',
                 'submit' => 'Valider',
                 '_token' => $token,
             ],
@@ -216,7 +212,7 @@ class ContactValidationTest extends WebTestCase
         $this->supprimer($contact);
     }
 
-    public function testRedirectVersFicheProspect(): void
+    public function testRetourVientDeLaFicheProspectConsultee(): void
     {
         $client = $this->loginAsUser();
         $prospect = $this->unProspect();
@@ -224,34 +220,44 @@ class ContactValidationTest extends WebTestCase
             static::markTestSkipped('Base de test indisponible.');
         }
 
-        $token = $this->csrfContact($client, $prospect->getId(), 'submit');
-        $redirect = '/user/prospects/show/'.$prospect->getId();
-        $client->request('POST', '/user/contacts/submit?redirect='.urlencode($redirect), [
+        // 1. On consulte la fiche prospect : elle devient la page de retour.
+        $fiche = '/user/prospects/show/'.$prospect->getId();
+        $client->request('GET', $fiche);
+        $this->assertResponseIsSuccessful();
+
+        // 2. Le formulaire de création fige cette URL dans son champ caché.
+        $crawler = $client->request('GET', '/user/contacts/submit?prospect='.$prospect->getId());
+        $token = (string) $crawler->filter('input[name="contact[_token]"]')->attr('value');
+        $retour = (string) $crawler->filter('input[name="contact[retour]"]')->attr('value');
+        $this->assertSame($fiche, $retour, 'Le retour doit être la fiche prospect consultée.');
+
+        // 3. La validation ramène sur la fiche, sans aucun paramètre d'URL.
+        $client->request('POST', '/user/contacts/submit', [
             'contact' => [
                 'prospect' => (string) $prospect->getId(),
-                'nom' => 'ZZTEST redirectP',
+                'nom' => 'ZZTEST retourFiche',
                 'prenom' => '',
                 'email' => '',
                 'telephoneBrut' => '',
                 'poste' => '',
                 'linkedinUrl' => '',
                 'estPrincipal' => '',
-                'redirect' => $redirect,
+                'retour' => $retour,
                 'submit' => 'Valider',
                 '_token' => $token,
             ],
         ], [], ['HTTP_ORIGIN' => 'http://localhost']);
-        $this->assertResponseRedirects($redirect);
+        $this->assertResponseRedirects($fiche);
 
         $em = $this->em();
         $em->clear();
-        $contact = $this->contacts()->findOneBy(['nom' => 'ZZTEST REDIRECTP']);
+        $contact = $this->contacts()->findOneBy(['nom' => 'ZZTEST RETOURFICHE']);
         if ($contact instanceof Contact) {
             $this->supprimer($contact);
         }
     }
 
-    public function testChampRedirectEstChampHiddenDansLeFormulaire(): void
+    public function testRetourIgnoreUneUrlExterne(): void
     {
         $client = $this->loginAsUser();
         $prospect = $this->unProspect();
@@ -259,15 +265,53 @@ class ContactValidationTest extends WebTestCase
             static::markTestSkipped('Base de test indisponible.');
         }
 
-        $redirect = '/user/contacts?test=1';
-        $client->request('GET', '/user/contacts/submit?redirect='.urlencode($redirect).'&prospect='.$prospect->getId());
-        $crawler = $client->getCrawler();
-        $hidden = $crawler->filter('input[type="hidden"][name="contact[redirect]"]');
-        $this->assertSame(1, $hidden->count(), 'Le champ redirect doit être rendu.');
-        $this->assertSame($redirect, $hidden->attr('value'));
+        $token = $this->csrfContact($client, $prospect->getId());
+        $client->request('POST', '/user/contacts/submit', [
+            'contact' => [
+                'prospect' => (string) $prospect->getId(),
+                'nom' => 'ZZTEST retourExterne',
+                'prenom' => '',
+                'email' => '',
+                'telephoneBrut' => '',
+                'poste' => '',
+                'linkedinUrl' => '',
+                'estPrincipal' => '',
+                'retour' => 'https://evil.example/pwn',
+                'submit' => 'Valider',
+                '_token' => $token,
+            ],
+        ], [], ['HTTP_ORIGIN' => 'http://localhost']);
+        $this->assertResponseRedirects('/user/contacts');
+
+        $em = $this->em();
+        $em->clear();
+        $contact = $this->contacts()->findOneBy(['nom' => 'ZZTEST RETOUREXTERNE']);
+        if ($contact instanceof Contact) {
+            $this->supprimer($contact);
+        }
     }
 
-    public function testListeContactPasseRedirectVersListe(): void
+    public function testChampRetourEstChampHiddenDansLeFormulaire(): void
+    {
+        $client = $this->loginAsUser();
+        $prospect = $this->unProspect();
+        if (null === $client || null === $prospect) {
+            static::markTestSkipped('Base de test indisponible.');
+        }
+
+        $client->request('GET', '/user/prospects/show/'.$prospect->getId());
+        $client->request('GET', '/user/contacts/submit?prospect='.$prospect->getId());
+
+        $hidden = $client->getCrawler()->filter('input[type="hidden"][name="contact[retour]"]');
+        $this->assertSame(1, $hidden->count(), 'Le champ retour doit être rendu.');
+        $this->assertSame(
+            '/user/prospects/show/'.$prospect->getId(),
+            $hidden->attr('value'),
+            'Le champ retour doit contenir la page précédente.',
+        );
+    }
+
+    public function testListeContactNeTransporteAucunRetour(): void
     {
         $client = $this->loginAsUser();
         if (null === $client) {
@@ -290,22 +334,17 @@ class ContactValidationTest extends WebTestCase
 
         $client->request('GET', '/user/contacts');
         $crawler = $client->getCrawler();
+
         $btn = $crawler->filter('a.btn-success');
         $this->assertGreaterThan(0, $btn->count(), 'Bouton Ajouter absent.');
-        $href = $btn->first()->attr('href');
-        $this->assertNotNull($href);
-        $this->assertStringContainsString('redirect=', $href, 'Le bouton Ajouter doit passer ?redirect= pour le retour.');
-        // L'URL est construite par Twig path() qui n'encode pas les caractères réservés
-        // (les "/" restent tels quels), on la compare sans urlencode.
-        $this->assertStringContainsString('/user/contacts', $href);
-        $this->assertMatchesRegularExpression('#\?redirect=(%2F|\/)user(%2F|\/)contacts#', $href);
+        $this->assertSame('/user/contacts/submit', $btn->first()->attr('href'));
 
-        // Au moins un lien « Modifier » doit aussi pointer vers update avec redirect.
-        $modifier = $crawler->filter('a[href*="update"][title="Modifier"]');
+        $modifier = $crawler->filter('a[href*="/user/contacts/update/"][title="Modifier"]');
         $this->assertGreaterThan(0, $modifier->count(), 'Aucun lien Modifier trouvé.');
-        $mhref = $modifier->first()->attr('href');
-        $this->assertNotNull($mhref);
-        $this->assertMatchesRegularExpression('#\?redirect=(%2F|\/)user(%2F|\/)contacts#', $mhref);
+        $this->assertStringNotContainsString('redirect=', (string) $modifier->first()->attr('href'));
+        $this->assertStringNotContainsString('retour=', (string) $modifier->first()->attr('href'));
+
+        $this->supprimer($contact);
     }
 
     // --- Helpers ---
