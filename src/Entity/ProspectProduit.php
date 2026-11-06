@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Enum\QualificationProduit;
 use App\Repository\ProspectProduitRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -22,17 +23,23 @@ class ProspectProduit
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Produit $produit = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?bool $qualifie = null;
+    /**
+     * Qualification du prospect sur ce produit. Stockée en VARCHAR
+     * (`QualificationProduit`), colonne non nullable : un lien créé sans
+     * décision vaut `QualificationProduit::NON`.
+     */
+    #[ORM\Column(length: 20, enumType: QualificationProduit::class, options: ['default' => 'non'])]
+    private QualificationProduit $qualifie = QualificationProduit::NON;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $qualification = null;
 
     /**
-     * Dernier changement de `qualifie` (non / oui / hors produit) : date et
-     * auteur. Renseignés par App\EventListener\QualifieModificationListener
-     * à chaque modification effective de la valeur (un enregistrement sans
-     * changement de valeur ne les touche pas).
+     * Dernier changement de `qualifie` (non / oui / hors produit /
+     * injoignable) : date et auteur. Renseignés par
+     * App\EventListener\QualifieModificationListener à chaque modification
+     * effective de la valeur (un enregistrement sans changement de valeur ne
+     * les touche pas).
      */
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTime $qualifieModifieAt = null;
@@ -70,12 +77,12 @@ class ProspectProduit
         return $this;
     }
 
-    public function getQualifie(): ?bool
+    public function getQualifie(): QualificationProduit
     {
         return $this->qualifie;
     }
 
-    public function setQualifie(?bool $qualifie): static
+    public function setQualifie(QualificationProduit $qualifie): static
     {
         $this->qualifie = $qualifie;
 

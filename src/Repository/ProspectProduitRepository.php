@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\ProspectProduit;
+use App\Enum\QualificationProduit;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use SortDirection;
@@ -38,7 +39,8 @@ class ProspectProduitRepository extends ServiceEntityRepository
     }
 
     /**
-     * Prospects qualifiés (« Oui » ou « Hors produit ») par mois et par produit.
+     * Prospects qualifiés (« Oui », « Hors produit » ou « Injoignable ») par
+     * mois et par produit.
      *
      * Une entrée par produit portant au moins une décision datée ; un prospect
      * qualifié sur plusieurs produits apparaît dans chacune. Les qualifications
@@ -56,7 +58,7 @@ class ProspectProduitRepository extends ServiceEntityRepository
             ->innerJoin('pc.produit', 'c')
             ->andWhere('pc.qualifieModifieAt IS NOT NULL')
             ->andWhere('pc.qualifie IN (:tranches)')
-            ->setParameter('tranches', [true, false])
+            ->setParameter('tranches', QualificationProduit::tranchees())
             ->orderBy('c.titre', SortDirection::Ascending);
 
         if (null !== $userId) {

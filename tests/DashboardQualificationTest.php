@@ -6,6 +6,7 @@ use App\Entity\Produit;
 use App\Entity\Prospect;
 use App\Entity\ProspectProduit;
 use App\Entity\User;
+use App\Enum\QualificationProduit;
 use App\Repository\ProspectProduitRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -14,7 +15,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
  * Pavé « Qualification des prospects » du tableau de bord : courbe mensuelle
- * du nombre de prospects qualifiés (« Oui » ou « Hors produit »), un prospect
+ * du nombre de prospects qualifiés (« Oui », « Hors produit » ou « Injoignable »), un prospect
  * compté une seule fois dans le mois de sa décision la plus récente, filtré
  * par « Affecté à », qualifications non datées exclues.
  *
@@ -40,21 +41,21 @@ class DashboardQualificationTest extends WebTestCase
 
         // A : deux décisions sur le produit A (janvier puis mars).
         $a = $this->creerProspect($user, 'A');
-        $this->lier($a, $produitA, true, '2024-01-10 09:00:00', $user);
-        $this->lier($a, $produitA, false, '2024-03-05 14:00:00', $user);
+        $this->lier($a, $produitA, QualificationProduit::OUI, '2024-01-10 09:00:00', $user);
+        $this->lier($a, $produitA, QualificationProduit::HORS_PRODUIT, '2024-03-05 14:00:00', $user);
 
         // B : une décision janvier sur A, une en février sur B.
         $b = $this->creerProspect($user, 'B');
-        $this->lier($b, $produitA, false, '2024-01-20 11:30:00', $user);
-        $this->lier($b, $produitB, true, '2024-02-02 09:15:00', $user);
+        $this->lier($b, $produitA, QualificationProduit::HORS_PRODUIT, '2024-01-20 11:30:00', $user);
+        $this->lier($b, $produitB, QualificationProduit::OUI, '2024-02-02 09:15:00', $user);
 
         // C : qualifié « Oui » mais sans date (antérieur à l'audit) → exclu.
         $c = $this->creerProspect($user, 'C');
-        $this->lier($c, $produitA, true, null, $user);
+        $this->lier($c, $produitA, QualificationProduit::OUI, null, $user);
 
         // D : état « Non » avec une date résiduelle → exclu.
         $d = $this->creerProspect($user, 'D');
-        $this->lier($d, $produitB, null, '2024-02-01 08:00:00', $user);
+        $this->lier($d, $produitB, QualificationProduit::NON, '2024-02-01 08:00:00', $user);
 
         $resultat = $this->repository()->countQualificationsParMoisParProduit((int) $user->getId());
 
@@ -75,15 +76,15 @@ class DashboardQualificationTest extends WebTestCase
         // second est signée par `$autre` : le filtre suit l'auteur du
         // changement, pas l'affectation commerciale.
         $parLui = $this->creerProspect($user, 'lui');
-        $this->lier($parLui, $produit, true, '2024-05-02 10:00:00', $user);
+        $this->lier($parLui, $produit, QualificationProduit::OUI, '2024-05-02 10:00:00', $user);
 
         $parAutre = $this->creerProspect($user, 'autre');
-        $this->lier($parAutre, $produit, true, '2024-05-03 10:00:00', $autre);
+        $this->lier($parAutre, $produit, QualificationProduit::OUI, '2024-05-03 10:00:00', $autre);
 
         // Décision non signée (import, commande) : visible pour « Tous »
         // seulement, dans aucun intervenant.
         $sansAuteur = $this->creerProspect($user, 'systeme');
-        $this->lier($sansAuteur, $produit, false, '2024-05-04 10:00:00', null);
+        $this->lier($sansAuteur, $produit, QualificationProduit::HORS_PRODUIT, '2024-05-04 10:00:00', null);
 
         $sien = $this->repository()->countQualificationsParMoisParProduit((int) $user->getId());
         $autreSerie = $this->repository()->countQualificationsParMoisParProduit((int) $autre->getId());
@@ -105,7 +106,7 @@ class DashboardQualificationTest extends WebTestCase
         $user = $this->creerUtilisateur();
         $produit = $this->creerProduit('ZZQUALI Produit UI');
         $prospect = $this->creerProspect($user, 'ui');
-        $this->lier($prospect, $produit, true, '2024-07-04 12:00:00', $user);
+        $this->lier($prospect, $produit, QualificationProduit::OUI, '2024-07-04 12:00:00', $user);
 
         $client->request('GET', '/user/dashboard?utilisateur='.$user->getId());
         $this->assertResponseIsSuccessful();
@@ -226,7 +227,7 @@ class DashboardQualificationTest extends WebTestCase
      * s'exécutent pas, ce qui permet de simuler une qualification antérieure
      * à l'audit (`null`) comme une date et un auteur choisis.
      */
-    private function lier(Prospect $prospect, Produit $produit, ?bool $qualifie, ?string $quand, ?User $auteur = null): void
+    private function lier(Prospect $prospect, Produit $produit, QualificationProduit $qualifie, ?string $quand, ?User $auteur = null): void
     {
         $lien = new ProspectProduit();
         $lien->setProspect($prospect);

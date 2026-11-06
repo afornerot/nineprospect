@@ -31,19 +31,22 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
   (calculées via API Adresse sur autocompletion ou via l'Annuaire des Entreprises).
   - **Contacté** : booléen simple `contacte` (cycle `null → true → false → true`,
     date premier contact syncronisée automatiquement à `true`).
-  - **Qualifié** : `qualifie` nullable (`null` = Non, `true` = Oui, `false` = Hors produit),
-    porté par le lien `ProspectProduit` (une qualification par couple prospect × produit).
+  - **Qualifié** : `qualifie` (enum `App\Enum\QualificationProduit`, stockée en
+    VARCHAR : `non`, `oui`, `hors_produit`, `injoignable`), porté par le lien
+    `ProspectProduit` (une qualification par couple prospect × produit). Le badge
+    clique en boucle `Non → Oui → Hors produit → Injoignable → Non` ; un lien créé
+    (import, affectation en masse, formulaire public) naît « Non ».
   - **Audit de la qualification** : `qualifieModifieAt` (datetime) et
     `qualifieModifiePar` (FK `user`, `SET NULL`) mémorisent la date et l'auteur du
     dernier **changement effectif** de `qualifie`. Renseignés par
     `App\EventListener\QualifieModificationListener` (`prePersist` / `preUpdate`
     Doctrine) : tous les writers passent par `setQualifie()`, donc l'audit est
     unique. Un enregistrement qui ne change pas la valeur ne réhorodate pas ;
-    un lien créé directement « Oui »/« Hors produit » est daté dès la création.
-    Le retour à « Non » (`null`) **vide** les deux champs : cet état ne porte
-    aucune décision. `qualifieModifiePar` reste `null` pour un changement hors
-    session (import, commande, formulaire public) et s'affiche alors « système ».
-    Affiché sous le titre « Qualifiée par » (fiche, édition, export PDF).
+    un lien créé directement « Oui »/« Hors produit »/« Injoignable » est daté
+    dès la création. Le retour à « Non » **vide** les deux champs : cet état ne
+    porte aucune décision. `qualifieModifiePar` reste `null` pour un changement
+    hors session (import, commande, formulaire public) et s'affiche alors
+    « système ». Affiché sous le titre « Qualifiée par » (fiche, édition, export PDF).
   - **Prochaine action** : `Prospect::getProchaineAction()` calcule l'action planifiée la
     plus proche dans le futur (`datePrevue >= today`, non réalisée).
   - **Dernière action (liste)** : `Prospect::getDerniereAction()` renvoie l'action à
@@ -245,8 +248,8 @@ les filtres suivants (query string) :
 - `campagne`, `sprint`, `departement`, `utilisateur` : filtres par FK
 - `contacte` : `oui` (match exact `true`) ou `non` (match `IS NULL OR false`,
   c'est-à-dire tous les prospects sans `true`)
-- `qualifie` : `oui` (match exact `true`), `non` (`IS NULL`, défaut Non), `horsproduit`
-  (match exact `false`)
+- `qualifie` : `oui`, `non` (aucune décision tranchée sur aucun produit),
+  `horsproduit` ou `injoignable` (match exact sur cet état)
 - `statut` : au moins une action du statut donné — `retard` (planifiée
   `datePrevue < aujourd'hui`), `aujourdhui` (`datePrevue = aujourd'hui`), `avenir`
   (`datePrevue > aujourd'hui` ou sans date), `faites` (`dateRealisee != null`)

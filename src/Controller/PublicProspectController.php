@@ -7,6 +7,7 @@ use App\Entity\Produit;
 use App\Entity\Contact;
 use App\Entity\Prospect;
 use App\Entity\ProspectProduit;
+use App\Enum\QualificationProduit;
 use App\Repository\CampagneRepository;
 use App\Repository\ProduitRepository;
 use App\Repository\ContactRepository;
@@ -230,7 +231,7 @@ class PublicProspectController extends AbstractController
                 $prospectProduit = new ProspectProduit();
                 $prospectProduit->setProspect($prospect);
                 $prospectProduit->setProduit($produitEntity);
-                $prospectProduit->setQualifie(null);
+                $prospectProduit->setQualifie(QualificationProduit::NON);
                 $this->em->persist($prospectProduit);
                 $this->em->flush();
             }
@@ -289,7 +290,7 @@ class PublicProspectController extends AbstractController
                 $prospectProduit = new ProspectProduit();
                 $prospectProduit->setProspect($prospect);
                 $prospectProduit->setProduit($produit);
-                $prospectProduit->setQualifie(null);
+                $prospectProduit->setQualifie(QualificationProduit::NON);
                 $this->em->persist($prospectProduit);
                 $this->em->flush();
             }
@@ -388,7 +389,7 @@ class PublicProspectController extends AbstractController
             $prospectProduit = new ProspectProduit();
             $prospectProduit->setProspect($prospect);
             $prospectProduit->setProduit($produit);
-            $prospectProduit->setQualifie(null);
+            $prospectProduit->setQualifie(QualificationProduit::NON);
             $this->em->persist($prospectProduit);
             $this->em->flush();
         }

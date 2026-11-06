@@ -125,6 +125,19 @@ docker compose exec -T nineprospect php bin/console doctrine:schema:update --for
 # 3. (optionnel) importer un nouveau fichier via l'écran /user/produits/import
 ```
 
+Changement de **type** sur une colonne déjà peuplée : exécuter le script SQL de
+conversion **avant** `doctrine:schema:update --force`, sinon Doctrine réécrit la
+colonne en perdant les valeurs. Exemple (qualification produit booléenne →
+4 états) :
+```bash
+# 1. sauvegarde hors base (voir avertissement ci-dessus)
+# 2. conversion des données, sans perte : 1 -> oui, 0 -> hors_produit, NULL -> non
+docker compose exec -T mariadb mariadb -unineprospect -p<mdp> nineprospect < misc/sql/2026-11-06-qualification-injoignable.sql
+# 3. alignement du schéma sur le mapping (déjà à jour, no-op)
+docker compose exec -T nineprospect php bin/console doctrine:schema:update --force
+```
+Le script est idempotent : relancé après conversion, il ne change plus rien.
+
 Pour une correction ponctuelle de **données** (jamais de schéma) : `UPDATE` SQL
 direct autorisé. Exemple historique : réaligner `pipeline.par_defaut=1` sur le
 vrai « Pipeline par défaut » (id=1) :

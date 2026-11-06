@@ -7,6 +7,7 @@ use App\Entity\Produit;
 use App\Entity\Contact;
 use App\Entity\Prospect;
 use App\Entity\ProspectProduit;
+use App\Enum\QualificationProduit;
 use App\Message\GeocodeProspectMessage;
 use App\Repository\CampagneRepository;
 use App\Repository\CibleRepository;
@@ -457,7 +458,7 @@ final class ImportExecutor
             $pc = new ProspectProduit();
             $pc->setProspect($prospect);
             $pc->setProduit($produit);
-            $pc->setQualifie(null); // Pas encore qualifié
+            $pc->setQualifie(QualificationProduit::NON); // Pas encore qualifié
             $this->em->persist($pc);
         }
     }

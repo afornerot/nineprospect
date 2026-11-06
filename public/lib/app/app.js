@@ -173,22 +173,22 @@ $(document).ready(function () {
 	});
 });
 
-// Cycle du statut Cible sur les badges cliquables dans la liste prospects.
-// null → true → false → null (Non → Oui → Hors cible → Non).
+// Cycle de la qualification produit sur les badges cliquables dans la liste prospects.
+// non → oui → hors_produit → injoignable → non.
 $(document).ready(function () {
-	$(document).on('click', '.js-cycle-cible', function (e) {
+	$(document).on('click', '.js-cycle-produit', function (e) {
 		e.preventDefault();
 		e.stopPropagation();
 		const $btn = $(this);
 		if ($btn.prop('disabled')) return;
 
 		const prospectId = $btn.data('prospect');
-		const cibleId = $btn.data('cible');
+		const produitId = $btn.data('produit');
 		const csrf = $btn.data('csrf');
-		if (!prospectId || !cibleId || !csrf) return;
+		if (!prospectId || !produitId || !csrf) return;
 
 		$btn.prop('disabled', true);
-		const url = '/user/prospects/toggle-cible/' + prospectId + '/' + cibleId;
+		const url = '/user/prospects/toggle-produit/' + prospectId + '/' + produitId;
 		const body = new URLSearchParams();
 		body.set('_csrf_token', csrf);
 
@@ -209,7 +209,7 @@ $(document).ready(function () {
 				alert(msg);
 				return;
 			}
-			const newClass = 'badge text-bg-' + r.data.color + ' js-cycle-cible';
+			const newClass = 'badge text-bg-' + r.data.color + ' js-cycle-produit';
 			$btn.attr('class', newClass);
 			$btn.attr('title', r.data.label);
 			location.reload();
@@ -221,18 +221,18 @@ $(document).ready(function () {
 	});
 });
 
-// Ajout d'une cible à un prospect via le dropdown.
+// Ajout d'un produit à un prospect via le dropdown.
 $(document).ready(function () {
-	$(document).on('click', '.js-link-cible', function (e) {
+	$(document).on('click', '.js-link-produit', function (e) {
 		e.preventDefault();
 		e.stopPropagation();
 		const $link = $(this);
 		const prospectId = $link.data('prospect');
-		const cibleId = $link.data('cible');
+		const produitId = $link.data('produit');
 		const csrf = $link.data('csrf');
-		if (!prospectId || !cibleId || !csrf) return;
+		if (!prospectId || !produitId || !csrf) return;
 
-		const url = '/user/prospects/add-cible/' + prospectId + '/' + cibleId;
+		const url = '/user/prospects/add-produit/' + prospectId + '/' + produitId;
 		const body = new URLSearchParams();
 		body.set('_csrf_token', csrf);
 

@@ -6,6 +6,7 @@ use App\Entity\Produit;
 use App\Entity\Prospect;
 use App\Entity\ProspectProduit;
 use App\Entity\User;
+use App\Enum\QualificationProduit;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -13,8 +14,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
  * Audit de la qualification d'un prospect sur un produit
- * (non / oui / hors produit) : chaque changement effectif de `qualifie`
- * est daté et signé par son auteur.
+ * (non / oui / hors produit / injoignable) : chaque changement effectif de
+ * `qualifie` est daté et signé par son auteur.
  */
 class QualificationAuditTest extends WebTestCase
 {
@@ -28,7 +29,7 @@ class QualificationAuditTest extends WebTestCase
         $user = $this->utilisateurConnecte();
         $prospect = $this->creerProspect();
         $produit = $this->creerProduit();
-        $lien = $this->lier($prospect, $produit, null);
+        $lien = $this->lier($prospect, $produit, QualificationProduit::NON);
 
         $this->assertNull($lien->getQualifieModifieAt(), 'Un lien créé « Non » n\'est pas daté.');
 
@@ -37,28 +38,35 @@ class QualificationAuditTest extends WebTestCase
         $this->em()->clear();
         $csrf = $this->csrfCycle($client, $prospect, $produit);
 
-        // null → true : daté et signé par l'utilisateur courant.
+        // Non → Oui : daté et signé par l'utilisateur courant.
         $this->basculer($client, $prospect, $produit, $csrf);
         $this->assertResponseIsSuccessful();
         $lien = $this->recharger($lien);
-        $this->assertTrue($lien->getQualifie());
+        $this->assertSame(QualificationProduit::OUI, $lien->getQualifie());
         $this->assertInstanceOf(\DateTime::class, $lien->getQualifieModifieAt());
         $this->assertSame((new \DateTime())->format('Y-m-d'), $lien->getQualifieModifieAt()->format('Y-m-d'));
         $this->assertSame($user->getUsername(), $lien->getQualifieModifiePar()?->getUsername());
 
-        // true → false (Hors produit) : nouvel horodatage.
+        // Oui → Hors produit : nouvel horodatage.
         $precedent = $lien->getQualifieModifieAt();
         $this->basculer($client, $prospect, $produit, $csrf, 1);
         $this->assertResponseIsSuccessful();
         $lien = $this->recharger($lien);
-        $this->assertFalse($lien->getQualifie());
+        $this->assertSame(QualificationProduit::HORS_PRODUIT, $lien->getQualifie());
         $this->assertGreaterThanOrEqual($precedent, $lien->getQualifieModifieAt());
 
-        // false → null (Non) : plus de décision, date et auteur sont vidés.
+        // Hors produit → Injoignable : un état tranché de plus, daté et signé.
         $this->basculer($client, $prospect, $produit, $csrf, 1);
         $this->assertResponseIsSuccessful();
         $lien = $this->recharger($lien);
-        $this->assertNull($lien->getQualifie());
+        $this->assertSame(QualificationProduit::INJOIGNABLE, $lien->getQualifie());
+        $this->assertSame($user->getUsername(), $lien->getQualifieModifiePar()?->getUsername());
+
+        // Injoignable → Non : plus de décision, date et auteur sont vidés.
+        $this->basculer($client, $prospect, $produit, $csrf, 1);
+        $this->assertResponseIsSuccessful();
+        $lien = $this->recharger($lien);
+        $this->assertSame(QualificationProduit::NON, $lien->getQualifie());
         $this->assertNull($lien->getQualifieModifieAt(), 'Le retour à « Non » doit vider la date.');
         $this->assertNull($lien->getQualifieModifiePar(), 'Le retour à « Non » doit vider l\'auteur.');
 
@@ -66,7 +74,7 @@ class QualificationAuditTest extends WebTestCase
         $this->basculer($client, $prospect, $produit, $csrf, 1);
         $this->assertResponseIsSuccessful();
         $lien = $this->recharger($lien);
-        $this->assertTrue($lien->getQualifie());
+        $this->assertSame(QualificationProduit::OUI, $lien->getQualifie());
         $this->assertInstanceOf(\DateTime::class, $lien->getQualifieModifieAt());
         $this->assertSame($user->getUsername(), $lien->getQualifieModifiePar()?->getUsername());
 
@@ -77,7 +85,7 @@ class QualificationAuditTest extends WebTestCase
     {
         $prospect = $this->creerProspect();
         $produit = $this->creerProduit();
-        $lien = $this->lier($prospect, $produit, true);
+        $lien = $this->lier($prospect, $produit, QualificationProduit::OUI);
 
         $ancienne = new \DateTime('2020-01-01 08:30:00');
         $lien->setQualifieModifieAt($ancienne);
@@ -94,7 +102,7 @@ class QualificationAuditTest extends WebTestCase
         $this->assertSame('2020-01-01 08:30:00', $lien->getQualifieModifieAt()?->format('Y-m-d H:i:s'));
 
         // Changement réel : réhorodaté.
-        $lien->setQualifie(false);
+        $lien->setQualifie(QualificationProduit::INJOIGNABLE);
         $this->em()->flush();
         $this->em()->clear();
 
@@ -114,7 +122,7 @@ class QualificationAuditTest extends WebTestCase
 
         $prospect = $this->creerProspect();
         $produit = $this->creerProduit();
-        $lien = $this->lier($prospect, $produit, true);
+        $lien = $this->lier($prospect, $produit, QualificationProduit::OUI);
         $lien->setQualifieModifieAt(new \DateTime('2024-03-12 15:45:00'));
         $lien->setQualifieModifiePar($this->utilisateurConnecte());
         $this->em()->flush();
@@ -189,7 +197,7 @@ class QualificationAuditTest extends WebTestCase
         return $produit;
     }
 
-    private function lier(Prospect $prospect, Produit $produit, ?bool $qualifie): ProspectProduit
+    private function lier(Prospect $prospect, Produit $produit, QualificationProduit $qualifie): ProspectProduit
     {
         $lien = new ProspectProduit();
         $lien->setProspect($prospect);

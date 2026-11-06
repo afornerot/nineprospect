@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Produit;
 use App\Entity\ProspectProduit;
+use App\Enum\QualificationProduit;
 use App\Http\ContexteRetour;
 use App\Repository\ProduitRepository;
 use App\Repository\ProspectProduitRepository;
@@ -91,7 +92,7 @@ class ProduitBulkController extends AbstractController
                 $pc = new ProspectProduit();
                 $pc->setProspect($prospect);
                 $pc->setProduit($produit);
-                $pc->setQualifie(null);
+                $pc->setQualifie(QualificationProduit::NON);
                 $this->em->persist($pc);
                 ++$count;
             }

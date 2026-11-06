@@ -9,6 +9,7 @@ use App\Entity\Prospect;
 use App\Entity\ProspectSprint;
 use App\Entity\Sprint;
 use App\Enum\PipelineStatut;
+use App\Enum\QualificationProduit;
 use App\Form\ProspectType;
 use App\Http\ContexteRetour;
 use App\Repository\ActionTypeDefautRepository;
@@ -450,28 +451,14 @@ class ProspectController extends AbstractController
         ]);
     }
 
-    /**
-     * Libellé UI du booléen de qualification :
-     *   null  → « Non »       (état initial, sans décision)
-     *   true  → « Oui »       (lead qualifié)
-     *   false → « Hors produit » (refusé par scoring)
-     */
-    private function qualifieLabel(?bool $valeur): string
+    private function qualifieLabel(QualificationProduit $valeur): string
     {
-        return match ($valeur) {
-            true => 'Oui',
-            false => 'Hors produit',
-            default => 'Non',
-        };
+        return $valeur->label();
     }
 
-    private function qualifieColor(?bool $valeur): string
+    private function qualifieColor(QualificationProduit $valeur): string
     {
-        return match ($valeur) {
-            true => 'success',
-            false => 'danger',
-            default => 'secondary',
-        };
+        return $valeur->color();
     }
 
     #[Route('/toggle-produit/{prospectId}/{produitId}', name: 'app_user_prospects_toggle_produit', methods: ['POST'])]
@@ -496,25 +483,18 @@ class ProspectController extends AbstractController
             $prospectProduit = new \App\Entity\ProspectProduit();
             $prospectProduit->setProspect($prospect);
             $prospectProduit->setProduit($produit);
-            $prospectProduit->setQualifie(true);
+            $prospectProduit->setQualifie(QualificationProduit::OUI);
             $this->em->persist($prospectProduit);
         } else {
-            $actuel = $prospectProduit->getQualifie();
-            if (null === $actuel) {
-                $prospectProduit->setQualifie(true);
-            } elseif (true === $actuel) {
-                $prospectProduit->setQualifie(false);
-            } else {
-                $prospectProduit->setQualifie(null);
-            }
+            $prospectProduit->setQualifie($prospectProduit->getQualifie()->suivant());
         }
         $this->em->flush();
 
         return new JsonResponse([
             'ok' => true,
-            'qualifie' => $prospectProduit->getQualifie(),
-            'label' => $this->qualifieLabel($prospectProduit->getQualifie()),
-            'color' => $this->qualifieColor($prospectProduit->getQualifie()),
+            'qualifie' => $prospectProduit->getQualifie()->value,
+            'label' => $prospectProduit->getQualifie()->label(),
+            'color' => $prospectProduit->getQualifie()->color(),
         ]);
     }
 
@@ -543,15 +523,15 @@ class ProspectController extends AbstractController
         $prospectProduit = new \App\Entity\ProspectProduit();
         $prospectProduit->setProspect($prospect);
         $prospectProduit->setProduit($produit);
-        $prospectProduit->setQualifie(null);
+        $prospectProduit->setQualifie(QualificationProduit::NON);
         $this->em->persist($prospectProduit);
         $this->em->flush();
 
         return new JsonResponse([
             'ok' => true,
-            'qualifie' => $prospectProduit->getQualifie(),
-            'label' => $this->qualifieLabel($prospectProduit->getQualifie()),
-            'color' => $this->qualifieColor($prospectProduit->getQualifie()),
+            'qualifie' => $prospectProduit->getQualifie()->value,
+            'label' => $prospectProduit->getQualifie()->label(),
+            'color' => $prospectProduit->getQualifie()->color(),
             'produitId' => $produitId,
             'produitNom' => $produit->getTitre(),
         ]);
@@ -597,21 +577,9 @@ class ProspectController extends AbstractController
             'ok' => true,
             'statut' => $suivant,
             'label' => PipelineStatut::label($suivant),
-            'color' => $this->pipelineColor($suivant),
+            'color' => PipelineStatut::color($suivant),
             'date' => $lien->valeurPour($etape)?->dateEtAuteur(),
         ]);
-    }
-
-    private function pipelineColor(int $valeur): string
-    {
-        return match ($valeur) {
-            PipelineStatut::OUI => 'success',
-            PipelineStatut::RELANCER => 'warning',
-            PipelineStatut::NON => 'danger',
-            PipelineStatut::EN_ATTENTE => 'secondary',
-            PipelineStatut::A_QUALIFIER => 'info',
-            default => 'light',
-        };
     }
 
     /**
@@ -727,7 +695,7 @@ class ProspectController extends AbstractController
 
         $courant = $prospect->vagueCourante();
         foreach ($etapes as $etape) {
-            $form->get('etape'.$etape->getId())->setData(null !== $courant ? $courant->statutPour($etape) : PipelineStatut::NON_DEMARRE);
+            $form->get('etape'.$etape->getId())->setData(null !== $courant ? $courant->statutPour($etape) : PipelineStatut::A_FAIRE);
             $form->get('dateEtape'.$etape->getId())->setData(null !== $courant ? $courant->datePour($etape) : null);
         }
     }
@@ -748,7 +716,7 @@ class ProspectController extends AbstractController
         foreach ($etapes as $etape) {
             $statut = (int) $form->get('etape'.$etape->getId())->getData();
             $date = $form->get('dateEtape'.$etape->getId())->getData();
-            $renseigne = $renseigne || $statut > PipelineStatut::NON_DEMARRE || null !== $date;
+            $renseigne = $renseigne || $statut > PipelineStatut::A_FAIRE || null !== $date;
         }
 
         $lien = $prospect->vagueCourante();
@@ -828,7 +796,7 @@ class ProspectController extends AbstractController
         }
 
         $qualifie = trim((string) $request->query->get('qualifie', ''));
-        if (!\in_array($qualifie, ['', 'oui', 'non', 'horsproduit'], true)) {
+        if (null === QualificationProduit::depuisFiltre($qualifie)) {
             $qualifie = '';
         }
 

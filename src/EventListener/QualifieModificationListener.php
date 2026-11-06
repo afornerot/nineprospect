@@ -12,7 +12,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 /**
  * Date et signe chaque changement effectif de `ProspectProduit::qualifie`
- * (null = Non, true = Oui, false = Hors produit).
+ * (Non / Oui / Hors produit / Injoignable).
  *
  * Tous les writers (toggle, formulaire, import, affectation en masse,
  * formulaire public) passent par `setQualifie()` ; l'audit est posé ici pour
@@ -33,8 +33,9 @@ class QualifieModificationListener
     }
 
     /**
-     * Création d'un lien : s'il naît déjà tranché (« Oui »/« Hors produit »),
-     * la décision est datée et signée. Créé « Non », il reste sans audit.
+     * Création d'un lien : s'il naît déjà tranché (« Oui », « Hors produit »
+     * ou « Injoignable »), la décision est datée et signée. Créé « Non », il
+     * reste sans audit.
      */
     public function prePersist(PrePersistEventArgs $args): void
     {
@@ -46,9 +47,9 @@ class QualifieModificationListener
 
     /**
      * Modification : l'audit ne réagit qu'à un changement réel de `qualifie`.
-     *  - nouvelle valeur `null` (« Non ») : plus de décision, date et auteur
-     *    sont vidés ;
-     *  - nouvelle valeur `true`/`false` : date du jour + auteur courant.
+     *  - nouvelle valeur « Non » : plus de décision, date et auteur sont
+     *    vidés ;
+     *  - tout autre état : date du jour + auteur courant.
      * Doctrine recalcule le changeset après les listeners, les deux champs
      * d'audit sont donc bien persistés (dont la FK auteur).
      */
@@ -64,11 +65,11 @@ class QualifieModificationListener
 
     /**
      * État « Non » = aucune décision : pas de date ni d'auteur. Un état
-     * tranché (« Oui »/« Hors produit ») est daté et signé.
+     * tranché (« Oui », « Hors produit », « Injoignable ») est daté et signé.
      */
     private function tracer(ProspectProduit $entity): void
     {
-        if (null === $entity->getQualifie()) {
+        if (!$entity->getQualifie()->estTranchee()) {
             $entity->setQualifieModifieAt(null);
             $entity->setQualifieModifiePar(null);
 

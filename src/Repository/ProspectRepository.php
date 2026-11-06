@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Prospect;
 use App\Entity\ProspectSprint;
 use App\Enum\PipelineStatut;
+use App\Enum\QualificationProduit;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use SortDirection;
@@ -87,12 +88,15 @@ class ProspectRepository extends ServiceEntityRepository
         }
 
         if (isset($filtres['qualifie'])) {
-            if ('oui' === $filtres['qualifie']) {
-                $qb->andWhere('EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
-            } elseif ('horsproduit' === $filtres['qualifie']) {
-                $qb->andWhere('EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie = false)');
-            } else {
-                $qb->andWhere('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
+            $etat = QualificationProduit::depuisFiltre((string) $filtres['qualifie']);
+            if (QualificationProduit::NON === $etat) {
+                // « Non » = aucune décision prise sur aucun produit. Un prospect
+                // sans produit reste donc « non qualifié ».
+                $qb->andWhere('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie IN (:tranchees))')
+                    ->setParameter('tranchees', QualificationProduit::tranchees());
+            } elseif (null !== $etat) {
+                $qb->andWhere('EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie = :etatQualifie)')
+                    ->setParameter('etatQualifie', $etat);
             }
         }
 
@@ -392,13 +396,15 @@ class ProspectRepository extends ServiceEntityRepository
     }
 
     /**
-     * Prospects non qualifiés (qualifie = NULL = « Non » au sens du badge).
+     * Prospects non qualifiés : aucune décision tranchée (ni Oui, ni Hors
+     * produit, ni Injoignable) sur aucun de leurs produits.
      */
     public function countNonQualifie(): int
     {
         return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
-            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc WHERE pc.prospect = p AND pc.qualifie = true)')
+            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc WHERE pc.prospect = p AND pc.qualifie IN (:tranchees))')
+            ->setParameter('tranchees', QualificationProduit::tranchees())
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -417,7 +423,8 @@ class ProspectRepository extends ServiceEntityRepository
     {
         return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
-            ->where('EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc WHERE pc.prospect = p AND pc.qualifie = true)')
+            ->where('EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc WHERE pc.prospect = p AND pc.qualifie = :qualifie)')
+            ->setParameter('qualifie', QualificationProduit::OUI)
             ->getQuery()
             ->getSingleScalarResult();
     }

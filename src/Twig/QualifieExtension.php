@@ -3,6 +3,7 @@
 namespace App\Twig;
 
 use App\Entity\Prospect;
+use App\Enum\QualificationProduit;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 
@@ -19,22 +20,14 @@ class QualifieExtension extends AbstractExtension
         ];
     }
 
-    public function label(?bool $valeur): string
+    public function label(?QualificationProduit $valeur): string
     {
-        return match ($valeur) {
-            true => 'Oui',
-            false => 'Hors produit',
-            default => 'Non',
-        };
+        return ($valeur ?? QualificationProduit::NON)->label();
     }
 
-    public function color(?bool $valeur): string
+    public function color(?QualificationProduit $valeur): string
     {
-        return match ($valeur) {
-            true => 'success',
-            false => 'danger',
-            default => 'secondary',
-        };
+        return ($valeur ?? QualificationProduit::NON)->color();
     }
 
     public function produitLabel(Prospect $prospect): string
@@ -51,7 +44,7 @@ class QualifieExtension extends AbstractExtension
     {
         $pc = $this->produitPrincipale($prospect);
         if (!$pc) {
-            return 'secondary';
+            return QualificationProduit::NON->color();
         }
 
         return $this->color($pc->getQualifie());
@@ -66,10 +59,7 @@ class QualifieExtension extends AbstractExtension
                 continue;
             }
 
-            $prioriteActuel = $this->priorite($principale->getQualifie());
-            $prioriteNouveau = $this->priorite($pc->getQualifie());
-
-            if ($prioriteNouveau > $prioriteActuel) {
+            if ($this->priorite($pc->getQualifie()) > $this->priorite($principale->getQualifie())) {
                 $principale = $pc;
             }
         }
@@ -77,12 +67,17 @@ class QualifieExtension extends AbstractExtension
         return $principale;
     }
 
-    private function priorite(?bool $qualifie): int
+    /**
+     * Priorité d'affichage de la qualification principale : un prospect
+     * qualifié sur plusieurs produits montre l'état le plus engageant.
+     */
+    private function priorite(QualificationProduit $qualifie): int
     {
         return match ($qualifie) {
-            true => 3,
-            null => 2,
-            false => 1,
+            QualificationProduit::OUI => 4,
+            QualificationProduit::NON => 3,
+            QualificationProduit::INJOIGNABLE => 2,
+            QualificationProduit::HORS_PRODUIT => 1,
         };
     }
 }

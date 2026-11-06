@@ -5,10 +5,11 @@ namespace App\Form;
 use App\Entity\Produit;
 use App\Entity\Prospect;
 use App\Entity\ProspectProduit;
+use App\Enum\QualificationProduit;
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -45,16 +46,12 @@ class ProspectProduitType extends AbstractType
                     return $qb;
                 },
             ])
-            ->add('qualifie', ChoiceType::class, [
+            ->add('qualifie', EnumType::class, [
                 'label' => 'Qualifié',
-                'choices' => [
-                    'Non' => null,
-                    'Oui' => true,
-                    'Hors produit' => false,
-                ],
-                'choice_value' => static fn (?bool $v) => null === $v ? '__null__' : ($v ? '1' : '0'),
+                'class' => QualificationProduit::class,
+                'choice_label' => static fn (QualificationProduit $choix) => $choix->label(),
                 'placeholder' => false,
-                'required' => false,
+                'required' => true,
             ])
             ->add('qualification', TextType::class, [
                 'label' => 'Qualification',
