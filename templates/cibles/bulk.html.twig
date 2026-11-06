@@ -51,7 +51,7 @@
                         <select id="js-cible-select" class="form-select form-select-sm" style="width: auto;">
                             {% for cible in cibles %}
                                 <option value="{{ cible.id }}" {% if cible.id == cibleId %}selected{% endif %}>
-                                    {{ cible.titre }}
+                                    {{ cible.nom }}
                                 </option>
                             {% endfor %}
                         </select>

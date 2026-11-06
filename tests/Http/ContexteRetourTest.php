@@ -42,8 +42,8 @@ class ContexteRetourTest extends TestCase
     public function testAssainirConserveCheminQueryMaisRetireLeFragment(): void
     {
         $this->assertSame(
-            '/user/prospects?q=acme&cible=4',
-            ContexteRetour::assainir('/user/prospects?q=acme&cible=4#prospect-12'),
+            '/user/prospects?q=acme&produit=4',
+            ContexteRetour::assainir('/user/prospects?q=acme&produit=4#prospect-12'),
         );
         $this->assertSame('/user/agenda?date=2026-10-28', ContexteRetour::assainir('  /user/agenda?date=2026-10-28  '));
     }
@@ -52,12 +52,12 @@ class ContexteRetourTest extends TestCase
     {
         $request = $this->requete();
 
-        $this->contexte()->memoriserPage($request, '/user/prospects?cible=4', true);
+        $this->contexte()->memoriserPage($request, '/user/prospects?produit=4', true);
         $this->contexte()->memoriserPage($request, '/user/prospects/show/12', false);
 
         $this->assertSame('/user/prospects/show/12', $this->contexte()->page($request));
         $this->assertSame(
-            '/user/prospects?cible=4',
+            '/user/prospects?produit=4',
             $this->contexte()->liste($request, '/user/prospects'),
             'La liste mémorisée garde ses filtres.',
         );
@@ -135,10 +135,10 @@ class ContexteRetourTest extends TestCase
     public function testListeOuAjouteLAncreDeScroll(): void
     {
         $request = $this->requete();
-        $this->contexte()->memoriserPage($request, '/user/prospects?cible=4', true);
+        $this->contexte()->memoriserPage($request, '/user/prospects?produit=4', true);
 
         $this->assertSame(
-            '/user/prospects?cible=4#prospect-2675',
+            '/user/prospects?produit=4#prospect-2675',
             $this->contexte()->listeOu($request, '/user/prospects', 'app_fallback', [], 'prospect-2675'),
         );
     }
@@ -180,9 +180,9 @@ class ContexteRetourTest extends TestCase
 
     public function testRedirectionVersUtiliseLeChampRetour(): void
     {
-        $response = $this->contexte()->redirectionVers('/user/prospects?cible=4', 'app_fallback');
+        $response = $this->contexte()->redirectionVers('/user/prospects?produit=4', 'app_fallback');
 
-        $this->assertSame('/user/prospects?cible=4', $response->getTargetUrl());
+        $this->assertSame('/user/prospects?produit=4', $response->getTargetUrl());
     }
 
     private function requete(string $uri = '/user/prospects'): Request

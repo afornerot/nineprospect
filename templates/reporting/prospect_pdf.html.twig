@@ -62,21 +62,21 @@
     </table>
     {% endif %}
 
-    {% if prospect.prospectCibles|length > 0 %}
-    <h2>Cibles ({{ prospect.prospectCibles|length }})</h2>
+    {% if prospect.prospectProduits|length > 0 %}
+    <h2>Produits ({{ prospect.prospectProduits|length }})</h2>
     <table>
         <thead>
             <tr>
-                <th>Cible</th>
+                <th>Produit</th>
                 <th>Qualifié</th>
                 <th>Qualification</th>
                 <th>Qualifiée par</th>
             </tr>
         </thead>
         <tbody>
-            {% for pc in prospect.prospectCibles %}
+            {% for pc in prospect.prospectProduits %}
             <tr>
-                <td>{{ pc.cible ? pc.cible.titre : '—' }}</td>
+                <td>{{ pc.produit ? pc.produit.titre : '—' }}</td>
                 <td>{{ qualifie_label(pc.qualifie) }}</td>
                 <td>{{ pc.qualification ?: '—' }}</td>
                 <td>

@@ -31,15 +31,15 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
   (calculées via API Adresse sur autocompletion ou via l'Annuaire des Entreprises).
   - **Contacté** : booléen simple `contacte` (cycle `null → true → false → true`,
     date premier contact syncronisée automatiquement à `true`).
-  - **Qualifié** : `qualifie` nullable (`null` = Non, `true` = Oui, `false` = Hors cible),
-    porté par le lien `ProspectCible` (une qualification par couple prospect × cible).
+  - **Qualifié** : `qualifie` nullable (`null` = Non, `true` = Oui, `false` = Hors produit),
+    porté par le lien `ProspectProduit` (une qualification par couple prospect × produit).
   - **Audit de la qualification** : `qualifieModifieAt` (datetime) et
     `qualifieModifiePar` (FK `user`, `SET NULL`) mémorisent la date et l'auteur du
     dernier **changement effectif** de `qualifie`. Renseignés par
     `App\EventListener\QualifieModificationListener` (`prePersist` / `preUpdate`
     Doctrine) : tous les writers passent par `setQualifie()`, donc l'audit est
     unique. Un enregistrement qui ne change pas la valeur ne réhorodate pas ;
-    un lien créé directement « Oui »/« Hors cible » est daté dès la création.
+    un lien créé directement « Oui »/« Hors produit » est daté dès la création.
     Le retour à « Non » (`null`) **vide** les deux champs : cet état ne porte
     aucune décision. `qualifieModifiePar` reste `null` pour un changement hors
     session (import, commande, formulaire public) et s'affiche alors « système ».
@@ -127,14 +127,14 @@ il ne supprime jamais d'enregistrement. Avoir un prospect dans plusieurs vagues 
   devient une erreur de formulaire (422, « Ce numéro de vague est déjà utilisé. »)
   au lieu d'une exception SQL.
 - **Affecter en masse** (`/user/vagues/bulk`) : deux panneaux. À gauche le
-  listing des prospects avec ses filtres (vague, **cible**, **catégorie**,
+  listing des prospects avec ses filtres (vague, **produit**, **cible**,
   recherche) ; à droite la sélection à affecter. Le tableau de gauche est le
   plus large (7/5 en ≥ xl, empilés en dessous). Un prospect placé à droite
   **disparaît de gauche** et le réintègre au retrait : la ligne est masquée
   (`data-selectionne`), pas détruite, pour rester cohérente avec les filtres.
   Compteurs `(n)` de part et d'autre, en-têtes collants au scroll, état vide
   « Aucun prospect ne correspond aux filtres ». Le filtrage est **client** :
-  chaque ligne porte `data-sprint`, `data-cibles` et `data-categories`
+  chaque ligne porte `data-sprint`, `data-produits` et `data-cibles`
   (ids séparés par des virgules), alimentés par
   `ProspectRepository::findAllPourAffectation()` — une ligne par prospect,
   vague courante la plus haute (règle de `Prospect::vagueCourante()`), une
@@ -149,15 +149,15 @@ il ne supprime jamais d'enregistrement. Avoir un prospect dans plusieurs vagues 
 - Liste prospects : colonnes **Prospect** (email en `mailto:`), **Contact principal**
   (email en `mailto:`), **Téléphone** (celui du contact principal, à défaut celui du
   prospect, lien `tel:`), **Vague**, **Pipeline** (une colonne par étape, cycle
-  cliquable), **Contacté**, **Cible**, **Prc Action** (badge de statut
+  cliquable), **Contacté**, **Produit**, **Prc Action** (badge de statut
   `En retard / Aujourd'hui / À venir / Réalisée` + date de l'action de suivi
   `Prospect::getDerniereAction()`, lien vers la fiche de l'action).
-  La colonne « Catégories » a été retirée de la liste (les catégories restent
-  éditables sur la fiche et filtrées via `/user/prospects?categorie=`).
+  La colonne « Cibles » a été retirée de la liste (les cibles restent
+  éditables sur la fiche et filtrées via `/user/prospects?cible=`).
 - Tableau de bord : pavé **« Qualification des prospects »** au-dessus du graphe
-  Pipeline — une courbe par **cible**, alignée sur les mois communs, du nombre de
-  prospects qualifiés (« Oui » ou « Hors cible »). Un prospect qualifié sur plusieurs
-  cibles apparaît dans chacune ; les qualifications **non datées** et l'état « Non »
+  Pipeline — une courbe par **produit**, alignée sur les mois communs, du nombre de
+  prospects qualifiés (« Oui » ou « Hors produit »). Un prospect qualifié sur plusieurs
+  produits apparaît dans chacune ; les qualifications **non datées** et l'état « Non »
   sont exclus. La série respecte le filtre **Affecté à**, qui porte ici sur
   **l'auteur du changement de qualification** (`qualifie_modifie_par_id`), et non sur
   l'affectation commerciale (`prospect_user`) : sélectionner un intervenant montre les
@@ -245,7 +245,7 @@ les filtres suivants (query string) :
 - `campagne`, `sprint`, `departement`, `utilisateur` : filtres par FK
 - `contacte` : `oui` (match exact `true`) ou `non` (match `IS NULL OR false`,
   c'est-à-dire tous les prospects sans `true`)
-- `qualifie` : `oui` (match exact `true`), `non` (`IS NULL`, défaut Non), `horscible`
+- `qualifie` : `oui` (match exact `true`), `non` (`IS NULL`, défaut Non), `horsproduit`
   (match exact `false`)
 - `statut` : au moins une action du statut donné — `retard` (planifiée
   `datePrevue < aujourd'hui`), `aujourdhui` (`datePrevue = aujourd'hui`), `avenir`
@@ -448,7 +448,7 @@ docker compose exec -T nineprospect php bin/console app:init
 # 4. rattacher toutes les vagues existantes au pipeline par défaut
 docker compose exec -T mariadb mariadb -unineprospect -p<mdp> nineprospect -e \
   "UPDATE sprint SET pipeline_id = (SELECT id FROM pipeline WHERE par_defaut = 1) WHERE pipeline_id IS NULL"
-# 5. (optionnel) réimporter un fichier via l'écran UI /user/cibles/import
+# 5. (optionnel) réimporter un fichier via l'écran UI /user/produits/import
 ```
 
 L'étape 5 est indispensable : `d:s:update --force` supprime les anciennes colonnes
@@ -462,7 +462,7 @@ Pour ajouter un nouveau champ `Prospect` (ex. `idDolibarr`) :
 # 2. ajouter le champ dans src/Form/ProspectType.php
 # 3. mettre à jour le schéma :
 docker compose exec -T nineprospect php bin/console doctrine:schema:update --force
-# 4. (optionnel) enrichir via l'écran d'import UI /user/cibles/import
+# 4. (optionnel) enrichir via l'écran d'import UI /user/produits/import
 ```
 
 Pas de migration Doctrine générée : le `d:s:update --force` est la procédure
@@ -471,14 +471,14 @@ Les `UPDATE` SQL directs sur les données sont autorisés (ex. correction
 du `par_defaut` du pipeline « Pipeline par défaut »), mais **jamais**
 sur le schéma.
 
-## Import d'une cible depuis un tableur (UI)
+## Import de produits depuis un tableur (UI)
 
-L'application propose un import interactif depuis `/user/cibles/import`
+L'application propose un import interactif depuis `/user/produits/import`
 pour constituer une liste depuis un tableur (`.xlsx` ou `.csv`).
 
 **Flux** :
-1. L'utilisateur choisit le mode : nouvelle cible ou cible existante.
-2. Optionnellement : une ou plusieurs cibles supplémentaires + une campagne d'affectation.
+1. L'utilisateur choisit le mode : nouveau produit ou produit existant.
+2. Optionnellement : une ou plusieurs produits supplémentaires + une campagne d'affectation.
 3. Upload du tableur (modèle téléchargeable depuis l'écran).
 4. **Écran de pré-import** : affiche chaque ligne, les erreurs de format et les doublons
    détectés (prospect ou contact déjà existant). L'utilisateur choisit l'action par ligne
@@ -516,8 +516,8 @@ au cas par cas.
 
 ## Nettoyage des orphelins (SQL brut)
 
-Si vous supprimez manuellement des Prospects, Cibles, Campagnes ou Sprints en SQL,
-les tables liées (`contact`, `action`, `prospect_cible`, `prospect_user`,
+Si vous supprimez manuellement des Prospects, Produits, Campagnes ou Sprints en SQL,
+les tables liées (`contact`, `action`, `prospect_produit`, `prospect_user`,
 `prospect_sprint`) conservent des FK pointant dans le vide. Doctrine refuse alors
 de charger ces entités ("Entity of type X for IDs id(Y) was not found").
 
@@ -529,9 +529,9 @@ docker compose exec -T nineprospect php bin/console app:cleanup-orphans --dry-ru
 docker compose exec -T nineprospect php bin/console app:cleanup-orphans --yes      # exécution
 ```
 
-La commande scanne 8 catégories (actions / contacts / liens prospect-user /
-prospect_sprint × 2 / prospect_cible × 2 / prospects orphelins en campagne) et
-supprime en transaction.
+La commande scanne 8 types d'orphelins (actions / contacts / liens prospect-user /
+prospect_sprint × 2 / prospect_produit × 2 / prospects orphelins en campagne) et
+supprime dans une seule transaction.
 
 ## Géocodage des Prospects (API Adresse)
 

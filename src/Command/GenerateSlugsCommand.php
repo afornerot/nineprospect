@@ -3,7 +3,7 @@
 namespace App\Command;
 
 use App\Repository\CampagneRepository;
-use App\Repository\CibleRepository;
+use App\Repository\ProduitRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -13,13 +13,13 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:generate-slugs',
-    description: 'Génère les slugs manquants pour les campagnes et cibles',
+    description: 'Génère les slugs manquants pour les campagnes et produits',
 )]
 class GenerateSlugsCommand extends Command
 {
     public function __construct(
         private CampagneRepository $campagnes,
-        private CibleRepository $cibles,
+        private ProduitRepository $produits,
         private EntityManagerInterface $em,
     ) {
         parent::__construct();
@@ -29,8 +29,8 @@ class GenerateSlugsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $countCibles = $this->cibles->generateMissingSlugs($this->em);
-        $io->info("$countCibles slugs générés pour les cibles");
+        $countProduits = $this->produits->generateMissingSlugs($this->em);
+        $io->info("$countProduits slugs générés pour les produits");
 
         $countCampagnes = $this->campagnes->generateMissingSlugs($this->em);
         $io->info("$countCampagnes slugs générés pour les campagnes");

@@ -9,8 +9,8 @@ use App\Entity\ProspectSprint;
 use App\Entity\Sprint;
 use App\Form\SprintType;
 use App\Http\ContexteRetour;
-use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
+use App\Repository\ProduitRepository;
 use App\Repository\PipelineRepository;
 use App\Repository\ProspectRepository;
 use App\Repository\SprintRepository;
@@ -35,8 +35,8 @@ class SprintController extends AbstractController
         private ProspectRepository $prospects,
         private PipelineRepository $pipelines,
         private EntityManagerInterface $em,
+        private ProduitRepository $produits,
         private CibleRepository $cibles,
-        private CategoryRepository $categories,
         protected ContexteRetour $contexteRetour,
     ) {
     }
@@ -70,8 +70,8 @@ class SprintController extends AbstractController
             'sprints' => $sprints,
             'lastSprint' => $lastSprint,
             'prospectsAll' => $this->prospects->findAllPourAffectation(),
+            'produits' => $this->produits->findAllOrdered(),
             'cibles' => $this->cibles->findAllOrdered(),
-            'categories' => $this->categories->findAllOrdered(),
             'retour' => $this->contexteRetour->listeDuModule($request, 'app_user_vagues'),
         ]);
     }

@@ -3,14 +3,14 @@
 namespace App\Service\Import;
 
 use App\Entity\Campagne;
-use App\Entity\Cible;
+use App\Entity\Produit;
 use App\Entity\Contact;
 use App\Entity\Prospect;
-use App\Entity\ProspectCible;
+use App\Entity\ProspectProduit;
 use App\Message\GeocodeProspectMessage;
 use App\Repository\CampagneRepository;
-use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
+use App\Repository\ProduitRepository;
 use App\Repository\ContactRepository;
 use App\Repository\ProspectRepository;
 use App\Service\Geo\GeoResolver;
@@ -19,12 +19,12 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Exécute un import à partir d'un ImportPreview + décisions utilisateur
- * (action par ligne). Crée/maj les Prospects, Contacts, ProspectCibles.
+ * (action par ligne). Crée/maj les Prospects, Contacts, ProspectProduits.
  *
  * - "Importer" (Créer prospect) : crée le Prospect (et Contact) ;
  *   si Prospect existant pour la cleEntreprise, MAJ non destructive.
  * - "Mettre à jour" : MAJ des champs du Prospect et du Contact lié à la ligne.
- * - "Rattacher" : ajoute juste les ProspectCibles (et Contacts manquants),
+ * - "Rattacher" : ajoute juste les ProspectProduits (et Contacts manquants),
  *   ne modifie pas le Prospect.
  * - "Ignorer" : ne fait rien.
  *
@@ -36,8 +36,8 @@ final class ImportExecutor
         private EntityManagerInterface $em,
         private ProspectRepository $prospectsRepo,
         private ContactRepository $contactRepo,
+        private ProduitRepository $produitsRepo,
         private CibleRepository $ciblesRepo,
-        private CategoryRepository $categoriesRepo,
         private CampagneRepository $campagnesRepo,
         private GeoResolver $geo,
         private MessageBusInterface $bus,
@@ -51,23 +51,23 @@ final class ImportExecutor
     {
         $result = new ImportResult();
 
-        // 1) Cible principale : nouvelle, existante, ou aucune
-        $ciblePrincipale = $this->resolveCiblePrincipale($preview, $result);
-        if (null === $ciblePrincipale && ('new' === $preview->mode || null !== $preview->ciblePrincipaleId)) {
+        // 1) Produit principale : nouvelle, existante, ou aucune
+        $produitPrincipale = $this->resolveProduitPrincipale($preview, $result);
+        if (null === $produitPrincipale && ('new' === $preview->mode || null !== $preview->produitPrincipaleId)) {
             return $result; // erreur fatale interceptée en amont par le contrôleur
         }
 
-        // 2) Cibles supplémentaires
-        $ciblesSupplementaires = [];
-        foreach ($preview->ciblesSupplementairesIds as $cibleId) {
-            $c = $this->ciblesRepo->find($cibleId);
+        // 2) Produits supplémentaires
+        $produitsSupplementaires = [];
+        foreach ($preview->produitsSupplementairesIds as $produitId) {
+            $c = $this->produitsRepo->find($produitId);
             if (null !== $c) {
-                $ciblesSupplementaires[] = $c;
+                $produitsSupplementaires[] = $c;
             }
         }
-        $allCibles = null !== $ciblePrincipale
-            ? array_merge([$ciblePrincipale], $ciblesSupplementaires)
-            : $ciblesSupplementaires;
+        $allProduits = null !== $produitPrincipale
+            ? array_merge([$produitPrincipale], $produitsSupplementaires)
+            : $produitsSupplementaires;
 
         // 3) Campagne
         $campagne = null;
@@ -75,13 +75,13 @@ final class ImportExecutor
             $campagne = $this->campagnesRepo->find($preview->campagneId);
         }
 
-        // 3bis) Catégories supplémentaires : tous les Prospects importés
-        // (créés OU rattachés) seront liés à ces catégories.
-        $allCategories = [];
-        foreach ($preview->categoriesSupplementairesIds as $catId) {
-            $c = $this->categoriesRepo->find($catId);
+        // 3bis) Cibles supplémentaires : tous les Prospects importés
+        // (créés OU rattachés) seront liés à ces cibles.
+        $allCibles = [];
+        foreach ($preview->ciblesSupplementairesIds as $catId) {
+            $c = $this->ciblesRepo->find($catId);
             if (null !== $c) {
-                $allCategories[] = $c;
+                $allCibles[] = $c;
             }
         }
 
@@ -115,7 +115,7 @@ final class ImportExecutor
             }
 
             // Pour Rattacher : si le Prospect existe déjà en base, on doit s'assurer
-            // que les ProspectCibles sont rattachés même si le seul Contact à créer
+            // que les ProspectProduits sont rattachés même si le seul Contact à créer
             // est skip. On autorise donc Rattacher sans Contact uniquement sur un Prospect existant.
             $isRattacherOnly = false;
             foreach ($effectiveActions as $action) {
@@ -150,10 +150,10 @@ final class ImportExecutor
             }
 
             // Chercher ou créer le Prospect du groupe
-            $prospect = $this->resolveProspect($group, $prospectByCle, $result, $allCibles, $allCategories, $campagne);
+            $prospect = $this->resolveProspect($group, $prospectByCle, $result, $allProduits, $allCibles, $campagne);
             $prospectByCle[$cle] = $prospect;
 
-            // Pour chaque ligne du groupe, créer/maj les Contacts + ProspectCibles
+            // Pour chaque ligne du groupe, créer/maj les Contacts + ProspectProduits
             foreach ($group->getRows() as $ar) {
                 $rowNumber = $ar->row->rowNumber;
                 $action = $effectiveActions[$rowNumber];
@@ -163,7 +163,7 @@ final class ImportExecutor
                     continue;
                 }
 
-                $this->processRow($ar, $action, $prospect, $allCibles, $campagne, $result);
+                $this->processRow($ar, $action, $prospect, $allProduits, $campagne, $result);
             }
         }
 
@@ -172,30 +172,30 @@ final class ImportExecutor
         return $result;
     }
 
-    private function resolveCiblePrincipale(ImportPreview $preview, ImportResult $result): ?Cible
+    private function resolveProduitPrincipale(ImportPreview $preview, ImportResult $result): ?Produit
     {
         if ('new' === $preview->mode) {
-            $titre = trim((string) $preview->ciblePrincipaleTitle);
+            $titre = trim((string) $preview->produitPrincipaleTitle);
             if ('' === $titre) {
-                $result->errors[] = ['row' => 0, 'motif' => 'Titre de la nouvelle cible manquant.'];
+                $result->errors[] = ['row' => 0, 'motif' => 'Titre de le nouveau produit manquant.'];
 
                 return null;
             }
-            $c = new Cible();
+            $c = new Produit();
             $c->setTitre($titre);
             $this->em->persist($c);
 
             return $c;
         }
 
-        if (null === $preview->ciblePrincipaleId) {
-            // Pas de cible principale : l'import se fait sans rattachement à une cible.
+        if (null === $preview->produitPrincipaleId) {
+            // Pas de produit principal : l'import se fait sans rattachement à un produit.
             return null;
         }
 
-        $c = $this->ciblesRepo->find($preview->ciblePrincipaleId);
+        $c = $this->produitsRepo->find($preview->produitPrincipaleId);
         if (null === $c) {
-            $result->errors[] = ['row' => 0, 'motif' => sprintf('Cible principale introuvable (id=%d).', $preview->ciblePrincipaleId)];
+            $result->errors[] = ['row' => 0, 'motif' => sprintf('Produit principale introuvable (id=%d).', $preview->produitPrincipaleId)];
 
             return null;
         }
@@ -222,11 +222,11 @@ final class ImportExecutor
     }
 
     /**
-     * @param list<Cible>                $allCibles
-     * @param list<\App\Entity\Category> $allCategories
+     * @param list<Produit>                $allProduits
+     * @param list<\App\Entity\Cible> $allCibles
      * @param array<string, Prospect>    $prospectByCle
      */
-    private function resolveProspect(ImportGroup $group, array $prospectByCle, ImportResult $result, array $allCibles, array $allCategories, ?Campagne $campagne): Prospect
+    private function resolveProspect(ImportGroup $group, array $prospectByCle, ImportResult $result, array $allProduits, array $allCibles, ?Campagne $campagne): Prospect
     {
         $cle = $group->getCleEntreprise();
 
@@ -357,20 +357,20 @@ final class ImportExecutor
             }
         }
 
-        // Créer les ProspectCibles (toutes les cibles de la liste)
-        $this->ensureProspectCibles($prospect, $allCibles);
+        // Créer les ProspectProduits (toutes les produits de la liste)
+        $this->ensureProspectProduits($prospect, $allProduits);
 
-        // Lier le Prospect aux catégories supplémentaires cochées (sans toucher
-        // aux catégories déjà présentes sur le Prospect : fill-only).
-        $this->ensureCategories($prospect, $allCategories);
+        // Lier le Prospect aux cibles supplémentaires cochées (sans toucher
+        // aux cibles déjà présentes sur le Prospect : fill-only).
+        $this->ensureCibles($prospect, $allCibles);
 
         return $prospect;
     }
 
     /**
-     * @param list<Cible> $allCibles
+     * @param list<Produit> $allProduits
      */
-    private function processRow(AnalyzedImportRow $ar, string $action, Prospect $prospect, array $allCibles, ?Campagne $campagne, ImportResult $result): void
+    private function processRow(AnalyzedImportRow $ar, string $action, Prospect $prospect, array $allProduits, ?Campagne $campagne, ImportResult $result): void
     {
         $row = $ar->row;
 
@@ -436,50 +436,50 @@ final class ImportExecutor
     }
 
     /**
-     * Crée les liens ProspectCibles manquants pour les cibles données.
+     * Crée les liens ProspectProduits manquants pour les produits données.
      *
-     * @param list<Cible> $cibles
+     * @param list<Produit> $produits
      */
-    private function ensureProspectCibles(Prospect $prospect, array $cibles): void
+    private function ensureProspectProduits(Prospect $prospect, array $produits): void
     {
-        $existingCibleIds = [];
-        foreach ($prospect->getProspectCibles() as $pc) {
-            $cible = $pc->getCible();
-            if (null !== $cible) {
-                $existingCibleIds[$cible->getId()] = true;
+        $existingProduitIds = [];
+        foreach ($prospect->getProspectProduits() as $pc) {
+            $produit = $pc->getProduit();
+            if (null !== $produit) {
+                $existingProduitIds[$produit->getId()] = true;
             }
         }
 
-        foreach ($cibles as $cible) {
-            if (isset($existingCibleIds[$cible->getId()])) {
+        foreach ($produits as $produit) {
+            if (isset($existingProduitIds[$produit->getId()])) {
                 continue;
             }
-            $pc = new ProspectCible();
+            $pc = new ProspectProduit();
             $pc->setProspect($prospect);
-            $pc->setCible($cible);
+            $pc->setProduit($produit);
             $pc->setQualifie(null); // Pas encore qualifié
             $this->em->persist($pc);
         }
     }
 
     /**
-     * Lie le Prospect aux catégories données (sans toucher aux catégories
-     * déjà présentes). Symétrique de ensureProspectCibles.
+     * Lie le Prospect aux cibles données (sans toucher aux cibles
+     * déjà présentes). Symétrique de ensureProspectProduits.
      *
-     * @param list<\App\Entity\Category> $categories
+     * @param list<\App\Entity\Cible> $cibles
      */
-    private function ensureCategories(Prospect $prospect, array $categories): void
+    private function ensureCibles(Prospect $prospect, array $cibles): void
     {
-        $existingCategoryIds = [];
-        foreach ($prospect->getCategories() as $cat) {
-            $existingCategoryIds[$cat->getId()] = true;
+        $existingCibleIds = [];
+        foreach ($prospect->getCibles() as $cat) {
+            $existingCibleIds[$cat->getId()] = true;
         }
 
-        foreach ($categories as $category) {
-            if (isset($existingCategoryIds[$category->getId()])) {
+        foreach ($cibles as $cible) {
+            if (isset($existingCibleIds[$cible->getId()])) {
                 continue;
             }
-            $prospect->addCategory($category);
+            $prospect->addCible($cible);
         }
     }
 }

@@ -122,8 +122,31 @@ Procédure standard quand on ajoute/modifie un champ Doctrine :
 # 1. modifier l'Entity et le FormType
 # 2. appliquer le schéma :
 docker compose exec -T nineprospect php bin/console doctrine:schema:update --force
-# 3. (optionnel) importer un nouveau fichier via l'écran /user/cibles/import
+# 3. (optionnel) importer un nouveau fichier via l'écran /user/produits/import
 ```
+
+### Renommage de vocabulaire (cible → produit, catégorie → cible)
+
+Renommer deux entités qui échangent leur nom (`cible` devient `produit`,
+`category` devient `cible`) ne peut pas passer par `schema:update` : Doctrine
+voit deux créations et deux disparitions, et **DROPpe** `category` /
+`prospect_category` avec leurs données.
+
+Le script `misc/sql/2026-11-06-renommage-cible-produit.sql` fait le renommage
+structurel (tables, colonnes, index, contraintes) en conservant les `id`, donc
+les liens. À exécuter **avant** le `schema:update`, une seule fois :
+
+```bash
+docker compose exec -T mariadb \
+  sh -c 'MYSQL_PWD=<mdp> mariadb -uroot nineprospect' \
+  < misc/sql/2026-11-06-renommage-cible-produit.sql
+
+# le schema:update qui suit doit être un no-op
+docker compose exec -T nineprospect php bin/console doctrine:schema:update --force
+```
+
+Repères de volumétrie de l'environnement de dev au moment du renommage :
+`produit`=3, `cible`=2, `prospect_produit`=1022, `prospect_cible`=128.
 
 Pour une correction ponctuelle de **données** (jamais de schéma) : `UPDATE` SQL
 direct autorisé. Exemple historique : réaligner `pipeline.par_defaut=1` sur le

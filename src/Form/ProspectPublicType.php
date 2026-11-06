@@ -2,7 +2,7 @@
 
 namespace App\Form;
 
-use App\Entity\Cible;
+use App\Entity\Produit;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
@@ -14,7 +14,7 @@ class ProspectPublicType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $cibles = $options['cibles'];
+        $produits = $options['produits'];
 
         $builder
             ->add('typePersonne', ChoiceType::class, [
@@ -83,12 +83,12 @@ class ProspectPublicType extends AbstractType
             ]);
 
         $choices = [];
-        foreach ($cibles as $cible) {
-            $choices[$cible->getTitre()] = $cible->getId();
+        foreach ($produits as $produit) {
+            $choices[$produit->getTitre()] = $produit->getId();
         }
 
-        $builder->add('cible', ChoiceType::class, [
-            'label' => 'Cible souhaitée',
+        $builder->add('produit', ChoiceType::class, [
+            'label' => 'Produit souhaitée',
             'choices' => $choices,
             'required' => true,
             'attr' => ['class' => 'form-select'],
@@ -98,9 +98,9 @@ class ProspectPublicType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'cibles' => [],
+            'produits' => [],
         ]);
 
-        $resolver->setAllowedTypes('cibles', 'array');
+        $resolver->setAllowedTypes('produits', 'array');
     }
 }

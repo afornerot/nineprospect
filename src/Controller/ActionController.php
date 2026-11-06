@@ -316,7 +316,7 @@ class ActionController extends AbstractController
         $versUserId = (int) ($body['versUser'] ?? 0);
         $versUser = $this->em->find(User::class, $versUserId);
         if (!$versUser instanceof User) {
-            return new JsonResponse(['ok' => false, 'error' => 'Utilisateur cible invalide.'], 422);
+            return new JsonResponse(['ok' => false, 'error' => 'Utilisateur produit invalide.'], 422);
         }
 
         $action->setAFairePar($versUser);

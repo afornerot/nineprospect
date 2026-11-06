@@ -232,24 +232,24 @@
             </div>
 
             <div class="card mb-2">
-                <div class="card-header">Cibles ({{ prospect.prospectCibles|length }})</div>
+                <div class="card-header">Produits ({{ prospect.prospectProduits|length }})</div>
                 <div class="card-body">
-                    {% if prospect.prospectCibles|length > 0 %}
+                    {% if prospect.prospectProduits|length > 0 %}
                         <table class="table table-sm table-striped mb-0">
                             <thead>
                                 <tr>
-                                    <th style="width: 25%">Cible</th>
+                                    <th style="width: 25%">Produit</th>
                                     <th style="width: 15%">Qualifié</th>
                                     <th style="width: 30%">Qualification</th>
                                     <th style="width: 30%">Qualifiée par</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for pc in prospect.prospectCibles %}
+                                {% for pc in prospect.prospectProduits %}
                                     <tr>
-                                        <td>{{ pc.cible ? pc.cible.titre : '—' }}</td>
+                                        <td>{{ pc.produit ? pc.produit.titre : '—' }}</td>
                                         <td>
-                                            <button type="button" class="badge text-bg-{{ qualifie_color(pc.qualifie) }} js-cycle-cible" data-prospect="{{ prospect.id }}" data-cible="{{ pc.cible.id }}" data-csrf="{{ csrf_token('toggle-cible-prospect-' ~ prospect.id ~ '-' ~ pc.cible.id) }}" title="{{ qualifie_label(pc.qualifie) }}">{{ qualifie_label(pc.qualifie) }}</button>
+                                            <button type="button" class="badge text-bg-{{ qualifie_color(pc.qualifie) }} js-cycle-produit" data-prospect="{{ prospect.id }}" data-produit="{{ pc.produit.id }}" data-csrf="{{ csrf_token('toggle-produit-prospect-' ~ prospect.id ~ '-' ~ pc.produit.id) }}" title="{{ qualifie_label(pc.qualifie) }}">{{ qualifie_label(pc.qualifie) }}</button>
                                         </td>
                                         <td>{{ pc.qualification ?: '—' }}</td>
                                         <td>
@@ -265,7 +265,7 @@
                             </tbody>
                         </table>
                     {% else %}
-                        <p class="text-muted mb-0">Aucune cible associée.</p>
+                        <p class="text-muted mb-0">Aucun produit associé.</p>
                     {% endif %}
                 </div>
             </div>

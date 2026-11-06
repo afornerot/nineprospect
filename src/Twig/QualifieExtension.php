@@ -13,9 +13,9 @@ class QualifieExtension extends AbstractExtension
         return [
             new TwigFunction('qualifie_label', [$this, 'label']),
             new TwigFunction('qualifie_color', [$this, 'color']),
-            new TwigFunction('cible_label', [$this, 'cibleLabel']),
-            new TwigFunction('cible_color', [$this, 'cibleColor']),
-            new TwigFunction('prospect_cible_principale', [$this, 'ciblePrincipale']),
+            new TwigFunction('produit_label', [$this, 'produitLabel']),
+            new TwigFunction('produit_color', [$this, 'produitColor']),
+            new TwigFunction('prospect_produit_principale', [$this, 'produitPrincipale']),
         ];
     }
 
@@ -23,7 +23,7 @@ class QualifieExtension extends AbstractExtension
     {
         return match ($valeur) {
             true => 'Oui',
-            false => 'Hors cible',
+            false => 'Hors produit',
             default => 'Non',
         };
     }
@@ -37,19 +37,19 @@ class QualifieExtension extends AbstractExtension
         };
     }
 
-    public function cibleLabel(Prospect $prospect): string
+    public function produitLabel(Prospect $prospect): string
     {
-        $pc = $this->ciblePrincipale($prospect);
-        if (!$pc || !$pc->getCible()) {
+        $pc = $this->produitPrincipale($prospect);
+        if (!$pc || !$pc->getProduit()) {
             return '—';
         }
 
-        return $pc->getCible()->getTitre();
+        return $pc->getProduit()->getTitre();
     }
 
-    public function cibleColor(Prospect $prospect): string
+    public function produitColor(Prospect $prospect): string
     {
-        $pc = $this->ciblePrincipale($prospect);
+        $pc = $this->produitPrincipale($prospect);
         if (!$pc) {
             return 'secondary';
         }
@@ -57,10 +57,10 @@ class QualifieExtension extends AbstractExtension
         return $this->color($pc->getQualifie());
     }
 
-    public function ciblePrincipale(Prospect $prospect): ?\App\Entity\ProspectCible
+    public function produitPrincipale(Prospect $prospect): ?\App\Entity\ProspectProduit
     {
         $principale = null;
-        foreach ($prospect->getProspectCibles() as $pc) {
+        foreach ($prospect->getProspectProduits() as $pc) {
             if (null === $principale) {
                 $principale = $pc;
                 continue;

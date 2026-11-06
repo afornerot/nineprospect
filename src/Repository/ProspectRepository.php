@@ -20,15 +20,15 @@ class ProspectRepository extends ServiceEntityRepository
     }
 
     /**
-     * Filtres de la liste : campagne, vague, qualification, catégorie,
+     * Filtres de la liste : campagne, vague, qualification, cible,
      * statut d'action, affectation et recherche plein texte.
      *
      * @param array{
      *     campagne?: int|null,
      *     sprint?: int|null,
      *     contacte?: string|null,
+     *     produit?: int|null,
      *     cible?: int|null,
-     *     categorie?: int|null,
      *     qualifie?: string|null,
      *     statut?: string|null,
      *     userId?: int|null,
@@ -49,9 +49,9 @@ class ProspectRepository extends ServiceEntityRepository
             ->leftJoin('p.contacts', 'ct')
             ->leftJoin('p.users', 'u')
             ->leftJoin('p.actions', 'a')
-            ->leftJoin('p.prospectCibles', 'pc')
-            ->leftJoin('pc.cible', 'ci')
-            ->leftJoin('p.categories', 'cat')
+            ->leftJoin('p.prospectProduits', 'pc')
+            ->leftJoin('pc.produit', 'ci')
+            ->leftJoin('p.cibles', 'cat')
             ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'ct', 'u', 'a', 'pc', 'ci', 'cat')
             ->orderBy('p.nom', SortDirection::Ascending);
 
@@ -78,21 +78,21 @@ class ProspectRepository extends ServiceEntityRepository
             }
         }
 
-        if (isset($filtres['cible'])) {
-            $qb->andWhere('ci.id = :cible')->setParameter('cible', $filtres['cible']);
+        if (isset($filtres['produit'])) {
+            $qb->andWhere('ci.id = :produit')->setParameter('produit', $filtres['produit']);
         }
 
-        if (isset($filtres['categorie'])) {
-            $qb->andWhere('cat.id = :categorie')->setParameter('categorie', $filtres['categorie']);
+        if (isset($filtres['cible'])) {
+            $qb->andWhere('cat.id = :cible')->setParameter('cible', $filtres['cible']);
         }
 
         if (isset($filtres['qualifie'])) {
             if ('oui' === $filtres['qualifie']) {
-                $qb->andWhere('EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
-            } elseif ('horscible' === $filtres['qualifie']) {
-                $qb->andWhere('EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc2 WHERE pc2.prospect = p AND pc2.qualifie = false)');
+                $qb->andWhere('EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
+            } elseif ('horsproduit' === $filtres['qualifie']) {
+                $qb->andWhere('EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie = false)');
             } else {
-                $qb->andWhere('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
+                $qb->andWhere('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
             }
         }
 
@@ -129,7 +129,7 @@ class ProspectRepository extends ServiceEntityRepository
      *
      * @return array<int, array<int, int>> [etapeId][statut] => nombre de liens
      */
-    public function countPipeline(int $pipelineId, ?int $sprintId = null, ?int $userId = null, ?int $cibleId = null, ?int $categorieId = null): array
+    public function countPipeline(int $pipelineId, ?int $sprintId = null, ?int $userId = null, ?int $produitId = null, ?int $cibleId = null): array
     {
         $qb = $this->getEntityManager()->createQueryBuilder()
             ->select('e.id AS etape, v.statut AS valeur, COUNT(ps.id) AS total')
@@ -147,7 +147,7 @@ class ProspectRepository extends ServiceEntityRepository
             $qb->andWhere('s.id = :sprint')->setParameter('sprint', $sprintId);
         }
 
-        if (null !== $userId || null !== $cibleId || null !== $categorieId) {
+        if (null !== $userId || null !== $produitId || null !== $cibleId) {
             $qb->innerJoin('ps.prospect', 'cp_ps');
         }
 
@@ -157,17 +157,17 @@ class ProspectRepository extends ServiceEntityRepository
                 ->setParameter('cp_user', $userId);
         }
 
-        if (null !== $cibleId) {
-            $qb->innerJoin('cp_ps.prospectCibles', 'cp_pc')
-                ->innerJoin('cp_pc.cible', 'cp_c')
-                ->andWhere('cp_c.id = :cp_cible')
-                ->setParameter('cp_cible', $cibleId);
+        if (null !== $produitId) {
+            $qb->innerJoin('cp_ps.prospectProduits', 'cp_pc')
+                ->innerJoin('cp_pc.produit', 'cp_c')
+                ->andWhere('cp_c.id = :cp_produit')
+                ->setParameter('cp_produit', $produitId);
         }
 
-        if (null !== $categorieId) {
-            $qb->innerJoin('cp_ps.categories', 'cp_cat')
-                ->andWhere('cp_cat.id = :cp_categorie')
-                ->setParameter('cp_categorie', $categorieId);
+        if (null !== $cibleId) {
+            $qb->innerJoin('cp_ps.cibles', 'cp_cat')
+                ->andWhere('cp_cat.id = :cp_cible')
+                ->setParameter('cp_cible', $cibleId);
         }
 
         $result = [];
@@ -298,13 +298,13 @@ class ProspectRepository extends ServiceEntityRepository
 
     /**
      * Lignes de la page « affecter en masse » : identité, vague courante,
-     * cibles et catégories, pour un filtrage côté client sans aller-retour.
+     * produits et cibles, pour un filtrage côté client sans aller-retour.
      *
      * La vague courante est la plus haute (même règle que
      * {@see \App\Entity\Prospect::vagueCourante()}) : un prospect rattaché à
      * plusieurs vagues n'apparaît qu'une fois.
      *
-     * @return list<array{id:int, nom:string|null, sprintId:int|null, sprintNumero:int|null, cibleIds:list<int>, categorieIds:list<int>}>
+     * @return list<array{id:int, nom:string|null, sprintId:int|null, sprintNumero:int|null, produitIds:list<int>, cibleIds:list<int>}>
      */
     public function findAllPourAffectation(): array
     {
@@ -320,8 +320,8 @@ class ProspectRepository extends ServiceEntityRepository
                 'nom' => $ligne['nom'],
                 'sprintId' => null,
                 'sprintNumero' => null,
+                'produitIds' => [],
                 'cibleIds' => [],
-                'categorieIds' => [],
             ];
         }
 
@@ -348,29 +348,29 @@ class ProspectRepository extends ServiceEntityRepository
             }
         }
 
-        $cibles = $this->getEntityManager()->createQuery(
+        $produits = $this->getEntityManager()->createQuery(
             'SELECT IDENTITY(pc.prospect) pid, c.id cid
-             FROM App\Entity\ProspectCible pc
-             JOIN pc.cible c'
+             FROM App\Entity\ProspectProduit pc
+             JOIN pc.produit c'
+        )->getArrayResult();
+
+        foreach ($produits as $produit) {
+            $id = (int) $produit['pid'];
+            if (isset($lignes[$id])) {
+                $lignes[$id]['produitIds'][] = (int) $produit['cid'];
+            }
+        }
+
+        $cibles = $this->getEntityManager()->createQuery(
+            'SELECT p.id pid, cat.id cid
+             FROM App\Entity\Prospect p
+             JOIN p.cibles cat'
         )->getArrayResult();
 
         foreach ($cibles as $cible) {
             $id = (int) $cible['pid'];
             if (isset($lignes[$id])) {
                 $lignes[$id]['cibleIds'][] = (int) $cible['cid'];
-            }
-        }
-
-        $categories = $this->getEntityManager()->createQuery(
-            'SELECT p.id pid, cat.id cid
-             FROM App\Entity\Prospect p
-             JOIN p.categories cat'
-        )->getArrayResult();
-
-        foreach ($categories as $categorie) {
-            $id = (int) $categorie['pid'];
-            if (isset($lignes[$id])) {
-                $lignes[$id]['categorieIds'][] = (int) $categorie['cid'];
             }
         }
 
@@ -398,7 +398,7 @@ class ProspectRepository extends ServiceEntityRepository
     {
         return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
-            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc WHERE pc.prospect = p AND pc.qualifie = true)')
+            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc WHERE pc.prospect = p AND pc.qualifie = true)')
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -417,7 +417,7 @@ class ProspectRepository extends ServiceEntityRepository
     {
         return (int) $this->createQueryBuilder('p')
             ->select('COUNT(p.id)')
-            ->where('EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc WHERE pc.prospect = p AND pc.qualifie = true)')
+            ->where('EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc WHERE pc.prospect = p AND pc.qualifie = true)')
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -510,37 +510,6 @@ class ProspectRepository extends ServiceEntityRepository
     }
 
     /**
-     * Prospects qui n'ont AUCUNE catégorie rattachée.
-     *
-     * @return array<int, Prospect>
-     */
-    public function findSansCategorie(): array
-    {
-        return $this->createQueryBuilder('p')
-            ->leftJoin('p.categories', 'cat')
-            ->where('cat IS NULL')
-            ->orderBy('p.nom', SortDirection::Ascending)
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * Prospects qui ne sont PAS dans la catégorie donnée.
-     *
-     * @return array<int, Prospect>
-     */
-    public function findHorsCategorie(int $categorieId): array
-    {
-        return $this->createQueryBuilder('p')
-            ->leftJoin('p.categories', 'cat', 'WITH', 'cat.id = :catId')
-            ->where('cat.id IS NULL')
-            ->setParameter('catId', $categorieId)
-            ->orderBy('p.nom', SortDirection::Ascending)
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
      * Prospects qui n'ont AUCUNE cible rattachée.
      *
      * @return array<int, Prospect>
@@ -548,8 +517,8 @@ class ProspectRepository extends ServiceEntityRepository
     public function findSansCible(): array
     {
         return $this->createQueryBuilder('p')
-            ->leftJoin('p.prospectCibles', 'pc')
-            ->where('pc IS NULL')
+            ->leftJoin('p.cibles', 'cat')
+            ->where('cat IS NULL')
             ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
@@ -563,9 +532,40 @@ class ProspectRepository extends ServiceEntityRepository
     public function findHorsCible(int $cibleId): array
     {
         return $this->createQueryBuilder('p')
-            ->leftJoin('p.prospectCibles', 'pc', 'WITH', 'pc.cible = :cibleId')
+            ->leftJoin('p.cibles', 'cat', 'WITH', 'cat.id = :catId')
+            ->where('cat.id IS NULL')
+            ->setParameter('catId', $cibleId)
+            ->orderBy('p.nom', SortDirection::Ascending)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Prospects qui n'ont AUCUNE produit rattachée.
+     *
+     * @return array<int, Prospect>
+     */
+    public function findSansProduit(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.prospectProduits', 'pc')
+            ->where('pc IS NULL')
+            ->orderBy('p.nom', SortDirection::Ascending)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Prospects qui ne sont PAS dans le produit donné.
+     *
+     * @return array<int, Prospect>
+     */
+    public function findHorsProduit(int $produitId): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.prospectProduits', 'pc', 'WITH', 'pc.produit = :produitId')
             ->where('pc.id IS NULL')
-            ->setParameter('cibleId', $cibleId)
+            ->setParameter('produitId', $produitId)
             ->orderBy('p.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();

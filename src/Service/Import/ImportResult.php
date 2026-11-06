@@ -26,8 +26,8 @@ final class ImportResult
     /** @var list<int> IDs des prospects créés/rattachés pour les liens retour. */
     public array $affectedProspectIds = [];
 
-    public ?int $cibleId = null;
-    public ?string $cibleTitle = null;
+    public ?int $produitId = null;
+    public ?string $produitTitle = null;
 
     public function resume(): string
     {

@@ -110,21 +110,21 @@ class Prospect
     private Collection $sprints;
 
     /**
-     * Cibles du prospect (0..n).
+     * Produits du prospect (0..n).
      *
-     * @var Collection<int, ProspectCible>
+     * @var Collection<int, ProspectProduit>
      */
-    #[ORM\OneToMany(targetEntity: ProspectCible::class, mappedBy: 'prospect', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    private Collection $prospectCibles;
+    #[ORM\OneToMany(targetEntity: ProspectProduit::class, mappedBy: 'prospect', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $prospectProduits;
 
     /**
-     * Catégories du prospect (0..n) : taxonomie libre.
+     * Cibles du prospect (0..n) : taxonomie libre.
      *
-     * @var Collection<int, Category>
+     * @var Collection<int, Cible>
      */
-    #[ORM\ManyToMany(targetEntity: Category::class, inversedBy: 'prospects')]
-    #[ORM\JoinTable(name: 'prospect_category')]
-    private Collection $categories;
+    #[ORM\ManyToMany(targetEntity: Cible::class, inversedBy: 'prospects')]
+    #[ORM\JoinTable(name: 'prospect_cible')]
+    private Collection $cibles;
 
     /**
      * @var Collection<int, Contact>
@@ -161,8 +161,8 @@ class Prospect
         $this->actions = new ArrayCollection();
         $this->users = new ArrayCollection();
         $this->sprints = new ArrayCollection();
-        $this->prospectCibles = new ArrayCollection();
-        $this->categories = new ArrayCollection();
+        $this->prospectProduits = new ArrayCollection();
+        $this->cibles = new ArrayCollection();
         $this->createdAt = new \DateTime();
     }
 
@@ -498,11 +498,11 @@ class Prospect
     }
 
     /**
-     * @return Collection<int, ProspectCible>
+     * @return Collection<int, ProspectProduit>
      */
-    public function getProspectCibles(): Collection
+    public function getProspectProduits(): Collection
     {
-        return $this->prospectCibles;
+        return $this->prospectProduits;
     }
 
     /**
@@ -685,25 +685,25 @@ class Prospect
     }
 
     /**
-     * @return Collection<int, Category>
+     * @return Collection<int, Cible>
      */
-    public function getCategories(): Collection
+    public function getCibles(): Collection
     {
-        return $this->categories;
+        return $this->cibles;
     }
 
-    public function addCategory(Category $category): static
+    public function addCible(Cible $cible): static
     {
-        if (!$this->categories->contains($category)) {
-            $this->categories->add($category);
+        if (!$this->cibles->contains($cible)) {
+            $this->cibles->add($cible);
         }
 
         return $this;
     }
 
-    public function removeCategory(Category $category): static
+    public function removeCible(Cible $cible): static
     {
-        $this->categories->removeElement($category);
+        $this->cibles->removeElement($cible);
 
         return $this;
     }

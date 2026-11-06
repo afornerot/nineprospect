@@ -3,9 +3,9 @@
 namespace App\Form;
 
 use App\Entity\Cible;
-use Bnine\MdEditorBundle\Form\Type\MarkdownType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -20,13 +20,19 @@ class CibleType extends AbstractType
                 'attr' => ['class' => 'btn btn-success no-print me-1'],
             ])
 
-            ->add('titre', TextType::class, [
-                'label' => 'Titre',
+            ->add('nom', TextType::class, [
+                'label' => 'Nom',
+                'required' => true,
+                'attr' => ['placeholder' => 'Ex : Institutionnel, Collectivité, Partenaire...'],
             ])
 
-            ->add('description', MarkdownType::class, [
+            ->add('description', TextareaType::class, [
                 'label' => 'Description',
                 'required' => false,
+                'attr' => [
+                    'rows' => 3,
+                    'placeholder' => 'Description optionnelle de la cible',
+                ],
             ]);
     }
 

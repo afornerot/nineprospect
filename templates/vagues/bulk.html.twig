@@ -38,16 +38,16 @@
                                 <option value="{{ sprint.id }}">Vague {{ sprint.numero }}{% if sprint.libelle %} — {{ sprint.libelle }}{% endif %}</option>
                             {% endfor %}
                         </select>
+                        <select id="js-produit-filter" class="form-select form-select-sm">
+                            <option value="">Toutes les produits</option>
+                            {% for produit in produits %}
+                                <option value="{{ produit.id }}">{{ produit.titre }}</option>
+                            {% endfor %}
+                        </select>
                         <select id="js-cible-filter" class="form-select form-select-sm">
                             <option value="">Toutes les cibles</option>
                             {% for cible in cibles %}
-                                <option value="{{ cible.id }}">{{ cible.titre }}</option>
-                            {% endfor %}
-                        </select>
-                        <select id="js-categorie-filter" class="form-select form-select-sm">
-                            <option value="">Toutes les catégories</option>
-                            {% for categorie in categories %}
-                                <option value="{{ categorie.id }}">{{ categorie.nom }}</option>
+                                <option value="{{ cible.id }}">{{ cible.nom }}</option>
                             {% endfor %}
                         </select>
                         <button type="button" id="js-reset-filters" class="btn btn-sm btn-outline-secondary">Réinitialiser</button>
@@ -61,8 +61,8 @@
                                     <th style="width: 40px;"></th>
                                     <th>Prospect</th>
                                     <th>Vague</th>
+                                    <th>Produits</th>
                                     <th>Cibles</th>
-                                    <th>Catégories</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -70,8 +70,8 @@
                                     <tr data-prospect-id="{{ prospect.id }}"
                                         data-search="{{ prospect.nom|lower }}"
                                         data-sprint="{{ prospect.sprintId ?: 'without' }}"
-                                        data-cibles="{{ prospect.cibleIds|join(',') }}"
-                                        data-categories="{{ prospect.categorieIds|join(',') }}">
+                                        data-produits="{{ prospect.produitIds|join(',') }}"
+                                        data-cibles="{{ prospect.cibleIds|join(',') }}">
                                         <td>
                                             <button type="button" class="btn btn-sm btn-success js-add-prospect"
                                                     data-prospect-id="{{ prospect.id }}"
@@ -82,18 +82,18 @@
                                         <td>{{ prospect.nom }}</td>
                                         <td>{% if prospect.sprintId %}Vague {{ prospect.sprintNumero }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
                                         <td>
-                                            {% for id in prospect.cibleIds %}
-                                                {% for cible in cibles %}
-                                                    {% if cible.id == id %}<span class="badge text-bg-info">{{ cible.titre }}</span>{% endif %}
+                                            {% for id in prospect.produitIds %}
+                                                {% for produit in produits %}
+                                                    {% if produit.id == id %}<span class="badge text-bg-info">{{ produit.titre }}</span>{% endif %}
                                                 {% endfor %}
                                             {% else %}
                                                 <span class="text-muted">—</span>
                                             {% endfor %}
                                         </td>
                                         <td>
-                                            {% for id in prospect.categorieIds %}
-                                                {% for categorie in categories %}
-                                                    {% if categorie.id == id %}<span class="badge text-bg-secondary">{{ categorie.nom }}</span>{% endif %}
+                                            {% for id in prospect.cibleIds %}
+                                                {% for cible in cibles %}
+                                                    {% if cible.id == id %}<span class="badge text-bg-secondary">{{ cible.nom }}</span>{% endif %}
                                                 {% endfor %}
                                             {% else %}
                                                 <span class="text-muted">—</span>
@@ -164,8 +164,8 @@
                 const tbodyGauche = tableGauche.querySelector('tbody');
                 const tbodyDroite = document.getElementById('js-selected-list');
                 const filtreVague = document.getElementById('js-sprint-filter');
+                const filtreProduit = document.getElementById('js-produit-filter');
                 const filtreCible = document.getElementById('js-cible-filter');
-                const filtreCategorie = document.getElementById('js-categorie-filter');
                 const recherche = document.getElementById('js-search');
                 const btnSubmit = document.getElementById('js-submit-btn');
 
@@ -217,11 +217,11 @@
                     if ('without' === vague && tr.dataset.sprint !== 'without') return false;
                     if (vague !== '' && vague !== 'without' && tr.dataset.sprint !== vague) return false;
 
+                    const produit = filtreProduit.value;
+                    if (produit !== '' && !listeIds(tr.dataset.produits).includes(produit)) return false;
+
                     const cible = filtreCible.value;
                     if (cible !== '' && !listeIds(tr.dataset.cibles).includes(cible)) return false;
-
-                    const categorie = filtreCategorie.value;
-                    if (categorie !== '' && !listeIds(tr.dataset.categories).includes(categorie)) return false;
 
                     const texte = recherche.value.trim().toLowerCase();
                     if (texte !== '' && !tr.dataset.search.includes(texte)) return false;
@@ -258,14 +258,14 @@
                 });
 
                 filtreVague.addEventListener('change', appliquerFiltres);
+                filtreProduit.addEventListener('change', appliquerFiltres);
                 filtreCible.addEventListener('change', appliquerFiltres);
-                filtreCategorie.addEventListener('change', appliquerFiltres);
                 recherche.addEventListener('input', appliquerFiltres);
 
                 document.getElementById('js-reset-filters').addEventListener('click', function() {
                     filtreVague.value = '';
+                    filtreProduit.value = '';
                     filtreCible.value = '';
-                    filtreCategorie.value = '';
                     recherche.value = '';
                     appliquerFiltres();
                 });

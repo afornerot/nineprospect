@@ -13,11 +13,11 @@ use App\Form\ProspectType;
 use App\Http\ContexteRetour;
 use App\Repository\ActionTypeDefautRepository;
 use App\Repository\CampagneRepository;
-use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
+use App\Repository\ProduitRepository;
 use App\Repository\DepartementRepository;
 use App\Repository\PipelineRepository;
-use App\Repository\ProspectCibleRepository;
+use App\Repository\ProspectProduitRepository;
 use App\Repository\ProspectRepository;
 use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
@@ -48,9 +48,9 @@ class ProspectController extends AbstractController
         private DepartementRepository $departements,
         private UserRepository $users,
         private EntityManagerInterface $em,
+        private ProduitRepository $produits,
         private CibleRepository $cibles,
-        private CategoryRepository $categories,
-        private ProspectCibleRepository $prospectCibles,
+        private ProspectProduitRepository $prospectProduits,
         #[Autowire('%mapboxPublicToken%')]
         private string $mapboxPublicToken,
         private AnnuaireEntreprises $annuaire,
@@ -74,8 +74,8 @@ class ProspectController extends AbstractController
             'campagnes' => $this->campagnes->findAllOrdered(),
             'sprints' => $this->sprints->findAllOrdered(),
             'utilisateurs' => $this->users->findAll(),
+            'produits' => $this->produits->findAllOrdered(),
             'cibles' => $this->cibles->findAllOrdered(),
-            'categories' => $this->categories->findAllOrdered(),
         ]);
     }
 
@@ -339,7 +339,7 @@ class ProspectController extends AbstractController
     public function submit(Request $request): Response
     {
         $prospect = new Prospect();
-        $etapes = $this->etapesCible($request, $prospect);
+        $etapes = $this->etapesProduit($request, $prospect);
 
         $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'submit', 'etapes' => $etapes, 'prospect_id' => 0]);
         $this->initialiserFormulaire($form, $prospect, $etapes);
@@ -353,7 +353,7 @@ class ProspectController extends AbstractController
             $this->em->flush();
 
             // Après création, on ouvre la fiche de modification pour finaliser
-            // (étapes pipeline, cibles…). Le contexte de retour y mène ensuite
+            // (étapes pipeline, produits…). Le contexte de retour y mène ensuite
             // naturellement.
             return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospect->getId()]);
         }
@@ -375,7 +375,7 @@ class ProspectController extends AbstractController
             return $this->contexteRetour->redirection($request, 'app_user_prospects');
         }
 
-        $etapes = $this->etapesCible($request, $prospect);
+        $etapes = $this->etapesProduit($request, $prospect);
 
         $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'update', 'etapes' => $etapes, 'prospect_id' => $prospect->getId()]);
         $this->initialiserFormulaire($form, $prospect, $etapes);
@@ -398,15 +398,15 @@ class ProspectController extends AbstractController
         return $this->renderLayout('prospects/edit.html.twig', 'Modification = '.$prospect->getNom(), [
             'routedelete' => 'app_user_prospects_delete',
             'routeshow' => 'app_user_prospects_show',
-            'routeCibleDelete' => 'app_user_prospects_cibles_delete',
+            'routeProduitDelete' => 'app_user_prospects_produits_delete',
             'mode' => 'update',
             'form' => $form,
             'etapes' => $etapes,
             'prospect' => $prospect,
             'vagueCourante' => $prospect->vagueCourante(),
             'retour' => $retour,
-            'formCibles' => $this->formCibles($prospect),
-            'formAjoutCible' => $this->formAjoutCible($prospect),
+            'formProduits' => $this->formProduits($prospect),
+            'formAjoutProduit' => $this->formAjoutProduit($prospect),
         ]);
     }
 
@@ -454,13 +454,13 @@ class ProspectController extends AbstractController
      * Libellé UI du booléen de qualification :
      *   null  → « Non »       (état initial, sans décision)
      *   true  → « Oui »       (lead qualifié)
-     *   false → « Hors cible » (refusé par scoring)
+     *   false → « Hors produit » (refusé par scoring)
      */
     private function qualifieLabel(?bool $valeur): string
     {
         return match ($valeur) {
             true => 'Oui',
-            false => 'Hors cible',
+            false => 'Hors produit',
             default => 'Non',
         };
     }
@@ -474,86 +474,86 @@ class ProspectController extends AbstractController
         };
     }
 
-    #[Route('/toggle-cible/{prospectId}/{cibleId}', name: 'app_user_prospects_toggle_cible', methods: ['POST'])]
-    public function toggleCible(int $prospectId, int $cibleId, Request $request): JsonResponse
+    #[Route('/toggle-produit/{prospectId}/{produitId}', name: 'app_user_prospects_toggle_produit', methods: ['POST'])]
+    public function toggleProduit(int $prospectId, int $produitId, Request $request): JsonResponse
     {
         $prospect = $this->prospects->find($prospectId);
         if (!$prospect) {
             return new JsonResponse(['ok' => false, 'error' => 'Prospect introuvable.'], 404);
         }
 
-        $cible = $this->cibles->find($cibleId);
-        if (!$cible) {
-            return new JsonResponse(['ok' => false, 'error' => 'Cible introuvable.'], 404);
+        $produit = $this->produits->find($produitId);
+        if (!$produit) {
+            return new JsonResponse(['ok' => false, 'error' => 'Produit introuvable.'], 404);
         }
 
-        if (!$this->isCsrfTokenValid('toggle-cible-prospect-'.$prospectId.'-'.$cibleId, (string) $request->request->get('_csrf_token'))) {
+        if (!$this->isCsrfTokenValid('toggle-produit-prospect-'.$prospectId.'-'.$produitId, (string) $request->request->get('_csrf_token'))) {
             return new JsonResponse(['ok' => false, 'error' => 'Token CSRF invalide.'], 403);
         }
 
-        $prospectCible = $this->prospectCibles->findByProspectAndCible($prospectId, $cibleId);
-        if (!$prospectCible) {
-            $prospectCible = new \App\Entity\ProspectCible();
-            $prospectCible->setProspect($prospect);
-            $prospectCible->setCible($cible);
-            $prospectCible->setQualifie(true);
-            $this->em->persist($prospectCible);
+        $prospectProduit = $this->prospectProduits->findByProspectAndProduit($prospectId, $produitId);
+        if (!$prospectProduit) {
+            $prospectProduit = new \App\Entity\ProspectProduit();
+            $prospectProduit->setProspect($prospect);
+            $prospectProduit->setProduit($produit);
+            $prospectProduit->setQualifie(true);
+            $this->em->persist($prospectProduit);
         } else {
-            $actuel = $prospectCible->getQualifie();
+            $actuel = $prospectProduit->getQualifie();
             if (null === $actuel) {
-                $prospectCible->setQualifie(true);
+                $prospectProduit->setQualifie(true);
             } elseif (true === $actuel) {
-                $prospectCible->setQualifie(false);
+                $prospectProduit->setQualifie(false);
             } else {
-                $prospectCible->setQualifie(null);
+                $prospectProduit->setQualifie(null);
             }
         }
         $this->em->flush();
 
         return new JsonResponse([
             'ok' => true,
-            'qualifie' => $prospectCible->getQualifie(),
-            'label' => $this->qualifieLabel($prospectCible->getQualifie()),
-            'color' => $this->qualifieColor($prospectCible->getQualifie()),
+            'qualifie' => $prospectProduit->getQualifie(),
+            'label' => $this->qualifieLabel($prospectProduit->getQualifie()),
+            'color' => $this->qualifieColor($prospectProduit->getQualifie()),
         ]);
     }
 
-    #[Route('/add-cible/{prospectId}/{cibleId}', name: 'app_user_prospects_add_cible', methods: ['POST'])]
-    public function addCible(int $prospectId, int $cibleId, Request $request): JsonResponse
+    #[Route('/add-produit/{prospectId}/{produitId}', name: 'app_user_prospects_add_produit', methods: ['POST'])]
+    public function addProduit(int $prospectId, int $produitId, Request $request): JsonResponse
     {
         $prospect = $this->prospects->find($prospectId);
         if (!$prospect) {
             return new JsonResponse(['ok' => false, 'error' => 'Prospect introuvable.'], 404);
         }
 
-        $cible = $this->cibles->find($cibleId);
-        if (!$cible) {
-            return new JsonResponse(['ok' => false, 'error' => 'Cible introuvable.'], 404);
+        $produit = $this->produits->find($produitId);
+        if (!$produit) {
+            return new JsonResponse(['ok' => false, 'error' => 'Produit introuvable.'], 404);
         }
 
-        if (!$this->isCsrfTokenValid('add-cible-prospect-'.$prospectId.'-'.$cibleId, (string) $request->request->get('_csrf_token'))) {
+        if (!$this->isCsrfTokenValid('add-produit-prospect-'.$prospectId.'-'.$produitId, (string) $request->request->get('_csrf_token'))) {
             return new JsonResponse(['ok' => false, 'error' => 'Token CSRF invalide.'], 403);
         }
 
-        $prospectCible = $this->prospectCibles->findByProspectAndCible($prospectId, $cibleId);
-        if ($prospectCible) {
-            return new JsonResponse(['ok' => false, 'error' => 'Cible déjà liée à ce prospect.'], 409);
+        $prospectProduit = $this->prospectProduits->findByProspectAndProduit($prospectId, $produitId);
+        if ($prospectProduit) {
+            return new JsonResponse(['ok' => false, 'error' => 'Produit déjà liée à ce prospect.'], 409);
         }
 
-        $prospectCible = new \App\Entity\ProspectCible();
-        $prospectCible->setProspect($prospect);
-        $prospectCible->setCible($cible);
-        $prospectCible->setQualifie(null);
-        $this->em->persist($prospectCible);
+        $prospectProduit = new \App\Entity\ProspectProduit();
+        $prospectProduit->setProspect($prospect);
+        $prospectProduit->setProduit($produit);
+        $prospectProduit->setQualifie(null);
+        $this->em->persist($prospectProduit);
         $this->em->flush();
 
         return new JsonResponse([
             'ok' => true,
-            'qualifie' => $prospectCible->getQualifie(),
-            'label' => $this->qualifieLabel($prospectCible->getQualifie()),
-            'color' => $this->qualifieColor($prospectCible->getQualifie()),
-            'cibleId' => $cibleId,
-            'cibleNom' => $cible->getTitre(),
+            'qualifie' => $prospectProduit->getQualifie(),
+            'label' => $this->qualifieLabel($prospectProduit->getQualifie()),
+            'color' => $this->qualifieColor($prospectProduit->getQualifie()),
+            'produitId' => $produitId,
+            'produitNom' => $produit->getTitre(),
         ]);
     }
 
@@ -615,7 +615,7 @@ class ProspectController extends AbstractController
     }
 
     /**
-     * Étapes du pipeline cible : celles de la vague sélectionnée dans la
+     * Étapes du pipeline produit : celles de la vague sélectionnée dans la
      * requête (saisie) ou, à défaut, celles de la vague courante du prospect.
      * À défaut de vague du tout, on retombe sur le pipeline par défaut si la
      * requête porte des champs pipeline (permet d'afficher le message
@@ -623,7 +623,7 @@ class ProspectController extends AbstractController
      *
      * @return array<int, PipelineEtape>
      */
-    private function etapesCible(Request $request, Prospect $prospect): array
+    private function etapesProduit(Request $request, Prospect $prospect): array
     {
         $selection = $this->selectionSprints($request);
         $pipeline = null;
@@ -814,7 +814,7 @@ class ProspectController extends AbstractController
      *     sprint: int|null,
      *     userId: int|null,
      *     contacte: string|null,
-     *     cible: int|null,
+     *     produit: int|null,
      *     qualifie: string|null,
      *     statut: string|null,
      *     recherche: string
@@ -828,7 +828,7 @@ class ProspectController extends AbstractController
         }
 
         $qualifie = trim((string) $request->query->get('qualifie', ''));
-        if (!\in_array($qualifie, ['', 'oui', 'non', 'horscible'], true)) {
+        if (!\in_array($qualifie, ['', 'oui', 'non', 'horsproduit'], true)) {
             $qualifie = '';
         }
 
@@ -842,8 +842,8 @@ class ProspectController extends AbstractController
             'sprint' => $this->paramEntier($request, 'sprint'),
             'userId' => $this->paramEntier($request, 'utilisateur'),
             'contacte' => '' === $contacte ? null : $contacte,
+            'produit' => $this->paramEntier($request, 'produit'),
             'cible' => $this->paramEntier($request, 'cible'),
-            'categorie' => $this->paramEntier($request, 'categorie'),
             'qualifie' => '' === $qualifie ? null : $qualifie,
             'statut' => '' === $statut ? null : $statut,
             'recherche' => $this->paramTexte($request, 'q'),
@@ -988,29 +988,29 @@ class ProspectController extends AbstractController
         }
     }
 
-    #[Route('/{prospectId}/cibles/submit', name: 'app_user_prospects_cibles_submit', methods: ['POST'])]
-    public function cibleSubmit(int $prospectId, Request $request): Response
+    #[Route('/{prospectId}/produits/submit', name: 'app_user_prospects_produits_submit', methods: ['POST'])]
+    public function produitSubmit(int $prospectId, Request $request): Response
     {
         $prospect = $this->prospects->find($prospectId);
         if (!$prospect) {
             return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospectId]);
         }
 
-        $prospectCible = new \App\Entity\ProspectCible();
-        $prospectCible->setProspect($prospect);
+        $prospectProduit = new \App\Entity\ProspectProduit();
+        $prospectProduit->setProspect($prospect);
 
-        $form = $this->createForm(\App\Form\ProspectCibleType::class, $prospectCible);
+        $form = $this->createForm(\App\Form\ProspectProduitType::class, $prospectProduit);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            foreach ($prospect->getProspectCibles() as $existing) {
-                if ($existing->getCible()?->getId() === $prospectCible->getCible()?->getId()) {
-                    $this->addFlash('error', 'Cette cible est déjà associée.');
+            foreach ($prospect->getProspectProduits() as $existing) {
+                if ($existing->getProduit()?->getId() === $prospectProduit->getProduit()?->getId()) {
+                    $this->addFlash('error', 'Ce produit est déjà associée.');
 
                     return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospectId]);
                 }
             }
 
-            $this->em->persist($prospectCible);
+            $this->em->persist($prospectProduit);
             $this->em->flush();
 
             return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospectId]);
@@ -1019,20 +1019,20 @@ class ProspectController extends AbstractController
         return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospectId]);
     }
 
-    #[Route('/{prospectId}/cibles/update/{linkId}', name: 'app_user_prospects_cibles_update', methods: ['POST'])]
-    public function cibleUpdate(int $prospectId, int $linkId, Request $request): Response
+    #[Route('/{prospectId}/produits/update/{linkId}', name: 'app_user_prospects_produits_update', methods: ['POST'])]
+    public function produitUpdate(int $prospectId, int $linkId, Request $request): Response
     {
         $prospect = $this->prospects->find($prospectId);
         if (!$prospect) {
             return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospectId]);
         }
 
-        $prospectCible = $this->em->find(\App\Entity\ProspectCible::class, $linkId);
-        if (!$prospectCible) {
+        $prospectProduit = $this->em->find(\App\Entity\ProspectProduit::class, $linkId);
+        if (!$prospectProduit) {
             return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospectId]);
         }
 
-        $form = $this->createForm(\App\Form\ProspectCibleType::class, $prospectCible);
+        $form = $this->createForm(\App\Form\ProspectProduitType::class, $prospectProduit);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
@@ -1043,17 +1043,17 @@ class ProspectController extends AbstractController
         return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospectId]);
     }
 
-    #[Route('/{prospectId}/cibles/delete/{linkId}', name: 'app_user_prospects_cibles_delete', methods: ['POST'])]
-    public function cibleDelete(int $prospectId, int $linkId, Request $request): Response
+    #[Route('/{prospectId}/produits/delete/{linkId}', name: 'app_user_prospects_produits_delete', methods: ['POST'])]
+    public function produitDelete(int $prospectId, int $linkId, Request $request): Response
     {
-        $prospectCible = $this->em->find(\App\Entity\ProspectCible::class, $linkId);
-        if (!$prospectCible) {
+        $prospectProduit = $this->em->find(\App\Entity\ProspectProduit::class, $linkId);
+        if (!$prospectProduit) {
             return $this->contexteRetour->redirection($request, 'app_user_prospects_update', ['id' => $prospectId]);
         }
 
-        return $this->deleteEntity($request, $prospectCible, $linkId, 'prospect-cible', 'cible', $this->em, [
+        return $this->deleteEntity($request, $prospectProduit, $linkId, 'prospect-produit', 'produit', $this->em, [
             'list' => 'app_user_prospects_update',
-            'update' => 'app_user_prospects_cibles_update',
+            'update' => 'app_user_prospects_produits_update',
             'successRoute' => 'app_user_prospects_update',
             'successRouteParams' => ['id' => $prospectId],
         ]);
@@ -1062,29 +1062,29 @@ class ProspectController extends AbstractController
     /**
      * @return array<int, FormView>
      */
-    private function formCibles(Prospect $prospect, array $formCiblesSoumis = []): array
+    private function formProduits(Prospect $prospect, array $formProduitsSoumis = []): array
     {
-        $formCibles = [];
-        foreach ($prospect->getProspectCibles() as $prospectCible) {
-            $linkId = (int) $prospectCible->getId();
-            $cibleId = $prospectCible->getCible()?->getId();
-            $formCibles[$linkId] = ($formCiblesSoumis[$linkId] ?? $this->createForm(\App\Form\ProspectCibleType::class, $prospectCible, [
-                'action' => $this->generateUrl('app_user_prospects_cibles_update', ['prospectId' => $prospect->getId(), 'linkId' => $linkId]),
+        $formProduits = [];
+        foreach ($prospect->getProspectProduits() as $prospectProduit) {
+            $linkId = (int) $prospectProduit->getId();
+            $produitId = $prospectProduit->getProduit()?->getId();
+            $formProduits[$linkId] = ($formProduitsSoumis[$linkId] ?? $this->createForm(\App\Form\ProspectProduitType::class, $prospectProduit, [
+                'action' => $this->generateUrl('app_user_prospects_produits_update', ['prospectId' => $prospect->getId(), 'linkId' => $linkId]),
                 'prospect' => $prospect,
-                'excluded_cible_id' => $cibleId,
+                'excluded_produit_id' => $produitId,
             ]))->createView();
         }
 
-        return $formCibles;
+        return $formProduits;
     }
 
-    private function formAjoutCible(Prospect $prospect): FormView
+    private function formAjoutProduit(Prospect $prospect): FormView
     {
-        $prospectCible = new \App\Entity\ProspectCible();
-        $prospectCible->setProspect($prospect);
+        $prospectProduit = new \App\Entity\ProspectProduit();
+        $prospectProduit->setProspect($prospect);
 
-        return $this->createForm(\App\Form\ProspectCibleType::class, $prospectCible, [
-            'action' => $this->generateUrl('app_user_prospects_cibles_submit', ['prospectId' => $prospect->getId()]),
+        return $this->createForm(\App\Form\ProspectProduitType::class, $prospectProduit, [
+            'action' => $this->generateUrl('app_user_prospects_produits_submit', ['prospectId' => $prospect->getId()]),
             'prospect' => $prospect,
         ])->createView();
     }

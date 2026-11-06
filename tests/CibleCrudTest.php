@@ -2,10 +2,10 @@
 
 namespace App\Tests;
 
-use App\Entity\Category;
+use App\Entity\Cible;
 use App\Entity\Prospect;
 use App\Entity\User;
-use App\Repository\CategoryRepository;
+use App\Repository\CibleRepository;
 use App\Repository\ProspectRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -13,12 +13,12 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
- * CRUD complet d'une Category : create, read, update, delete.
- * Vérifie aussi l'association d'une catégorie à un Prospect via le formulaire.
+ * CRUD complet d'une Cible : create, read, update, delete.
+ * Vérifie aussi l'association d'une cible à un Prospect via le formulaire.
  */
-class CategoryCrudTest extends WebTestCase
+class CibleCrudTest extends WebTestCase
 {
-    public function testCategoryCrudLifecycle(): void
+    public function testCibleCrudLifecycle(): void
     {
         $client = $this->loginAsUser();
         if (null === $client) {
@@ -28,14 +28,14 @@ class CategoryCrudTest extends WebTestCase
         // Cleanup éventuel
         $this->nettoyer();
 
-        // 1) CREATE : POST /user/categories/submit
-        $uri = '/user/categories/submit';
+        // 1) CREATE : POST /user/cibles/submit
+        $uri = '/user/cibles/submit';
         $token = $this->csrf($client, $uri);
         $client->request('POST', $uri, [
-            'category' => [
+            'cible' => [
                 'submit' => '',
                 'nom' => 'ZZTEST-collectivite',
-                'description' => 'Catégorie de test',
+                'description' => 'Cible de test',
                 '_token' => $token,
             ],
         ], [], ['HTTP_ORIGIN' => 'http://localhost']);
@@ -43,28 +43,28 @@ class CategoryCrudTest extends WebTestCase
         $this->assertTrue($client->getResponse()->isRedirect(), 'Soumission doit rediriger');
         $location = $client->getResponse()->headers->get('Location');
         $this->assertNotNull($location);
-        $this->assertMatchesRegularExpression('#/user/categories/update/\d+$#', $location);
+        $this->assertMatchesRegularExpression('#/user/cibles/update/\d+$#', $location);
 
-        // Vérif que la Category est persistée avec un slug auto-généré
+        // Vérif que la Cible est persistée avec un slug auto-généré
         $this->em()->clear();
-        $cat = $this->categories()->findOneBy(['nom' => 'ZZTEST-collectivite']);
-        $this->assertInstanceOf(Category::class, $cat, 'Category devrait être persistée');
+        $cat = $this->cibles()->findOneBy(['nom' => 'ZZTEST-collectivite']);
+        $this->assertInstanceOf(Cible::class, $cat, 'Cible devrait être persistée');
         $this->assertSame('zztest-collectivite', $cat->getSlug(), 'Slug auto-généré');
         $catId = (int) $cat->getId();
 
-        // 2) READ : GET /user/categories → contient la Category
-        $crawler = $client->request('GET', '/user/categories');
+        // 2) READ : GET /user/cibles → contient la Cible
+        $crawler = $client->request('GET', '/user/cibles');
         $this->assertResponseIsSuccessful();
         $this->assertGreaterThan(0, $crawler->filter('td:contains("ZZTEST-collectivite")')->count());
 
-        // 3) UPDATE : POST /user/categories/update/{id}
-        $uri = '/user/categories/update/'.$catId;
+        // 3) UPDATE : POST /user/cibles/update/{id}
+        $uri = '/user/cibles/update/'.$catId;
         $token = $this->csrf($client, $uri);
         $client->request('POST', $uri, [
-            'category' => [
+            'cible' => [
                 'submit' => '',
                 'nom' => 'ZZTEST-collectivite-renomme',
-                'description' => 'Catégorie de test mise à jour',
+                'description' => 'Cible de test mise à jour',
                 '_token' => $token,
             ],
         ], [], ['HTTP_ORIGIN' => 'http://localhost']);
@@ -72,19 +72,19 @@ class CategoryCrudTest extends WebTestCase
         $this->assertTrue($client->getResponse()->isRedirect(), 'Update doit rediriger');
 
         $this->em()->clear();
-        $cat = $this->categories()->find($catId);
-        $this->assertInstanceOf(Category::class, $cat);
+        $cat = $this->cibles()->find($catId);
+        $this->assertInstanceOf(Cible::class, $cat);
         $this->assertSame('ZZTEST-collectivite-renomme', $cat->getNom());
-        $this->assertSame('Catégorie de test mise à jour', $cat->getDescription());
+        $this->assertSame('Cible de test mise à jour', $cat->getDescription());
 
-        // 4) Association Prospect ↔ Category via le formulaire ProspectType
+        // 4) Association Prospect ↔ Cible via le formulaire ProspectType
         $prospect = $this->prospectPourTest();
         if ($prospect instanceof Prospect) {
             $uri = '/user/prospects/update/'.$prospect->getId();
-            $catFieldId = 'prospect_categories';
+            $catFieldId = 'prospect_cibles';
             $crawler = $client->request('GET', $uri);
-            $candidates = $crawler->filter('select[name="prospect[categories][]"] option[value="'.$catId.'"]');
-            $this->assertGreaterThan(0, $candidates->count(), 'La Category doit apparaître dans le select du formulaire Prospect');
+            $candidates = $crawler->filter('select[name="prospect[cibles][]"] option[value="'.$catId.'"]');
+            $this->assertGreaterThan(0, $candidates->count(), 'La Cible doit apparaître dans le select du formulaire Prospect');
 
             $token = $crawler->filter('input[name="prospect[_token]"]')->attr('value');
             $this->assertNotNull($token, 'CSRF token du formulaire Prospect introuvable');
@@ -94,7 +94,7 @@ class CategoryCrudTest extends WebTestCase
                     '_token' => $token,
                     'nom' => $prospect->getNom() ?? '',
                     'contacte' => $prospect->getContacte() ? '1' : '0',
-                    'categories' => [$catId],
+                    'cibles' => [$catId],
                 ],
             ], [], ['HTTP_ORIGIN' => 'http://localhost']);
 
@@ -104,19 +104,19 @@ class CategoryCrudTest extends WebTestCase
             // contains() compare des identites d objet : apres em()->clear(),
             // $cat est detache et la comparaison echoue toujours. On compare
             // les identifiants.
-            $idsAssocies = $prospectReload->getCategories()->map(
-                static fn (Category $c): ?int => $c->getId()
+            $idsAssocies = $prospectReload->getCibles()->map(
+                static fn (Cible $c): ?int => $c->getId()
             )->toArray();
             $this->assertContains($catId, $idsAssocies,
-                'La Category doit être associée au Prospect après update');
+                'La Cible doit être associée au Prospect après update');
         }
 
-        // 5) DELETE : POST /user/categories/delete/{id} avec CSRF
+        // 5) DELETE : POST /user/cibles/delete/{id} avec CSRF
         // Le token n'est pas sur une page dediee : il est emis par le bouton
         // de suppression (include/delete_button.html.twig) present sur la
-        // page d'edition, avec l'identifiant 'delete-category{id}'.
-        $uri = '/user/categories/delete/'.$catId;
-        $crawler = $client->request('GET', '/user/categories/update/'.$catId);
+        // page d'edition, avec l'identifiant 'delete-cible{id}'.
+        $uri = '/user/cibles/delete/'.$catId;
+        $crawler = $client->request('GET', '/user/cibles/update/'.$catId);
         $champToken = $crawler->filter('input[name="_csrf_token"]');
         $this->assertNotSame(0, $champToken->count(), 'Bouton de suppression absent de la page d edition');
         $token = (string) $champToken->first()->attr('value');
@@ -125,20 +125,20 @@ class CategoryCrudTest extends WebTestCase
         ], [], ['HTTP_ORIGIN' => 'http://localhost']);
 
         $this->em()->clear();
-        $this->assertNull($this->categories()->find($catId), 'Category doit être supprimée');
+        $this->assertNull($this->cibles()->find($catId), 'Cible doit être supprimée');
 
-        // Le Prospect ne doit plus référencer la Category
+        // Le Prospect ne doit plus référencer la Cible
         if ($prospect instanceof Prospect) {
             $this->em()->clear();
             $prospectReload = $this->prospects()->find($prospect->getId());
             if ($prospectReload instanceof Prospect) {
-                $this->assertFalse($prospectReload->getCategories()->contains($cat),
-                    'La Category ne doit plus être associée au Prospect après suppression');
+                $this->assertFalse($prospectReload->getCibles()->contains($cat),
+                    'La Cible ne doit plus être associée au Prospect après suppression');
             }
         }
     }
 
-    public function testCategorySlugEstGenereDepuisLeNom(): void
+    public function testCibleSlugEstGenereDepuisLeNom(): void
     {
         $client = $this->loginAsUser();
         if (null === $client) {
@@ -148,10 +148,10 @@ class CategoryCrudTest extends WebTestCase
         $this->nettoyer();
 
         // Création avec un nom qui doit produire un slug
-        $uri = '/user/categories/submit';
+        $uri = '/user/cibles/submit';
         $token = $this->csrf($client, $uri);
         $client->request('POST', $uri, [
-            'category' => [
+            'cible' => [
                 'submit' => '',
                 'nom' => 'Mon Éducation Nationale',
                 'description' => '',
@@ -160,8 +160,8 @@ class CategoryCrudTest extends WebTestCase
         ], [], ['HTTP_ORIGIN' => 'http://localhost']);
 
         $this->em()->clear();
-        $cat = $this->categories()->findOneBy(['nom' => 'Mon Éducation Nationale']);
-        $this->assertInstanceOf(Category::class, $cat);
+        $cat = $this->cibles()->findOneBy(['nom' => 'Mon Éducation Nationale']);
+        $this->assertInstanceOf(Cible::class, $cat);
         $this->assertSame('mon-education-nationale', $cat->getSlug(),
             'Le slug doit retirer les accents et les espaces');
     }
@@ -170,7 +170,7 @@ class CategoryCrudTest extends WebTestCase
     {
         $em = $this->em();
         $qb = $em->createQueryBuilder();
-        $qb->delete(Category::class, 'c')
+        $qb->delete(Cible::class, 'c')
             ->where($qb->expr()->orX(
                 $qb->expr()->like('c.nom', $qb->expr()->literal('ZZTEST%')),
                 $qb->expr()->like('c.nom', $qb->expr()->literal('Mon %ducation Nationale')),
@@ -193,10 +193,10 @@ class CategoryCrudTest extends WebTestCase
             $em->flush();
         }
 
-        // S'assurer que le prospect de test n'a pas de catégorie au départ
+        // S'assurer que le prospect de test n'a pas de cible au départ
         if ($prospect instanceof Prospect) {
-            foreach ($prospect->getCategories() as $cat) {
-                $prospect->removeCategory($cat);
+            foreach ($prospect->getCibles() as $cat) {
+                $prospect->removeCible($cat);
             }
             $this->em()->flush();
         }
@@ -235,18 +235,18 @@ class CategoryCrudTest extends WebTestCase
     private function csrf(KernelBrowser $client, string $uri): string
     {
         $crawler = $client->request('GET', $uri);
-        $champ = $crawler->filter('input[name="category[_token]"]');
+        $champ = $crawler->filter('input[name="cible[_token]"]');
 
         $this->assertNotSame(0, $champ->count(), 'Champ CSRF introuvable sur '.$uri);
 
         return (string) $champ->attr('value');
     }
 
-    private function categories(): CategoryRepository
+    private function cibles(): CibleRepository
     {
-        $repository = static::getContainer()->get(CategoryRepository::class);
-        if (!$repository instanceof CategoryRepository) {
-            throw new \LogicException('Repository des catégories indisponible.');
+        $repository = static::getContainer()->get(CibleRepository::class);
+        if (!$repository instanceof CibleRepository) {
+            throw new \LogicException('Repository des cibles indisponible.');
         }
 
         return $repository;

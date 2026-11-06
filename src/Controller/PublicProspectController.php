@@ -3,14 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\Campagne;
-use App\Entity\Cible;
+use App\Entity\Produit;
 use App\Entity\Contact;
 use App\Entity\Prospect;
-use App\Entity\ProspectCible;
+use App\Entity\ProspectProduit;
 use App\Repository\CampagneRepository;
-use App\Repository\CibleRepository;
+use App\Repository\ProduitRepository;
 use App\Repository\ContactRepository;
-use App\Repository\ProspectCibleRepository;
+use App\Repository\ProspectProduitRepository;
 use App\Repository\ProspectRepository;
 use App\Service\AltchaService;
 use App\Service\AnnuaireEntreprises;
@@ -29,9 +29,9 @@ class PublicProspectController extends AbstractController
 {
     public function __construct(
         private CampagneRepository $campagnes,
-        private CibleRepository $cibles,
+        private ProduitRepository $produits,
         private ProspectRepository $prospects,
-        private ProspectCibleRepository $prospectCibles,
+        private ProspectProduitRepository $prospectProduits,
         private ContactRepository $contacts,
         private EntityManagerInterface $em,
         private AltchaService $altcha,
@@ -51,9 +51,9 @@ class PublicProspectController extends AbstractController
         return $campagne;
     }
 
-    private function findCible(string $cibleSlug): ?Cible
+    private function findProduit(string $produitSlug): ?Produit
     {
-        return $this->cibles->findOneBy(['slug' => $cibleSlug]);
+        return $this->produits->findOneBy(['slug' => $produitSlug]);
     }
 
     #[Route('/altcha/request', name: 'app_altcha_request', methods: ['GET'])]
@@ -107,13 +107,13 @@ class PublicProspectController extends AbstractController
         }
     }
 
-    #[Route('/contact/{campagneSlug}/{cibleSlug}', name: 'app_public_contact', methods: ['GET', 'POST'])]
-    public function contact(string $campagneSlug, string $cibleSlug, Request $request): Response
+    #[Route('/contact/{campagneSlug}/{produitSlug}', name: 'app_public_contact', methods: ['GET', 'POST'])]
+    public function contact(string $campagneSlug, string $produitSlug, Request $request): Response
     {
         $campagne = $this->findCampagne($campagneSlug);
-        $cible = $this->findCible($cibleSlug);
+        $produit = $this->findProduit($produitSlug);
 
-        if (!$campagne || !$cible) {
+        if (!$campagne || !$produit) {
             return $this->render('public/error.html.twig', [
                 'message' => 'La page demandée est introuvable.',
             ]);
@@ -122,7 +122,7 @@ class PublicProspectController extends AbstractController
         $session = $request->getSession();
         $prospectId = $session->get('prospect_id');
 
-        $allCibles = $this->cibles->findBy([], ['titre' => SortDirection::Ascending]);
+        $allProduits = $this->produits->findBy([], ['titre' => SortDirection::Ascending]);
 
         if ($request->isMethod('POST')) {
             if ($this->altchaEnabled) {
@@ -141,11 +141,11 @@ class PublicProspectController extends AbstractController
             $typePersonne = $request->request->get('typePersonne');
             $email = $request->request->get('email');
             $telephone = $request->request->get('telephone');
-            $cibleId = $request->request->get('cible');
+            $produitId = $request->request->get('produit');
 
-            $cibleEntity = $this->cibles->find($cibleId);
-            if (!$cibleEntity) {
-                return new Response('Cible invalide', 400);
+            $produitEntity = $this->produits->find($produitId);
+            if (!$produitEntity) {
+                return new Response('Produit invalide', 400);
             }
 
             $prospect = null;
@@ -221,36 +221,36 @@ class PublicProspectController extends AbstractController
 
             $session->set('prospect_id', $prospect->getId());
 
-            $existingLink = $this->prospectCibles->findOneBy([
+            $existingLink = $this->prospectProduits->findOneBy([
                 'prospect' => $prospect,
-                'cible' => $cibleEntity,
+                'produit' => $produitEntity,
             ]);
 
             if (!$existingLink) {
-                $prospectCible = new ProspectCible();
-                $prospectCible->setProspect($prospect);
-                $prospectCible->setCible($cibleEntity);
-                $prospectCible->setQualifie(null);
-                $this->em->persist($prospectCible);
+                $prospectProduit = new ProspectProduit();
+                $prospectProduit->setProspect($prospect);
+                $prospectProduit->setProduit($produitEntity);
+                $prospectProduit->setQualifie(null);
+                $this->em->persist($prospectProduit);
                 $this->em->flush();
             }
 
             return $this->redirectToRoute('app_public_contact_success', [
                 'campagneSlug' => $campagneSlug,
-                'cibleSlug' => $cibleSlug,
+                'produitSlug' => $produitSlug,
             ]);
         }
 
         return $this->render('public/contact.html.twig', [
             'campagne' => $campagne,
-            'cible' => $cible,
-            'cibles' => $allCibles,
+            'produit' => $produit,
+            'produits' => $allProduits,
             'altchaEnabled' => $this->altchaEnabled,
         ]);
     }
 
-    #[Route('/contact/{campagneSlug}/{cibleSlug}/success', name: 'app_public_contact_success', methods: ['GET', 'POST'])]
-    public function success(string $campagneSlug, string $cibleSlug, Request $request): Response
+    #[Route('/contact/{campagneSlug}/{produitSlug}/success', name: 'app_public_contact_success', methods: ['GET', 'POST'])]
+    public function success(string $campagneSlug, string $produitSlug, Request $request): Response
     {
         $session = $request->getSession();
         $prospectId = $session->get('prospect_id');
@@ -258,7 +258,7 @@ class PublicProspectController extends AbstractController
         if (!$prospectId) {
             return $this->redirectToRoute('app_public_contact', [
                 'campagneSlug' => $campagneSlug,
-                'cibleSlug' => $cibleSlug,
+                'produitSlug' => $produitSlug,
             ]);
         }
 
@@ -267,59 +267,59 @@ class PublicProspectController extends AbstractController
             $session->remove('prospect_id');
             return $this->redirectToRoute('app_public_contact', [
                 'campagneSlug' => $campagneSlug,
-                'cibleSlug' => $cibleSlug,
+                'produitSlug' => $produitSlug,
             ]);
         }
 
-        $cible = $this->findCible($cibleSlug);
-        if (!$cible) {
+        $produit = $this->findProduit($produitSlug);
+        if (!$produit) {
             return $this->render('public/error.html.twig', [
-                'message' => 'Cible non trouvée.',
+                'message' => 'Produit non trouvée.',
             ]);
         }
 
-        // Handle POST: link prospect to cible
-        if ($request->isMethod('POST') && $request->request->has('linkCible')) {
-            $existingLink = $this->prospectCibles->findOneBy([
+        // Handle POST: link prospect to produit
+        if ($request->isMethod('POST') && $request->request->has('linkProduit')) {
+            $existingLink = $this->prospectProduits->findOneBy([
                 'prospect' => $prospect,
-                'cible' => $cible,
+                'produit' => $produit,
             ]);
 
             if (!$existingLink) {
-                $prospectCible = new ProspectCible();
-                $prospectCible->setProspect($prospect);
-                $prospectCible->setCible($cible);
-                $prospectCible->setQualifie(null);
-                $this->em->persist($prospectCible);
+                $prospectProduit = new ProspectProduit();
+                $prospectProduit->setProspect($prospect);
+                $prospectProduit->setProduit($produit);
+                $prospectProduit->setQualifie(null);
+                $this->em->persist($prospectProduit);
                 $this->em->flush();
             }
 
             return $this->redirectToRoute('app_public_contact_success', [
                 'campagneSlug' => $campagneSlug,
-                'cibleSlug' => $cibleSlug,
+                'produitSlug' => $produitSlug,
             ] + ['show_docs' => true]);
         }
 
-        $prospectCible = $this->prospectCibles->findOneBy([
+        $prospectProduit = $this->prospectProduits->findOneBy([
             'prospect' => $prospect,
-            'cible' => $cible,
+            'produit' => $produit,
         ]);
 
-        $allCibles = $this->cibles->findBy([], ['titre' => SortDirection::Ascending]);
+        $allProduits = $this->produits->findBy([], ['titre' => SortDirection::Ascending]);
 
         return $this->render('public/contact_success.html.twig', [
             'prospect' => $prospect,
-            'prospectCible' => $prospectCible,
+            'prospectProduit' => $prospectProduit,
             'campagne' => $this->findCampagne($campagneSlug),
-            'cible' => $cible,
-            'allCibles' => $allCibles,
+            'produit' => $produit,
+            'allProduits' => $allProduits,
             'redirectUrl' => 'https://www.cadoles.com',
-            'show_docs' => $request->query->getBoolean('show_docs') || $prospectCible !== null,
+            'show_docs' => $request->query->getBoolean('show_docs') || $prospectProduit !== null,
         ]);
     }
 
-    #[Route('/contact/{campagneSlug}/select-cible', name: 'app_public_select_cible', methods: ['POST'])]
-    public function selectCible(string $campagneSlug, Request $request): Response
+    #[Route('/contact/{campagneSlug}/select-produit', name: 'app_public_select_produit', methods: ['POST'])]
+    public function selectProduit(string $campagneSlug, Request $request): Response
     {
         $session = $request->getSession();
         $prospectId = $session->get('prospect_id');
@@ -327,28 +327,28 @@ class PublicProspectController extends AbstractController
         if (!$prospectId) {
             return $this->redirectToRoute('app_public_contact', [
                 'campagneSlug' => $campagneSlug,
-                'cibleSlug' => '',
+                'produitSlug' => '',
             ]);
         }
 
-        $cibleId = $request->request->get('cibleId');
-        $cible = $this->cibles->find($cibleId);
+        $produitId = $request->request->get('produitId');
+        $produit = $this->produits->find($produitId);
 
-        if (!$cible) {
+        if (!$produit) {
             return $this->redirectToRoute('app_public_contact', [
                 'campagneSlug' => $campagneSlug,
-                'cibleSlug' => '',
+                'produitSlug' => '',
             ]);
         }
 
         return $this->redirectToRoute('app_public_contact_success', [
             'campagneSlug' => $campagneSlug,
-            'cibleSlug' => $cible->getSlug() ?? (string) $cible->getId(),
+            'produitSlug' => $produit->getSlug() ?? (string) $produit->getId(),
         ]);
     }
 
-    #[Route('/contact/{campagneSlug}/{cibleSlug}/add-cible', name: 'app_public_add_cible', methods: ['POST'])]
-    public function addCible(string $campagneSlug, string $cibleSlug, Request $request): Response
+    #[Route('/contact/{campagneSlug}/{produitSlug}/add-produit', name: 'app_public_add_produit', methods: ['POST'])]
+    public function addProduit(string $campagneSlug, string $produitSlug, Request $request): Response
     {
         $session = $request->getSession();
         $prospectId = $session->get('prospect_id');
@@ -356,7 +356,7 @@ class PublicProspectController extends AbstractController
         if (!$prospectId) {
             return $this->redirectToRoute('app_public_contact', [
                 'campagneSlug' => $campagneSlug,
-                'cibleSlug' => $cibleSlug,
+                'produitSlug' => $produitSlug,
             ]);
         }
 
@@ -365,37 +365,37 @@ class PublicProspectController extends AbstractController
             $session->remove('prospect_id');
             return $this->redirectToRoute('app_public_contact', [
                 'campagneSlug' => $campagneSlug,
-                'cibleSlug' => $cibleSlug,
+                'produitSlug' => $produitSlug,
             ]);
         }
 
-        $cibleId = $request->request->get('cible');
-        $cible = $this->cibles->find($cibleId);
+        $produitId = $request->request->get('produit');
+        $produit = $this->produits->find($produitId);
 
-        if (!$cible) {
+        if (!$produit) {
             return $this->redirectToRoute('app_public_contact_success', [
                 'campagneSlug' => $campagneSlug,
-                'cibleSlug' => $cibleSlug,
+                'produitSlug' => $produitSlug,
             ]);
         }
 
-        $existingLink = $this->prospectCibles->findOneBy([
+        $existingLink = $this->prospectProduits->findOneBy([
             'prospect' => $prospect,
-            'cible' => $cible,
+            'produit' => $produit,
         ]);
 
         if (!$existingLink) {
-            $prospectCible = new ProspectCible();
-            $prospectCible->setProspect($prospect);
-            $prospectCible->setCible($cible);
-            $prospectCible->setQualifie(null);
-            $this->em->persist($prospectCible);
+            $prospectProduit = new ProspectProduit();
+            $prospectProduit->setProspect($prospect);
+            $prospectProduit->setProduit($produit);
+            $prospectProduit->setQualifie(null);
+            $this->em->persist($prospectProduit);
             $this->em->flush();
         }
 
         return $this->redirectToRoute('app_public_contact_success', [
             'campagneSlug' => $campagneSlug,
-            'cibleSlug' => $cible->getSlug() ?? (string) $cible->getId(),
+            'produitSlug' => $produit->getSlug() ?? (string) $produit->getId(),
         ]);
     }
 
@@ -425,20 +425,20 @@ class PublicProspectController extends AbstractController
         return new JsonResponse($results);
     }
 
-    #[Route('/annuaire/cible/{id}', name: 'app_public_annuaire_cible', methods: ['GET'])]
-    public function getCible(int $id): JsonResponse
+    #[Route('/annuaire/produit/{id}', name: 'app_public_annuaire_produit', methods: ['GET'])]
+    public function getProduit(int $id): JsonResponse
     {
-        $cible = $this->cibles->find($id);
+        $produit = $this->produits->find($id);
 
-        if (!$cible) {
-            return new JsonResponse(['error' => 'Cible non trouvée'], 404);
+        if (!$produit) {
+            return new JsonResponse(['error' => 'Produit non trouvée'], 404);
         }
 
         return new JsonResponse([
-            'id' => $cible->getId(),
-            'titre' => $cible->getTitre(),
-            'description' => $cible->getDescription(),
-            'slug' => $cible->getSlug() ?? (string) $cible->getId(),
+            'id' => $produit->getId(),
+            'titre' => $produit->getTitre(),
+            'description' => $produit->getDescription(),
+            'slug' => $produit->getSlug() ?? (string) $produit->getId(),
         ]);
     }
 }

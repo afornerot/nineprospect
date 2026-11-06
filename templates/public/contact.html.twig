@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ cible.titre }} - Nous contacter{% endblock %}
+{% block title %}{{ produit.titre }} - Nous contacter{% endblock %}
 
 {% block localstyle %}
 {% include 'public/style.html.twig' %}
@@ -11,7 +11,7 @@
 <div class="container">
     <div class="row mb-4">
         <div class="col-12 text-center">
-            <h1>{{ cible.titre }}</h1>
+            <h1>{{ produit.titre }}</h1>
         </div>
     </div>
 
@@ -139,7 +139,7 @@
                             </div>
                         </div>
 
-                        <input type="hidden" id="cible" name="cible" value="{{ cible.id }}">
+                        <input type="hidden" id="produit" name="produit" value="{{ produit.id }}">
                         <input type="hidden" id="altcha-challenge" name="altcha-challenge">
                         <input type="hidden" id="altcha-salt" name="altcha-salt">
                         <input type="hidden" id="altcha-signature" name="altcha-signature">
@@ -171,9 +171,9 @@
         </div>
 
         <div class="col-lg-6">
-            <div class="cible-description">
-                {% if cible.description %}
-                    {{ cible.description|markdown_to_html }}
+            <div class="produit-description">
+                {% if produit.description %}
+                    {{ produit.description|markdown_to_html }}
                 {% else %}
                     <p class="text-muted">Pas de description disponible.</p>
                 {% endif %}

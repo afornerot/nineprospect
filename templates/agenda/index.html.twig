@@ -71,7 +71,7 @@
             }
             // FullCalendar : si l'URL porte ?date=YYYY-MM-DD, on ouvre le
             // calendrier directement sur cette date (utile pour le retour
-            // après modification d'une action : on cible la date mise à jour).
+            // après modification d'une action : on produit la date mise à jour).
             const url = new URL(window.location.href);
             const dateParam = url.searchParams.get('date');
             const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(dateParam || '') ? dateParam : undefined;

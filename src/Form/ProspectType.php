@@ -3,7 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Campagne;
-use App\Entity\Category;
+use App\Entity\Cible;
 use App\Entity\Departement;
 use App\Entity\PipelineEtape;
 use App\Entity\Prospect;
@@ -239,9 +239,9 @@ class ProspectType extends AbstractType
                 'attr' => ['class' => 'select2'],
             ])
 
-            ->add('categories', EntityType::class, [
-                'label' => 'Catégories',
-                'class' => Category::class,
+            ->add('cibles', EntityType::class, [
+                'label' => 'Cibles',
+                'class' => Cible::class,
                 'choice_label' => 'nom',
                 'multiple' => true,
                 'required' => false,

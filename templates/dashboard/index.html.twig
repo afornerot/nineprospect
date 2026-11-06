@@ -101,20 +101,20 @@
                             </select>
                         </div>
                         <div class="mb-2">
-                            <label for="filtre-cible-pipeline" class="form-label small text-muted mb-1 d-block">Cible</label>
-                            <select name="cible" id="filtre-cible-pipeline" class="form-select form-select-sm w-100" onchange="this.form.submit()">
-                                <option value="">Toutes les cibles</option>
-                                {% for cible in cibles %}
-                                    <option value="{{ cible.id }}" {% if filtreCible == cible.id %}selected{% endif %}>{{ cible.titre }}</option>
+                            <label for="filtre-produit-pipeline" class="form-label small text-muted mb-1 d-block">Produit</label>
+                            <select name="produit" id="filtre-produit-pipeline" class="form-select form-select-sm w-100" onchange="this.form.submit()">
+                                <option value="">Toutes les produits</option>
+                                {% for produit in produits %}
+                                    <option value="{{ produit.id }}" {% if filtreProduit == produit.id %}selected{% endif %}>{{ produit.titre }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="mb-2">
-                            <label for="filtre-categorie-pipeline" class="form-label small text-muted mb-1 d-block">Catégorie</label>
-                            <select name="categorie" id="filtre-categorie-pipeline" class="form-select form-select-sm w-100" onchange="this.form.submit()">
-                                <option value="">Toutes les catégories</option>
-                                {% for categorie in categories %}
-                                    <option value="{{ categorie.id }}" {% if filtreCategorie == categorie.id %}selected{% endif %}>{{ categorie.nom }}</option>
+                            <label for="filtre-cible-pipeline" class="form-label small text-muted mb-1 d-block">Cible</label>
+                            <select name="cible" id="filtre-cible-pipeline" class="form-select form-select-sm w-100" onchange="this.form.submit()">
+                                <option value="">Toutes les cibles</option>
+                                {% for cible in cibles %}
+                                    <option value="{{ cible.id }}" {% if filtreCible == cible.id %}selected{% endif %}>{{ cible.nom }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -140,8 +140,8 @@
                         <canvas id="qualificationChart"></canvas>
                     </div>
                     <p class="text-muted small mb-0 mt-2">
-                        Prospects qualifiés (« Oui » ou « Hors cible ») par mois, une courbe par cible.
-                        Un prospect qualifié sur plusieurs cibles apparaît dans chacune ; les
+                        Prospects qualifiés (« Oui » ou « Hors produit ») par mois, une courbe par produit.
+                        Un prospect qualifié sur plusieurs produits apparaît dans chacune ; les
                         qualifications sans date sont exclues.
                     </p>
                 </div>

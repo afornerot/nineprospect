@@ -47,20 +47,20 @@
             </select>
         </div>
         <div class="flex-grow-1" style="min-width: 160px;">
-            <label class="form-label" for="filtre-cible">Cible</label>
-            <select class="form-select" id="filtre-cible" name="cible">
+            <label class="form-label" for="filtre-produit">Produit</label>
+            <select class="form-select" id="filtre-produit" name="produit">
                 <option value="">Toutes</option>
-                {% for cible in cibles %}
-                    <option value="{{ cible.id }}" {% if filtres.cible == cible.id %}selected{% endif %}>{{ cible.titre }}</option>
+                {% for produit in produits %}
+                    <option value="{{ produit.id }}" {% if filtres.produit == produit.id %}selected{% endif %}>{{ produit.titre }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="flex-grow-1" style="min-width: 160px;">
-            <label class="form-label" for="filtre-categorie">Catégorie</label>
-            <select class="form-select" id="filtre-categorie" name="categorie">
+            <label class="form-label" for="filtre-cible">Cible</label>
+            <select class="form-select" id="filtre-cible" name="cible">
                 <option value="">Toutes</option>
-                {% for categorie in categories %}
-                    <option value="{{ categorie.id }}" {% if filtres.categorie == categorie.id %}selected{% endif %}>{{ categorie.nom }}</option>
+                {% for cible in cibles %}
+                    <option value="{{ cible.id }}" {% if filtres.cible == cible.id %}selected{% endif %}>{{ cible.nom }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -70,7 +70,7 @@
                 <option value="">Tous</option>
                 <option value="oui" {% if filtres.qualifie == 'oui' %}selected{% endif %}>Oui</option>
                 <option value="non" {% if filtres.qualifie == 'non' %}selected{% endif %}>Non</option>
-                <option value="horscible" {% if filtres.qualifie == 'horscible' %}selected{% endif %}>Hors cible</option>
+                <option value="horsproduit" {% if filtres.qualifie == 'horsproduit' %}selected{% endif %}>Hors produit</option>
             </select>
         </div>
         <div class="flex-grow-1" style="min-width: 140px;">
@@ -95,7 +95,7 @@
     <a href="{{ path('app_user_prospects_from_annuaire') }}" class="btn btn-outline-success mb-3 ms-1">
         <i class="fas fa-magnifying-glass me-1"></i>Créer depuis l'Annuaire
     </a>
-    <a href="{{ path('app_user_cibles_import') }}" class="btn btn-outline-primary mb-3 ms-1">
+    <a href="{{ path('app_user_produits_import') }}" class="btn btn-outline-primary mb-3 ms-1">
         <i class="fas fa-file-import me-1"></i>Importer
     </a>
 
@@ -110,7 +110,7 @@
                 <th width="80px">Vague</th>
                 <th>Pipeline</th>
                 <th width="80px">Contacté</th>
-                <th width="180px">Cible</th>
+                <th width="180px">Produit</th>
                 <th width="100px">Prc Action</th>
             </tr>
             </thead>
@@ -171,33 +171,33 @@
                         </td>
                         <td>
                             <div class="d-flex flex-wrap gap-1 align-items-center">
-                                {% for pc in prospect.prospectCibles %}
-                                    <button type="button" class="badge text-bg-{{ qualifie_color(pc.qualifie) }} js-cycle-cible" data-prospect="{{ prospect.id }}" data-cible="{{ pc.cible.id }}" data-csrf="{{ csrf_token('toggle-cible-prospect-' ~ prospect.id ~ '-' ~ pc.cible.id) }}" title="{{ qualifie_label(pc.qualifie) }}">
-                                        {{ pc.cible.titre }}
+                                {% for pc in prospect.prospectProduits %}
+                                    <button type="button" class="badge text-bg-{{ qualifie_color(pc.qualifie) }} js-cycle-produit" data-prospect="{{ prospect.id }}" data-produit="{{ pc.produit.id }}" data-csrf="{{ csrf_token('toggle-produit-prospect-' ~ prospect.id ~ '-' ~ pc.produit.id) }}" title="{{ qualifie_label(pc.qualifie) }}">
+                                        {{ pc.produit.titre }}
                                     </button>
                                 {% endfor %}
-                                {% set ciblesDisponibles = [] %}
-                                {% for cible in cibles %}
+                                {% set produitsDisponibles = [] %}
+                                {% for produit in produits %}
                                     {% set dejaLiee = false %}
-                                    {% for pc in prospect.prospectCibles %}
-                                        {% if pc.cible.id == cible.id %}
+                                    {% for pc in prospect.prospectProduits %}
+                                        {% if pc.produit.id == produit.id %}
                                             {% set dejaLiee = true %}
                                         {% endif %}
                                     {% endfor %}
                                     {% if not dejaLiee %}
-                                        {% set ciblesDisponibles = ciblesDisponibles|merge([cible]) %}
+                                        {% set produitsDisponibles = produitsDisponibles|merge([produit]) %}
                                     {% endif %}
                                 {% endfor %}
-                                {% if ciblesDisponibles|length > 0 %}
+                                {% if produitsDisponibles|length > 0 %}
                                 <div class="dropdown">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary js-add-cible dropdown-toggle" data-bs-toggle="dropdown" data-prospect="{{ prospect.id }}" aria-expanded="false" title="Ajouter une cible">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-add-produit dropdown-toggle" data-bs-toggle="dropdown" data-prospect="{{ prospect.id }}" aria-expanded="false" title="Ajouter un produit">
                                         <i class="fas fa-plus"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
-                                        {% for cible in ciblesDisponibles %}
+                                        {% for produit in produitsDisponibles %}
                                             <li>
-                                                <a class="dropdown-item js-link-cible" href="#" data-prospect="{{ prospect.id }}" data-cible="{{ cible.id }}" data-csrf="{{ csrf_token('add-cible-prospect-' ~ prospect.id ~ '-' ~ cible.id) }}">
-                                                    {{ cible.titre }}
+                                                <a class="dropdown-item js-link-produit" href="#" data-prospect="{{ prospect.id }}" data-produit="{{ produit.id }}" data-csrf="{{ csrf_token('add-produit-prospect-' ~ prospect.id ~ '-' ~ produit.id) }}">
+                                                    {{ produit.titre }}
                                                 </a>
                                             </li>
                                         {% endfor %}

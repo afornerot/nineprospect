@@ -5,8 +5,8 @@ namespace App\Tests\Service\Import;
 use App\Entity\Prospect;
 use App\Message\GeocodeProspectMessage;
 use App\Repository\CampagneRepository;
-use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
+use App\Repository\ProduitRepository;
 use App\Repository\ContactRepository;
 use App\Repository\ProspectRepository;
 use App\Service\Geo\GeoResolver;
@@ -25,7 +25,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 class ImportExecutorTest extends TestCase
 {
-    public function testExecuteCréeLesProspectsContactsEtProspectCibles(): void
+    public function testExecuteCréeLesProspectsContactsEtProspectProduits(): void
     {
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects($this->any())->method('persist');
@@ -35,9 +35,9 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
         $contactRepo = $this->createMock(ContactRepository::class);
         $contactRepo->method('findByEmails')->willReturn([]);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
@@ -50,8 +50,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -81,16 +81,16 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
         $contactRepo = $this->createMock(ContactRepository::class);
         $contactRepo->method('findByEmails')->willReturn([]);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
-        // Cible existante pour ne pas avoir à mocker une création de Cible
-        $cible = new \App\Entity\Cible();
-        $cible->setTitre('Test');
-        $ciblesRepo->method('find')->willReturn($cible);
+        // Produit existante pour ne pas avoir à mocker une création de Produit
+        $produit = new \App\Entity\Produit();
+        $produit->setTitre('Test');
+        $produitsRepo->method('find')->willReturn($produit);
 
         $preview = $this->createPreviewWithMode([
             ['Société X', 'DUPONT', 'Marie', 'marie@example.com', null, null, null, null],
@@ -100,8 +100,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -127,9 +127,9 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
         $contactRepo = $this->createMock(ContactRepository::class);
         $contactRepo->method('findByEmails')->willReturn([]);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
@@ -142,8 +142,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -174,16 +174,16 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
         $contactRepo = $this->createMock(ContactRepository::class);
         $contactRepo->method('findByEmails')->willReturn([]);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
-        // Cible existante pour ne pas avoir à mocker une création de Cible
-        $cible = new \App\Entity\Cible();
-        $cible->setTitre('Test');
-        $ciblesRepo->method('find')->willReturn($cible);
+        // Produit existante pour ne pas avoir à mocker une création de Produit
+        $produit = new \App\Entity\Produit();
+        $produit->setTitre('Test');
+        $produitsRepo->method('find')->willReturn($produit);
 
         $preview = $this->createPreviewWithMode([
             ['Université de Tours', 'A', 'Test', 'a@example.com', null, null, null, null],
@@ -195,8 +195,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -227,16 +227,16 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
         $contactRepo = $this->createMock(ContactRepository::class);
         $contactRepo->method('findByEmails')->willReturn([]);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
-        // Cible existante pour ne pas avoir à mocker une création de Cible
-        $cible = new \App\Entity\Cible();
-        $cible->setTitre('Test');
-        $ciblesRepo->method('find')->willReturn($cible);
+        // Produit existante pour ne pas avoir à mocker une création de Produit
+        $produit = new \App\Entity\Produit();
+        $produit->setTitre('Test');
+        $produitsRepo->method('find')->willReturn($produit);
 
         $preview = $this->createPreviewWithMode([
             ['Nouvelle Société', 'A', 'Z', 'a@z.com', null, null, null, null],
@@ -246,8 +246,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -286,16 +286,16 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo->method('find')->with(123)->willReturn($existingProspect);
         $contactRepo = $this->createMock(ContactRepository::class);
         $contactRepo->method('findByEmails')->willReturn([]);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
-        // Cible existante
-        $cible = new \App\Entity\Cible();
-        $cible->setTitre('Test');
-        $ciblesRepo->method('find')->willReturn($cible);
+        // Produit existante
+        $produit = new \App\Entity\Produit();
+        $produit->setTitre('Test');
+        $produitsRepo->method('find')->willReturn($produit);
 
         $preview = $this->createPreviewWithMode([
             ['Société Existante', 'A', 'X', 'a@x.com', null, '10 rue Test', '75002', 'Paris'],
@@ -313,8 +313,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -361,16 +361,16 @@ class ImportExecutorTest extends TestCase
         ]);
         $contactRepo = $this->createMock(ContactRepository::class);
         $contactRepo->method('findByEmails')->willReturn([]);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
-        // Cible existante
-        $cible = new \App\Entity\Cible();
-        $cible->setTitre('Test');
-        $ciblesRepo->method('find')->willReturn($cible);
+        // Produit existante
+        $produit = new \App\Entity\Produit();
+        $produit->setTitre('Test');
+        $produitsRepo->method('find')->willReturn($produit);
 
         $preview = $this->createPreviewWithMode([
             ['Société Complète', 'A', 'X', 'a@x.com', null, '10 rue de la Paix', '75002', 'Paris'],
@@ -387,8 +387,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -428,16 +428,16 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo->method('find')->with(2682)->willReturn($existingProspect);
         $contactRepo = $this->createMock(ContactRepository::class);
         $contactRepo->method('findByEmails')->willReturn([]);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
-        // Cible existante
-        $cible = new \App\Entity\Cible();
-        $cible->setTitre('Import');
-        $ciblesRepo->method('find')->willReturn($cible);
+        // Produit existante
+        $produit = new \App\Entity\Produit();
+        $produit->setTitre('Import');
+        $produitsRepo->method('find')->willReturn($produit);
 
         $preview = $this->createPreviewWithMode([
             ['Conseil Départemental du Cher', 'DUPONT', 'Marie', 'marie@example.com', null, '1 place de la Préfecture', '18000', 'Bourges'],
@@ -454,8 +454,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -486,17 +486,17 @@ class ImportExecutorTest extends TestCase
     }
 
     /**
-     * Construit un ImportPreview avec contrôle du mode et de la cible.
+     * Construit un ImportPreview avec contrôle du mode et de le produit.
      *
      * @param list<array{0:string,1:string,2:string,3:string,4:?string,5:?string,6:?string,7:?string}> $rows
      */
-    private function createPreviewWithMode(array $rows, string $mode, ?int $cibleId, ?string $cibleTitle): ImportPreview
+    private function createPreviewWithMode(array $rows, string $mode, ?int $produitId, ?string $produitTitle): ImportPreview
     {
         $preview = new ImportPreview(
             filename: 'test.csv',
             mode: $mode,
-            ciblePrincipaleId: $cibleId,
-            ciblePrincipaleTitle: $cibleTitle,
+            produitPrincipaleId: $produitId,
+            produitPrincipaleTitle: $produitTitle,
         );
 
         $groups = [];
@@ -603,9 +603,9 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo = $this->createMock(ProspectRepository::class);
         $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
         $contactRepo = $this->createMock(ContactRepository::class);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
@@ -617,8 +617,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -638,9 +638,9 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo = $this->createMock(ProspectRepository::class);
         $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
         $contactRepo = $this->createMock(ContactRepository::class);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
@@ -652,8 +652,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -680,9 +680,9 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo = $this->createMock(ProspectRepository::class);
         $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
         $contactRepo = $this->createMock(ContactRepository::class);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
@@ -694,8 +694,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,
@@ -726,9 +726,9 @@ class ImportExecutorTest extends TestCase
         $prospectsRepo = $this->createMock(ProspectRepository::class);
         $prospectsRepo->method('findByClesEntreprise')->willReturn([]);
         $contactRepo = $this->createMock(ContactRepository::class);
-        $ciblesRepo = $this->createMock(CibleRepository::class);
+        $produitsRepo = $this->createMock(ProduitRepository::class);
         $campagnesRepo = $this->createMock(CampagneRepository::class);
-        $categoriesRepo = $this->createMock(CategoryRepository::class);
+        $ciblesRepo = $this->createMock(CibleRepository::class);
         $geo = $this->makeGeoResolverStub();
         $bus = $this->makeMessageBusStub();
 
@@ -740,8 +740,8 @@ class ImportExecutorTest extends TestCase
             $em,
             $prospectsRepo,
             $contactRepo,
+            $produitsRepo,
             $ciblesRepo,
-            $categoriesRepo,
             $campagnesRepo,
             $geo,
             $bus,

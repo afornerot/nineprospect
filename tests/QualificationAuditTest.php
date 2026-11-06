@@ -2,9 +2,9 @@
 
 namespace App\Tests;
 
-use App\Entity\Cible;
+use App\Entity\Produit;
 use App\Entity\Prospect;
-use App\Entity\ProspectCible;
+use App\Entity\ProspectProduit;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -12,8 +12,8 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
- * Audit de la qualification d'un prospect sur une cible
- * (non / oui / hors cible) : chaque changement effectif de `qualifie`
+ * Audit de la qualification d'un prospect sur un produit
+ * (non / oui / hors produit) : chaque changement effectif de `qualifie`
  * est daté et signé par son auteur.
  */
 class QualificationAuditTest extends WebTestCase
@@ -27,18 +27,18 @@ class QualificationAuditTest extends WebTestCase
 
         $user = $this->utilisateurConnecte();
         $prospect = $this->creerProspect();
-        $cible = $this->creerCible();
-        $lien = $this->lier($prospect, $cible, null);
+        $produit = $this->creerProduit();
+        $lien = $this->lier($prospect, $produit, null);
 
         $this->assertNull($lien->getQualifieModifieAt(), 'Un lien créé « Non » n\'est pas daté.');
 
         // Le kernel de test n'est pas redémarré entre les requêtes : on
         // détache les entités pour que les contrôleurs relisent la base.
         $this->em()->clear();
-        $csrf = $this->csrfCycle($client, $prospect, $cible);
+        $csrf = $this->csrfCycle($client, $prospect, $produit);
 
         // null → true : daté et signé par l'utilisateur courant.
-        $this->basculer($client, $prospect, $cible, $csrf);
+        $this->basculer($client, $prospect, $produit, $csrf);
         $this->assertResponseIsSuccessful();
         $lien = $this->recharger($lien);
         $this->assertTrue($lien->getQualifie());
@@ -46,16 +46,16 @@ class QualificationAuditTest extends WebTestCase
         $this->assertSame((new \DateTime())->format('Y-m-d'), $lien->getQualifieModifieAt()->format('Y-m-d'));
         $this->assertSame($user->getUsername(), $lien->getQualifieModifiePar()?->getUsername());
 
-        // true → false (Hors cible) : nouvel horodatage.
+        // true → false (Hors produit) : nouvel horodatage.
         $precedent = $lien->getQualifieModifieAt();
-        $this->basculer($client, $prospect, $cible, $csrf, 1);
+        $this->basculer($client, $prospect, $produit, $csrf, 1);
         $this->assertResponseIsSuccessful();
         $lien = $this->recharger($lien);
         $this->assertFalse($lien->getQualifie());
         $this->assertGreaterThanOrEqual($precedent, $lien->getQualifieModifieAt());
 
         // false → null (Non) : plus de décision, date et auteur sont vidés.
-        $this->basculer($client, $prospect, $cible, $csrf, 1);
+        $this->basculer($client, $prospect, $produit, $csrf, 1);
         $this->assertResponseIsSuccessful();
         $lien = $this->recharger($lien);
         $this->assertNull($lien->getQualifie());
@@ -63,21 +63,21 @@ class QualificationAuditTest extends WebTestCase
         $this->assertNull($lien->getQualifieModifiePar(), 'Le retour à « Non » doit vider l\'auteur.');
 
         // Nouveau cycle après remise à zéro : la date repart de zéro.
-        $this->basculer($client, $prospect, $cible, $csrf, 1);
+        $this->basculer($client, $prospect, $produit, $csrf, 1);
         $this->assertResponseIsSuccessful();
         $lien = $this->recharger($lien);
         $this->assertTrue($lien->getQualifie());
         $this->assertInstanceOf(\DateTime::class, $lien->getQualifieModifieAt());
         $this->assertSame($user->getUsername(), $lien->getQualifieModifiePar()?->getUsername());
 
-        $this->nettoyer($lien, $prospect, $cible);
+        $this->nettoyer($lien, $prospect, $produit);
     }
 
     public function testUnEnregistrementSansChangementDeValeurNeRehorodatePas(): void
     {
         $prospect = $this->creerProspect();
-        $cible = $this->creerCible();
-        $lien = $this->lier($prospect, $cible, true);
+        $produit = $this->creerProduit();
+        $lien = $this->lier($prospect, $produit, true);
 
         $ancienne = new \DateTime('2020-01-01 08:30:00');
         $lien->setQualifieModifieAt($ancienne);
@@ -89,8 +89,8 @@ class QualificationAuditTest extends WebTestCase
         $this->em()->flush();
         $this->em()->clear();
 
-        $lien = $this->em()->find(ProspectCible::class, (int) $lien->getId());
-        $this->assertInstanceOf(ProspectCible::class, $lien);
+        $lien = $this->em()->find(ProspectProduit::class, (int) $lien->getId());
+        $this->assertInstanceOf(ProspectProduit::class, $lien);
         $this->assertSame('2020-01-01 08:30:00', $lien->getQualifieModifieAt()?->format('Y-m-d H:i:s'));
 
         // Changement réel : réhorodaté.
@@ -98,11 +98,11 @@ class QualificationAuditTest extends WebTestCase
         $this->em()->flush();
         $this->em()->clear();
 
-        $lien = $this->em()->find(ProspectCible::class, (int) $lien->getId());
-        $this->assertInstanceOf(ProspectCible::class, $lien);
+        $lien = $this->em()->find(ProspectProduit::class, (int) $lien->getId());
+        $this->assertInstanceOf(ProspectProduit::class, $lien);
         $this->assertSame((new \DateTime())->format('Y-m-d'), $lien->getQualifieModifieAt()?->format('Y-m-d'));
 
-        $this->nettoyer($lien, $prospect, $cible);
+        $this->nettoyer($lien, $prospect, $produit);
     }
 
     public function testLaFicheAfficheLeDernierChangement(): void
@@ -113,8 +113,8 @@ class QualificationAuditTest extends WebTestCase
         }
 
         $prospect = $this->creerProspect();
-        $cible = $this->creerCible();
-        $lien = $this->lier($prospect, $cible, true);
+        $produit = $this->creerProduit();
+        $lien = $this->lier($prospect, $produit, true);
         $lien->setQualifieModifieAt(new \DateTime('2024-03-12 15:45:00'));
         $lien->setQualifieModifiePar($this->utilisateurConnecte());
         $this->em()->flush();
@@ -128,18 +128,18 @@ class QualificationAuditTest extends WebTestCase
         $this->assertStringContainsString('12/03/2024 15:45', $html, 'La fiche affiche la date du dernier changement.');
         $this->assertStringContainsString((string) $this->utilisateurConnecte()->getUsername(), $html, 'La fiche affiche l\'auteur du dernier changement.');
 
-        // Écran d'édition : la ligne de cible rappelle l'auteur et la date.
+        // Écran d'édition : la ligne de produit rappelle l'auteur et la date.
         $client->request('GET', '/user/prospects/update/'.$prospect->getId());
         $this->assertResponseIsSuccessful();
         $html = (string) $client->getResponse()->getContent();
         $this->assertStringContainsString('Qualifiée par '.$this->utilisateurConnecte()->getUsername().' le 12/03/2024 15:45', $html);
 
-        // Export PDF : la même information est reprise dans le tableau des cibles.
+        // Export PDF : la même information est reprise dans le tableau des produits.
         $client->request('GET', '/user/reporting/prospect/'.$prospect->getId().'/pdf');
         $this->assertResponseIsSuccessful();
         $this->assertResponseHeaderSame('Content-Type', 'application/pdf');
 
-        $this->nettoyer($lien, $prospect, $cible);
+        $this->nettoyer($lien, $prospect, $produit);
     }
 
     // --- Helpers ---
@@ -179,21 +179,21 @@ class QualificationAuditTest extends WebTestCase
         return $prospect;
     }
 
-    private function creerCible(): Cible
+    private function creerProduit(): Produit
     {
-        $cible = new Cible();
-        $cible->setTitre('ZZTEST Cible '.uniqid());
-        $this->em()->persist($cible);
+        $produit = new Produit();
+        $produit->setTitre('ZZTEST Produit '.uniqid());
+        $this->em()->persist($produit);
         $this->em()->flush();
 
-        return $cible;
+        return $produit;
     }
 
-    private function lier(Prospect $prospect, Cible $cible, ?bool $qualifie): ProspectCible
+    private function lier(Prospect $prospect, Produit $produit, ?bool $qualifie): ProspectProduit
     {
-        $lien = new ProspectCible();
+        $lien = new ProspectProduit();
         $lien->setProspect($prospect);
-        $lien->setCible($cible);
+        $lien->setProduit($produit);
         $lien->setQualifie($qualifie);
         $this->em()->persist($lien);
         $this->em()->flush();
@@ -201,19 +201,19 @@ class QualificationAuditTest extends WebTestCase
         return $lien;
     }
 
-    private function recharger(ProspectCible $lien): ProspectCible
+    private function recharger(ProspectProduit $lien): ProspectProduit
     {
         $this->em()->clear();
-        $recharge = $this->em()->find(ProspectCible::class, (int) $lien->getId());
-        $this->assertInstanceOf(ProspectCible::class, $recharge);
+        $recharge = $this->em()->find(ProspectProduit::class, (int) $lien->getId());
+        $this->assertInstanceOf(ProspectProduit::class, $recharge);
 
         return $recharge;
     }
 
-    private function csrfCycle(KernelBrowser $client, Prospect $prospect, Cible $cible): string
+    private function csrfCycle(KernelBrowser $client, Prospect $prospect, Produit $produit): string
     {
         $client->request('GET', '/user/prospects/show/'.$prospect->getId());
-        $bouton = $client->getCrawler()->filter('.js-cycle-cible[data-cible="'.$cible->getId().'"]');
+        $bouton = $client->getCrawler()->filter('.js-cycle-produit[data-produit="'.$produit->getId().'"]');
         $this->assertSame(1, $bouton->count(), 'Le badge de qualification doit être présent sur la fiche.');
         $token = (string) $bouton->attr('data-csrf');
         $this->assertNotSame('', $token);
@@ -221,10 +221,10 @@ class QualificationAuditTest extends WebTestCase
         return $token;
     }
 
-    private function basculer(KernelBrowser $client, Prospect $prospect, Cible $cible, string $csrf, int $fois = 0): void
+    private function basculer(KernelBrowser $client, Prospect $prospect, Produit $produit, string $csrf, int $fois = 0): void
     {
         for ($i = 0; $i < max(1, $fois); ++$i) {
-            $client->request('POST', '/user/prospects/toggle-cible/'.$prospect->getId().'/'.$cible->getId(), [
+            $client->request('POST', '/user/prospects/toggle-produit/'.$prospect->getId().'/'.$produit->getId(), [
                 '_csrf_token' => $csrf,
             ], [], [
                 'HTTP_ORIGIN' => 'http://localhost',
@@ -233,11 +233,11 @@ class QualificationAuditTest extends WebTestCase
         }
     }
 
-    private function nettoyer(?ProspectCible $lien, Prospect $prospect, Cible $cible): void
+    private function nettoyer(?ProspectProduit $lien, Prospect $prospect, Produit $produit): void
     {
         $em = $this->em();
         $em->clear();
-        foreach ([$lien, $prospect, $cible] as $entite) {
+        foreach ([$lien, $prospect, $produit] as $entite) {
             if (null === $entite || null === $entite->getId()) {
                 continue;
             }

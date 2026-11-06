@@ -7,7 +7,7 @@ use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
- * Page « Affecter en masse » des vagues : filtres cible/catégorie à gauche et
+ * Page « Affecter en masse » des vagues : filtres produit/cible à gauche et
  * bascule symétrique gauche ↔ droite.
  */
 class VaguesBulkTest extends WebTestCase
@@ -23,8 +23,8 @@ class VaguesBulkTest extends WebTestCase
         $this->assertResponseIsSuccessful();
 
         $crawler = $client->getCrawler();
+        $this->assertSame(1, $crawler->filter('#js-produit-filter')->count(), 'Filtre produit absent.');
         $this->assertSame(1, $crawler->filter('#js-cible-filter')->count(), 'Filtre cible absent.');
-        $this->assertSame(1, $crawler->filter('#js-categorie-filter')->count(), 'Filtre catégorie absent.');
         $this->assertSame(1, $crawler->filter('#js-sprint-filter')->count(), 'Filtre vague absent.');
         $this->assertSame(1, $crawler->filter('#js-reset-filters')->count(), 'Bouton de réinitialisation absent.');
 
@@ -34,8 +34,8 @@ class VaguesBulkTest extends WebTestCase
 
         $ligne = $lignes->first();
         $this->assertNotNull($ligne->attr('data-sprint'), 'Attribut data-sprint manquant.');
+        $this->assertNotNull($ligne->attr('data-produits'), 'Attribut data-produits manquant.');
         $this->assertNotNull($ligne->attr('data-cibles'), 'Attribut data-cibles manquant.');
-        $this->assertNotNull($ligne->attr('data-categories'), 'Attribut data-categories manquant.');
     }
 
     public function testLeScriptMasqueLaLignePlaceeaDroiteEtLaReafficheAuRetrait(): void
@@ -77,12 +77,12 @@ class VaguesBulkTest extends WebTestCase
         $ids = array_column($lignes, 'id');
         $this->assertSame($ids, array_values(array_unique($ids)), 'Des prospects sont dupliqués.');
 
-        foreach (['id', 'nom', 'sprintId', 'sprintNumero', 'cibleIds', 'categorieIds'] as $cle) {
+        foreach (['id', 'nom', 'sprintId', 'sprintNumero', 'produitIds', 'cibleIds'] as $cle) {
             $this->assertArrayHasKey($cle, $lignes[0], 'Clé manquante : '.$cle);
         }
 
+        $this->assertIsArray($lignes[0]['produitIds']);
         $this->assertIsArray($lignes[0]['cibleIds']);
-        $this->assertIsArray($lignes[0]['categorieIds']);
     }
 
     private function clientConnecte(): ?\Symfony\Bundle\FrameworkBundle\KernelBrowser

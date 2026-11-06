@@ -44,7 +44,7 @@ class ImportAnalyzerTest extends TestCase
             'filename' => 'test.csv',
             'filePath' => $path,
             'mode' => 'new',
-            'ciblePrincipaleTitle' => 'Test',
+            'produitPrincipaleTitle' => 'Test',
         ]);
 
         $this->assertNull($preview->fatalError);
@@ -66,7 +66,7 @@ class ImportAnalyzerTest extends TestCase
             'filename' => 'test.csv',
             'filePath' => $path,
             'mode' => 'new',
-            'ciblePrincipaleTitle' => 'Test',
+            'produitPrincipaleTitle' => 'Test',
         ]);
 
         $this->assertNotNull($preview->fatalError);
@@ -88,7 +88,7 @@ class ImportAnalyzerTest extends TestCase
             'filename' => 'test.csv',
             'filePath' => $path,
             'mode' => 'new',
-            'ciblePrincipaleTitle' => 'Test',
+            'produitPrincipaleTitle' => 'Test',
         ]);
 
         $this->assertSame(2, $preview->totalRows());
@@ -109,7 +109,7 @@ class ImportAnalyzerTest extends TestCase
             'filename' => 'test.csv',
             'filePath' => $path,
             'mode' => 'new',
-            'ciblePrincipaleTitle' => 'Test',
+            'produitPrincipaleTitle' => 'Test',
         ]);
 
         $this->assertSame(1, $preview->duplicateRows());
@@ -134,7 +134,7 @@ class ImportAnalyzerTest extends TestCase
             'filename' => 'test.csv',
             'filePath' => $path,
             'mode' => 'new',
-            'ciblePrincipaleTitle' => 'Test',
+            'produitPrincipaleTitle' => 'Test',
         ]);
 
         $this->assertSame(1, $preview->duplicateRows());
@@ -155,7 +155,7 @@ class ImportAnalyzerTest extends TestCase
             'filename' => 'test.csv',
             'filePath' => $path,
             'mode' => 'new',
-            'ciblePrincipaleTitle' => 'Test',
+            'produitPrincipaleTitle' => 'Test',
         ]);
 
         $this->assertSame(2, count($preview->groups));
@@ -171,7 +171,7 @@ class ImportAnalyzerTest extends TestCase
             'filename' => 'no.csv',
             'filePath' => '/tmp/nonexistent-'.uniqid().'.csv',
             'mode' => 'new',
-            'ciblePrincipaleTitle' => 'Test',
+            'produitPrincipaleTitle' => 'Test',
         ]);
 
         $this->assertNotNull($preview->fatalError);

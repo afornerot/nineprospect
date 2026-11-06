@@ -46,7 +46,7 @@ class CrudDeleteTraitTest extends TestCase
         $em->expects($this->once())->method('flush');
 
         $requete = $this->requete('valid-token');
-        $this->contexte()->memoriserPage($requete, '/user/prospects?cible=4', true);
+        $this->contexte()->memoriserPage($requete, '/user/prospects?produit=4', true);
 
         $response = $this->controller()->testDelete(
             $requete,
@@ -58,7 +58,7 @@ class CrudDeleteTraitTest extends TestCase
         );
 
         $this->assertSame(
-            '/user/prospects?cible=4',
+            '/user/prospects?produit=4',
             $response->getTargetUrl(),
             'Après suppression on revient sur la liste filtrée consultée.',
         );

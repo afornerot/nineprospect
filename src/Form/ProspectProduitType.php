@@ -2,9 +2,9 @@
 
 namespace App\Form;
 
-use App\Entity\Cible;
+use App\Entity\Produit;
 use App\Entity\Prospect;
-use App\Entity\ProspectCible;
+use App\Entity\ProspectProduit;
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -14,31 +14,31 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use SortDirection;
 
-class ProspectCibleType extends AbstractType
+class ProspectProduitType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $prospect = $options['prospect'] ?? null;
-        $excludedCibleId = $options['excluded_cible_id'] ?? null;
+        $excludedProduitId = $options['excluded_produit_id'] ?? null;
 
         $builder
-            ->add('cible', EntityType::class, [
-                'label' => 'Cible',
-                'class' => Cible::class,
+            ->add('produit', EntityType::class, [
+                'label' => 'Produit',
+                'class' => Produit::class,
                 'choice_label' => 'titre',
-                'placeholder' => 'Sélectionnez une cible…',
-                'query_builder' => static function (EntityRepository $er) use ($prospect, $excludedCibleId) {
+                'placeholder' => 'Sélectionnez un produit…',
+                'query_builder' => static function (EntityRepository $er) use ($prospect, $excludedProduitId) {
                     $qb = $er->createQueryBuilder('c')->orderBy('c.titre', SortDirection::Ascending);
 
                     if ($prospect instanceof Prospect) {
-                        $attachedCibleIds = [];
-                        foreach ($prospect->getProspectCibles() as $pc) {
-                            if (null !== $pc->getCible() && (null === $excludedCibleId || $pc->getCible()->getId() !== $excludedCibleId)) {
-                                $attachedCibleIds[] = $pc->getCible()->getId();
+                        $attachedProduitIds = [];
+                        foreach ($prospect->getProspectProduits() as $pc) {
+                            if (null !== $pc->getProduit() && (null === $excludedProduitId || $pc->getProduit()->getId() !== $excludedProduitId)) {
+                                $attachedProduitIds[] = $pc->getProduit()->getId();
                             }
                         }
-                        if (\count($attachedCibleIds) > 0) {
-                            $qb->where($qb->expr()->notIn('c.id', $attachedCibleIds));
+                        if (\count($attachedProduitIds) > 0) {
+                            $qb->where($qb->expr()->notIn('c.id', $attachedProduitIds));
                         }
                     }
 
@@ -50,7 +50,7 @@ class ProspectCibleType extends AbstractType
                 'choices' => [
                     'Non' => null,
                     'Oui' => true,
-                    'Hors cible' => false,
+                    'Hors produit' => false,
                 ],
                 'choice_value' => static fn (?bool $v) => null === $v ? '__null__' : ($v ? '1' : '0'),
                 'placeholder' => false,
@@ -65,9 +65,9 @@ class ProspectCibleType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => ProspectCible::class,
+            'data_class' => ProspectProduit::class,
             'prospect' => null,
-            'excluded_cible_id' => null,
+            'excluded_produit_id' => null,
         ]);
     }
 }

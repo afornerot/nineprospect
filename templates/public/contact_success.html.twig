@@ -11,7 +11,7 @@
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12 text-center">
-            <h1>{{ cible.titre }}</h1>
+            <h1>{{ produit.titre }}</h1>
             <p class="mt-2" style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">
                 <i class="fas fa-check-circle me-1" style="color: #6fc7e2;"></i>
                 Merci pour votre inscription !
@@ -23,15 +23,15 @@
         <div class="col-lg-6">
             <div class="card mb-4">
                 <div class="card-header" style="background-color: rgba(111, 199, 226, 0.2); border-bottom: 1px solid rgba(111, 199, 226, 0.3);">
-                    <h2 class="h5 mb-0" style="color: #6fc7e2;">Choisir une cible</h2>
+                    <h2 class="h5 mb-0" style="color: #6fc7e2;">Choisir un produit</h2>
                 </div>
                 <div class="card-body">
-                    <form id="cible-form" method="get">
+                    <form id="produit-form" method="get">
                         <div class="mb-3">
-                            <label for="autre-cible" class="form-label">Sélectionnez une cible</label>
-                            <select class="form-control" id="autre-cible" name="cibleSlug">
-                                {% for c in allCibles %}
-                                    <option value="{{ c.slug ?: c.id }}" {% if c.id == cible.id %}selected{% endif %}>{{ c.titre }}</option>
+                            <label for="autre-produit" class="form-label">Sélectionnez un produit</label>
+                            <select class="form-control" id="autre-produit" name="produitSlug">
+                                {% for c in allProduits %}
+                                    <option value="{{ c.slug ?: c.id }}" {% if c.id == produit.id %}selected{% endif %}>{{ c.titre }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -39,11 +39,11 @@
                 </div>
             </div>
 
-            {% if not prospectCible %}
+            {% if not prospectProduit %}
             <div class="card mb-4">
                 <div class="card-body">
-                    <form method="post" action="{{ path('app_public_contact_success', {campagneSlug: campagne.slug, cibleSlug: cible.slug}) }}">
-                        <input type="hidden" name="linkCible" value="{{ cible.id }}">
+                    <form method="post" action="{{ path('app_public_contact_success', {campagneSlug: campagne.slug, produitSlug: produit.slug}) }}">
+                        <input type="hidden" name="linkProduit" value="{{ produit.id }}">
                         <button type="submit" class="btn w-100" style="background-color: #ff974a; color: #0f2f3f; border-radius: 9999px;">
                             <i class="fas fa-link me-2"></i>Afficher les documents
                         </button>
@@ -52,13 +52,13 @@
             </div>
             {% endif %}
 
-            {% if prospectCible or show_docs|default(false) %}
+            {% if prospectProduit or show_docs|default(false) %}
             <div class="card mb-4" id="documents-card">
                 <div class="card-header" style="background-color: rgba(255, 151, 74, 0.2); border-bottom: 1px solid rgba(255, 151, 74, 0.3);">
                     <h2 class="h5 mb-0" style="color: #ff974a;">Documents disponibles</h2>
                 </div>
                 <div class="card-body">
-                    {{ render(path('bninefiles_files', {domain: 'cible', id: cible.id, editable: 0,compact: true})) }}
+                    {{ render(path('bninefiles_files', {domain: 'produit', id: produit.id, editable: 0,compact: true})) }}
                 </div>
             </div>
             {% endif %}
@@ -80,9 +80,9 @@
         </div>
 
         <div class="col-lg-6">
-            <div class="cible-description" style="font-size: 1.1rem; line-height: 1.6; color: rgba(255,255,255,0.9);">
-                {% if cible.description %}
-                    {{ cible.description|markdown_to_html }}
+            <div class="produit-description" style="font-size: 1.1rem; line-height: 1.6; color: rgba(255,255,255,0.9);">
+                {% if produit.description %}
+                    {{ produit.description|markdown_to_html }}
                 {% else %}
                     <p class="text-white-50">Pas de description disponible.</p>
                 {% endif %}
@@ -94,12 +94,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const cibleSelect = document.getElementById('autre-cible');
+    const produitSelect = document.getElementById('autre-produit');
     
-    cibleSelect.addEventListener('change', function() {
-        const cibleSlug = this.value;
-        if (cibleSlug) {
-            window.location.href = '/contact/{{ campagne.slug }}/' + cibleSlug + '/success';
+    produitSelect.addEventListener('change', function() {
+        const produitSlug = this.value;
+        if (produitSlug) {
+            window.location.href = '/contact/{{ campagne.slug }}/' + produitSlug + '/success';
         }
     });
 });

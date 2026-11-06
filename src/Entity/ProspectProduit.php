@@ -2,25 +2,25 @@
 
 namespace App\Entity;
 
-use App\Repository\ProspectCibleRepository;
+use App\Repository\ProspectProduitRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: ProspectCibleRepository::class)]
-class ProspectCible
+#[ORM\Entity(repositoryClass: ProspectProduitRepository::class)]
+class ProspectProduit
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Prospect::class, inversedBy: 'prospectCibles')]
+    #[ORM\ManyToOne(targetEntity: Prospect::class, inversedBy: 'prospectProduits')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Prospect $prospect = null;
 
-    #[ORM\ManyToOne(targetEntity: Cible::class, inversedBy: 'prospectCibles')]
+    #[ORM\ManyToOne(targetEntity: Produit::class, inversedBy: 'prospectProduits')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private ?Cible $cible = null;
+    private ?Produit $produit = null;
 
     #[ORM\Column(nullable: true)]
     private ?bool $qualifie = null;
@@ -29,7 +29,7 @@ class ProspectCible
     private ?string $qualification = null;
 
     /**
-     * Dernier changement de `qualifie` (non / oui / hors cible) : date et
+     * Dernier changement de `qualifie` (non / oui / hors produit) : date et
      * auteur. Renseignés par App\EventListener\QualifieModificationListener
      * à chaque modification effective de la valeur (un enregistrement sans
      * changement de valeur ne les touche pas).
@@ -58,14 +58,14 @@ class ProspectCible
         return $this;
     }
 
-    public function getCible(): ?Cible
+    public function getProduit(): ?Produit
     {
-        return $this->cible;
+        return $this->produit;
     }
 
-    public function setCible(?Cible $cible): static
+    public function setProduit(?Produit $produit): static
     {
-        $this->cible = $cible;
+        $this->produit = $produit;
 
         return $this;
     }

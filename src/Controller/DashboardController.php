@@ -7,11 +7,11 @@ use App\Entity\Pipeline;
 use App\Entity\User;
 use App\Enum\PipelineStatut;
 use App\Repository\ActionRepository;
-use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
+use App\Repository\ProduitRepository;
 use App\Repository\ContactRepository;
 use App\Repository\PipelineRepository;
-use App\Repository\ProspectCibleRepository;
+use App\Repository\ProspectProduitRepository;
 use App\Repository\ProspectRepository;
 use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
@@ -29,22 +29,22 @@ class DashboardController extends AbstractController
         private ProspectRepository $prospects,
         private ContactRepository $contacts,
         private ActionRepository $actions,
-        private ProspectCibleRepository $prospectCibles,
+        private ProspectProduitRepository $prospectProduits,
         private SprintRepository $sprints,
         private PipelineRepository $pipelines,
         private UserRepository $users,
+        private ProduitRepository $produits,
         private CibleRepository $cibles,
-        private CategoryRepository $categories,
     ) {
     }
 
     #[Route('/dashboard', name: 'app_user_dashboard')]
     public function index(Request $request): Response
     {
-        $filtrePipeline = $this->pipelineCible($request);
+        $filtrePipeline = $this->pipelineProduit($request);
         $filtreSprint = $this->lireParamEntier($request, 'sprint');
+        $filtreProduit = $this->lireParamEntier($request, 'produit');
         $filtreCible = $this->lireParamEntier($request, 'cible');
-        $filtreCategorie = $this->lireParamEntier($request, 'categorie');
 
         $user = $this->paramUtilisateur($request);
         $userId = $user?->getId();
@@ -56,7 +56,7 @@ class DashboardController extends AbstractController
         }
 
         $compteurs = null !== $filtrePipeline
-            ? $this->prospects->countPipeline((int) $filtrePipeline->getId(), $filtreSprint, $userId, $filtreCible, $filtreCategorie)
+            ? $this->prospects->countPipeline((int) $filtrePipeline->getId(), $filtreSprint, $userId, $filtreProduit, $filtreCible)
             : [];
 
         $donneesPipeline = [];
@@ -71,7 +71,7 @@ class DashboardController extends AbstractController
         $kpiProspects = $this->compteurProspects($user);
         $kpiContacts = $this->compteurContacts($user);
 
-        $qualifications = $this->prospectCibles->countQualificationsParMoisParCible($userId);
+        $qualifications = $this->prospectProduits->countQualificationsParMoisParProduit($userId);
         $etapesStatuts = $this->pipelines->countStatutsEtapeParMoisParLibelle($userId);
         $realisees = $this->actions->countRealiseesParMois($userId);
 
@@ -91,10 +91,10 @@ class DashboardController extends AbstractController
             'filtrePipeline' => null !== $filtrePipeline ? (int) $filtrePipeline->getId() : null,
             'sprints' => $this->sprints->findAllOrdered(),
             'filtreSprint' => $filtreSprint,
+            'produits' => $this->produits->findAllOrdered(),
+            'filtreProduit' => $filtreProduit,
             'cibles' => $this->cibles->findAllOrdered(),
             'filtreCible' => $filtreCible,
-            'categories' => $this->categories->findAllOrdered(),
-            'filtreCategorie' => $filtreCategorie,
             'moisQualifications' => $qualifications['mois'],
             'seriesQualifications' => $qualifications['series'],
             'moisEtapes' => $etapesStatuts['mois'],
@@ -114,7 +114,7 @@ class DashboardController extends AbstractController
      * Pipeline sélectionné pour le graphe (paramètre « pipeline », à défaut
      * le pipeline par défaut).
      */
-    private function pipelineCible(Request $request): ?Pipeline
+    private function pipelineProduit(Request $request): ?Pipeline
     {
         $id = $this->lireParamEntier($request, 'pipeline');
         if (null !== $id) {
@@ -200,7 +200,7 @@ class DashboardController extends AbstractController
     private function compteurNonQualifie(?User $user): int
     {
         $qb = $this->prospects->createQueryBuilder('p')->select('COUNT(p.id)')
-            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectCible pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
+            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
         if (null !== $user) {
             $qb->innerJoin('p.users', 'nq_u')->andWhere('nq_u.id = :nq_uId')->setParameter('nq_uId', $user);
         }

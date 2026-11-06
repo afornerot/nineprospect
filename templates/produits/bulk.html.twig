@@ -48,10 +48,10 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>Prospects à affecter</span>
                     <div class="d-flex align-items-center gap-2">
-                        <select id="js-categorie-select" class="form-select form-select-sm" style="width: auto;">
-                            {% for categorie in categories %}
-                                <option value="{{ categorie.id }}" {% if categorie.id == categorieId %}selected{% endif %}>
-                                    {{ categorie.nom }}
+                        <select id="js-produit-select" class="form-select form-select-sm" style="width: auto;">
+                            {% for produit in produits %}
+                                <option value="{{ produit.id }}" {% if produit.id == produitId %}selected{% endif %}>
+                                    {{ produit.titre }}
                                 </option>
                             {% endfor %}
                         </select>
@@ -59,8 +59,8 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <form id="js-bulk-form" method="post" action="{{ path('app_user_categories_bulk_submit') }}">
-                        <input type="hidden" name="categorie_id" id="js-categorie-id" value="{{ categorieId }}">
+                    <form id="js-bulk-form" method="post" action="{{ path('app_user_produits_bulk_submit') }}">
+                        <input type="hidden" name="produit_id" id="js-produit-id" value="{{ produitId }}">
                         <table class="table table-sm table-striped mb-0" id="js-prospects-right">
                             <thead>
                                 <tr>
@@ -92,11 +92,11 @@
 
                 function updateSubmitBtn() {
                     const btn = document.getElementById('js-submit-btn');
-                    const input = document.getElementById('js-categorie-id');
-                    const categorieSelect = document.getElementById('js-categorie-select');
+                    const input = document.getElementById('js-produit-id');
+                    const produitSelect = document.getElementById('js-produit-select');
                     const count = Object.keys(selected).length;
                     btn.disabled = count === 0 || !input.value;
-                    input.value = categorieSelect.value;
+                    input.value = produitSelect.value;
                 }
 
                 function addRowToTable(id, nom) {
@@ -115,11 +115,11 @@
                     if (tr) tr.remove();
                 }
 
-                // Changer de catégorie recharge la liste des prospects (excluant
-                // ceux qui sont déjà dans la nouvelle catégorie).
-                document.getElementById('js-categorie-select').addEventListener('change', function() {
+                // Changer de produit recharge la liste des prospects (excluant
+                // ceux qui sont déjà dans le nouveau produit).
+                document.getElementById('js-produit-select').addEventListener('change', function() {
                     const id = this.value;
-                    window.location.href = '{{ path('app_user_categories_bulk') }}?categorie=' + id;
+                    window.location.href = '{{ path('app_user_produits_bulk') }}?produit=' + id;
                 });
 
                 document.querySelectorAll('.js-add-prospect').forEach(function(btn) {

@@ -24,20 +24,30 @@ class CibleRepository extends ServiceEntityRepository
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('c')
-            ->orderBy('c.titre', SortDirection::Ascending)
+            ->orderBy('c.nom', SortDirection::Ascending)
             ->getQuery()
             ->getResult();
     }
 
+    /**
+     * @return array<int, Cible>
+     */
+    public function findAllActives(): array
+    {
+        return $this->findAllOrdered();
+    }
+
+    /**
+     * Backfill des slugs manquants (idempotent).
+     */
     public function generateMissingSlugs(EntityManagerInterface $em): int
     {
         $count = 0;
         $cibles = $this->findAll();
         foreach ($cibles as $cible) {
             if (!$cible->getSlug()) {
-                $slug = $this->generateSlug($cible->getTitre() ?: 'cible');
-                $cible->setSlug($slug);
-                $count++;
+                $cible->setSlug($this->generateSlug($cible->getNom() ?: 'cible'));
+                ++$count;
             }
         }
         $em->flush();
@@ -48,8 +58,9 @@ class CibleRepository extends ServiceEntityRepository
     private function generateSlug(string $name): string
     {
         $slug = strtolower(trim($name));
-        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $slug) ?? '';
         $slug = trim($slug, '-');
-        return $slug ?: 'cible';
+
+        return '' === $slug ? 'cible' : $slug;
     }
 }

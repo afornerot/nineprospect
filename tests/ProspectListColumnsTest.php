@@ -11,7 +11,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
- * Colonnes de la liste prospects : la colonne « Catégories » est remplacée par
+ * Colonnes de la liste prospects : la colonne « Cibles » est remplacée par
  * « Téléphone » (celui du contact principal, à défaut celui du prospect), et
  * tous les emails affichés sont des liens `mailto:`.
  */
@@ -20,7 +20,7 @@ class ProspectListColumnsTest extends WebTestCase
     /** @var list<int> */
     private array $prospectsCrees = [];
 
-    public function testLaColonneCategorieEstRemplaceeParLeTelephone(): void
+    public function testLaColonneCibleEstRemplaceeParLeTelephone(): void
     {
         $client = $this->loginAsUser();
         if (null === $client) {
@@ -41,7 +41,7 @@ class ProspectListColumnsTest extends WebTestCase
         $html = (string) $client->getResponse()->getContent();
 
         $this->assertStringContainsString('<th width="150px">Téléphone</th>', $html);
-        $this->assertStringNotContainsString('Catégories</th>', $html, 'La colonne « Catégories » est retirée de la liste.');
+        $this->assertStringNotContainsString('Cibles</th>', $html, 'La colonne « Cibles » est retirée de la liste.');
 
         // Téléphone du contact principal ; email du prospect et du contact en mailto.
         $this->assertLigne($html, (int) $avecContact->getId(), [

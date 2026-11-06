@@ -117,7 +117,7 @@
                             <div class="col-md-6">{{ form_row(form.campagne) }}</div>
                             <div class="col-md-6">{{ form_row(form.sprints) }}</div>
                             <div class="col-md-12">{{ form_row(form.users) }}</div>
-                            <div class="col-md-12">{{ form_row(form.categories) }}</div>
+                            <div class="col-md-12">{{ form_row(form.cibles) }}</div>
                             <div class="col-md-12">{{ form_row(form.notes) }}</div>
                         </div>
                     </div>
@@ -129,33 +129,33 @@
             {% if mode is defined and mode == 'update' %}
             <div class="col-md-12">
                 <div class="card mt-3">
-                    <div class="card-header">Cibles</div>
+                    <div class="card-header">Produits</div>
                     <div class="card-body">
-                        {% if formCibles %}
+                        {% if formProduits %}
                             <table class="table table-sm">
                                 <thead>
                                     <tr>
-                                        <th style="width: 25%">Cible</th>
+                                        <th style="width: 25%">Produit</th>
                                         <th style="width: 65%">Qualification</th>
                                         <th style="width: 10%"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for linkId, formCible in formCibles %}
+                                    {% for linkId, formProduit in formProduits %}
                                         <tr>
-                                            <td style="vertical-align: middle">{{ formCible.vars.data.cible|default('—') }}</td>
+                                            <td style="vertical-align: middle">{{ formProduit.vars.data.produit|default('—') }}</td>
                                             <td style="vertical-align: middle">
-                                                <form method="post" action="{{ path('app_user_prospects_cibles_update', {prospectId: prospect.id, linkId: linkId}) }}" class="d-inline mb-0">
+                                                <form method="post" action="{{ path('app_user_prospects_produits_update', {prospectId: prospect.id, linkId: linkId}) }}" class="d-inline mb-0">
                                                     <div class="d-flex gap-2 align-items-center">
-                                                        <div style="width: 30%">{{ form_widget(formCible.qualifie, {'attr': {'class': 'form-select form-select-sm'}}) }}</div>
-                                                        <div style="width: 60%">{{ form_widget(formCible.qualification, {'attr': {'class': 'form-control form-control-sm'}}) }}</div>
+                                                        <div style="width: 30%">{{ form_widget(formProduit.qualifie, {'attr': {'class': 'form-select form-select-sm'}}) }}</div>
+                                                        <div style="width: 60%">{{ form_widget(formProduit.qualification, {'attr': {'class': 'form-control form-control-sm'}}) }}</div>
                                                         <div style="width: 10%">
                                                             <button type="submit" class="btn btn-sm btn-primary w-100" title="Enregistrer"><i class="fa-solid fa-floppy-disk"></i></button>
                                                         </div>
                                                     </div>
                                                     <div class="form-text">
-                                                        {% if formCible.vars.data.qualifieModifieAt %}
-                                                            Qualifiée par {{ formCible.vars.data.qualifieModifiePar ? formCible.vars.data.qualifieModifiePar.username : 'système' }} le {{ formCible.vars.data.qualifieModifieAt|date('d/m/Y H:i') }}
+                                                        {% if formProduit.vars.data.qualifieModifieAt %}
+                                                            Qualifiée par {{ formProduit.vars.data.qualifieModifiePar ? formProduit.vars.data.qualifieModifiePar.username : 'système' }} le {{ formProduit.vars.data.qualifieModifieAt|date('d/m/Y H:i') }}
                                                         {% else %}
                                                             Qualification jamais modifiée.
                                                         {% endif %}
@@ -163,8 +163,8 @@
                                                 </form>
                                             </td>
                                             <td style="vertical-align: middle">
-                                                <form method="post" action="{{ path('app_user_prospects_cibles_delete', {prospectId: prospect.id, linkId: linkId}) }}" class="d-inline mb-0" onsubmit="return confirm('Confirmez-vous la suppression de cette cible ?')">
-                                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('prospect-cible' ~ linkId) }}">
+                                                <form method="post" action="{{ path('app_user_prospects_produits_delete', {prospectId: prospect.id, linkId: linkId}) }}" class="d-inline mb-0" onsubmit="return confirm('Confirmez-vous la suppression de ce produit ?')">
+                                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('prospect-produit' ~ linkId) }}">
                                                     <button type="submit" class="btn btn-sm btn-danger" title="Supprimer"><i class="fa-solid fa-trash-can"></i></button>
                                                 </form>
                                             </td>
@@ -178,20 +178,20 @@
 
                         <div class="row g-2 align-items-end">
                             <div class="col">
-                                {{ form_start(formAjoutCible) }}
+                                {{ form_start(formAjoutProduit) }}
                                 <div class="d-flex gap-2">
-                                    <div style="width: 25%">{{ form_widget(formAjoutCible.cible) }}</div>
+                                    <div style="width: 25%">{{ form_widget(formAjoutProduit.produit) }}</div>
                                     <div style="width: 65%">
                                         <div class="d-flex gap-2">
-                                            <div style="width: 30%">{{ form_widget(formAjoutCible.qualifie, {'attr': {'class': 'form-select form-select-sm'}}) }}</div>
-                                            <div style="width: 60%">{{ form_widget(formAjoutCible.qualification, {'attr': {'class': 'form-control form-control-sm'}}) }}</div>
+                                            <div style="width: 30%">{{ form_widget(formAjoutProduit.qualifie, {'attr': {'class': 'form-select form-select-sm'}}) }}</div>
+                                            <div style="width: 60%">{{ form_widget(formAjoutProduit.qualification, {'attr': {'class': 'form-control form-control-sm'}}) }}</div>
                                             <div style="width: 10%">
                                                 <button type="submit" class="btn btn-success w-100" title="Ajouter"><i class="fa-solid fa-plus me-1"></i></button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                {{ form_end(formAjoutCible) }}
+                                {{ form_end(formAjoutProduit) }}
                             </div>
                         </div>
                     </div>

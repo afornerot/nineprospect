@@ -27,7 +27,7 @@ class RetourNavigationTest extends WebTestCase
         }
 
         // 1. Liste filtrée : elle devient l'origine de retour.
-        $filtre = '/user/prospects?q=&campagne=&sprint=&utilisateur=&contacte=&cible=4&categorie=&qualifie=&statut=';
+        $filtre = '/user/prospects?q=&campagne=&sprint=&utilisateur=&contacte=&produit=4&cible=&qualifie=&statut=';
         $client->request('GET', $filtre);
         $this->assertResponseIsSuccessful();
 
@@ -35,7 +35,7 @@ class RetourNavigationTest extends WebTestCase
         $client->request('GET', '/user/prospects/show/'.$prospect->getId());
         $this->assertResponseIsSuccessful();
         $liste = (string) $client->getCrawler()->filter('a:contains("Retour à la liste")')->attr('href');
-        $this->assertStringContainsString('cible=4', $liste);
+        $this->assertStringContainsString('produit=4', $liste);
         $this->assertStringContainsString('#prospect-'.$prospect->getId(), $liste);
 
         // 3. Ajout d'un contact depuis la fiche : le retour fige la fiche.
@@ -65,7 +65,7 @@ class RetourNavigationTest extends WebTestCase
         // 5. Le filtre d'origine survit aux allers-retours dans la fiche.
         $client->request('GET', '/user/prospects/show/'.$prospect->getId());
         $listeFinale = (string) $client->getCrawler()->filter('a:contains("Retour à la liste")')->attr('href');
-        $this->assertStringContainsString('cible=4', $listeFinale);
+        $this->assertStringContainsString('produit=4', $listeFinale);
         $this->assertStringContainsString('#prospect-'.$prospect->getId(), $listeFinale);
 
         $this->supprimerContact('ZZTEST PARCOURS');
@@ -145,7 +145,7 @@ class RetourNavigationTest extends WebTestCase
             static::markTestSkipped('Base de test indisponible.');
         }
 
-        $client->request('GET', '/user/prospects?cible=4');
+        $client->request('GET', '/user/prospects?produit=4');
         $client->request('GET', '/user/contacts?utilisateur=1');
         $client->request('GET', '/user/actions?vue=avenir');
         $client->request('GET', '/user/prospects/show/'.$prospect->getId());
@@ -162,7 +162,7 @@ class RetourNavigationTest extends WebTestCase
         // section, même après avoir consulté les listes voisines.
         $client->request('GET', '/user/prospects/show/'.$prospect->getId());
         $this->assertStringContainsString(
-            'cible=4',
+            'produit=4',
             (string) $client->getCrawler()->filter('a:contains("Retour à la liste")')->attr('href'),
         );
         $client->request('GET', '/user/actions/update/'.$this->uneAction()->getId());

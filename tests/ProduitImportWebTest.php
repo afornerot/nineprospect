@@ -7,13 +7,13 @@ use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-class CibleImportWebTest extends WebTestCase
+class ProduitImportWebTest extends WebTestCase
 {
     public function testAnonymeEstRedirigeVersLogin(): void
     {
         $client = static::createClient();
         try {
-            $client->request('GET', '/user/cibles/import');
+            $client->request('GET', '/user/produits/import');
         } catch (\Throwable) {
             static::markTestSkipped('Base de données de test indisponible.');
         }
@@ -28,10 +28,10 @@ class CibleImportWebTest extends WebTestCase
             static::markTestSkipped('Base de données de test indisponible.');
         }
 
-        $client->request('GET', '/user/cibles/import');
+        $client->request('GET', '/user/produits/import');
 
         $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('h1', 'Importer une cible');
+        $this->assertSelectorTextContains('h1', 'Importer un produit');
     }
 
     public function testTemplateXlxsEstTelechargeable(): void
@@ -41,7 +41,7 @@ class CibleImportWebTest extends WebTestCase
             static::markTestSkipped('Base de données de test indisponible.');
         }
 
-        $client->request('GET', '/user/cibles/import/template');
+        $client->request('GET', '/user/produits/import/template');
 
         $this->assertResponseIsSuccessful();
         $this->assertResponseHeaderSame('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -56,11 +56,11 @@ class CibleImportWebTest extends WebTestCase
         }
 
         // Le bouton d'import vit sur la liste des PROSPECTS
-        // (templates/prospects/list.html.twig:98), pas sur celle des cibles.
+        // (templates/prospects/list.html.twig:98), pas sur celle des produits.
         $client->request('GET', '/user/prospects');
 
         $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('a[href*="cibles/import"]', 'Importer');
+        $this->assertSelectorTextContains('a[href*="produits/import"]', 'Importer');
     }
 
     private function loginAsUser(): ?KernelBrowser

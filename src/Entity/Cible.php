@@ -2,11 +2,17 @@
 
 namespace App\Entity;
 
+use Symfony\Component\String\Slugger\AsciiSlugger;
+
 use App\Repository\CibleRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * Cible de prospect : taxonomie libre pour classer les Prospects.
+ * Un Prospect peut avoir 0..n cibles (relation ManyToMany).
+ */
 #[ORM\Entity(repositoryClass: CibleRepository::class)]
 class Cible
 {
@@ -16,7 +22,7 @@ class Cible
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $titre = null;
+    private ?string $nom = null;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
@@ -25,17 +31,20 @@ class Cible
     private ?string $slug = null;
 
     #[ORM\Column]
-    private bool $active = true;
+    private ?\DateTimeImmutable $createdAt = null;
 
     /**
-     * @var Collection<int, ProspectCible>
+     * Prospects qui portent cette cible.
+     *
+     * @var Collection<int, Prospect>
      */
-    #[ORM\OneToMany(targetEntity: ProspectCible::class, mappedBy: 'cible', cascade: ['remove'], orphanRemoval: true)]
-    private Collection $prospectCibles;
+    #[ORM\ManyToMany(targetEntity: Prospect::class, mappedBy: 'cibles')]
+    private Collection $prospects;
 
     public function __construct()
     {
-        $this->prospectCibles = new ArrayCollection();
+        $this->prospects = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int
@@ -43,28 +52,20 @@ class Cible
         return $this->id;
     }
 
-    public function getTitre(): ?string
+    public function getNom(): ?string
     {
-        return $this->titre;
+        return $this->nom;
     }
 
-    public function setTitre(string $titre): static
+    public function setNom(string $nom): static
     {
-        $this->titre = $titre;
-        
+        $this->nom = $nom;
+
         if (null === $this->slug || '' === $this->slug) {
-            $this->slug = $this->generateSlug($titre);
+            $this->slug = $this->generateSlug($nom);
         }
 
         return $this;
-    }
-
-    private function generateSlug(string $text): string
-    {
-        $text = strtolower($text);
-        $text = preg_replace('/[^a-z0-9]+/', '-', $text);
-        $text = trim($text, '-');
-        return $text;
     }
 
     public function getDescription(): ?string
@@ -91,28 +92,32 @@ class Cible
         return $this;
     }
 
-    public function isActive(): bool
+    public function getCreatedAt(): ?\DateTimeImmutable
     {
-        return $this->active;
-    }
-
-    public function setActive(bool $active): static
-    {
-        $this->active = $active;
-
-        return $this;
+        return $this->createdAt;
     }
 
     /**
-     * @return Collection<int, ProspectCible>
+     * @return Collection<int, Prospect>
      */
-    public function getProspectCibles(): Collection
+    public function getProspects(): Collection
     {
-        return $this->prospectCibles;
+        return $this->prospects;
+    }
+
+    private function generateSlug(string $text): string
+    {
+        // AsciiSlugger translitere les accents (É -> e) avant de reduire
+        // aux caracteres surs. Sans lui, '[^a-z0-9]+' supprimait la lettre
+        // accentuee au lieu de la remplacer : "Mon Éducation Nationale"
+        // devenait "mon-ducation-nationale".
+        $slug = (new AsciiSlugger())->slug($text, '-')->lower()->toString();
+
+        return '' === $slug ? 'cible' : $slug;
     }
 
     public function __toString(): string
     {
-        return $this->titre ?? 'Cible '.$this->id;
+        return $this->nom ?? 'Cible '.$this->id;
     }
 }

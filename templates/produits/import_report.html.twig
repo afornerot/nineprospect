@@ -17,13 +17,13 @@
                 <strong>{{ result.rowsSkipped }}</strong> ligne(s) ignorée(s),
                 <strong>{{ result.rowsErrored }}</strong> en erreur.
             </p>
-            {% if result.cibleId %}
-                <a href="{{ path(routecible, {id: result.cibleId}) }}" class="btn btn-primary">
-                    <i class="fas fa-arrow-right"></i> Voir la cible « {{ result.cibleTitle }} »
+            {% if result.produitId %}
+                <a href="{{ path(routeproduit, {id: result.produitId}) }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-right"></i> Voir le produit « {{ result.produitTitle }} »
                 </a>
             {% endif %}
             <a href="{{ retour }}" class="btn btn-secondary ms-2">
-                <i class="fas fa-list"></i> Retour à la liste des cibles
+                <i class="fas fa-list"></i> Retour à la liste des produits
             </a>
         </div>
     </div>

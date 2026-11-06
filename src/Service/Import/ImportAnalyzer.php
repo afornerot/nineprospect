@@ -32,11 +32,11 @@ final class ImportAnalyzer
      *     filename: string,
      *     filePath: string,
      *     mode: string,
-     *     ciblePrincipaleId?: int|null,
-     *     ciblePrincipaleTitle?: string|null,
-     *     ciblesSupplementairesIds?: list<int>,
+     *     produitPrincipaleId?: int|null,
+     *     produitPrincipaleTitle?: string|null,
+     *     produitsSupplementairesIds?: list<int>,
      *     campagneId?: int|null,
-     *     categoriesSupplementairesIds?: list<int>,
+     *     ciblesSupplementairesIds?: list<int>,
      * } $params
      */
     public function analyze(array $params): ImportPreview
@@ -44,11 +44,11 @@ final class ImportAnalyzer
         $preview = new ImportPreview(
             filename: $params['filename'],
             mode: $params['mode'],
-            ciblePrincipaleId: $params['ciblePrincipaleId'] ?? null,
-            ciblePrincipaleTitle: $params['ciblePrincipaleTitle'] ?? null,
-            ciblesSupplementairesIds: $params['ciblesSupplementairesIds'] ?? [],
+            produitPrincipaleId: $params['produitPrincipaleId'] ?? null,
+            produitPrincipaleTitle: $params['produitPrincipaleTitle'] ?? null,
+            produitsSupplementairesIds: $params['produitsSupplementairesIds'] ?? [],
             campagneId: $params['campagneId'] ?? null,
-            categoriesSupplementairesIds: $params['categoriesSupplementairesIds'] ?? [],
+            ciblesSupplementairesIds: $params['ciblesSupplementairesIds'] ?? [],
         );
 
         try {

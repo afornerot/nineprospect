@@ -26,13 +26,13 @@ final class ImportPreview
     public function __construct(
         public readonly string $filename,
         public readonly string $mode,
-        public readonly ?int $ciblePrincipaleId,
-        public readonly ?string $ciblePrincipaleTitle,
+        public readonly ?int $produitPrincipaleId,
+        public readonly ?string $produitPrincipaleTitle,
         /** @var list<int> */
-        public readonly array $ciblesSupplementairesIds = [],
+        public readonly array $produitsSupplementairesIds = [],
         public readonly ?int $campagneId = null,
         /** @var list<int> */
-        public readonly array $categoriesSupplementairesIds = [],
+        public readonly array $ciblesSupplementairesIds = [],
     ) {
     }
 

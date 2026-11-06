@@ -11,11 +11,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Supprime les lignes orphelines qui pointent vers des Prospects / Cibles / Campagnes / Sprints
+ * Supprime les lignes orphelines qui pointent vers des Prospects / Produits / Campagnes / Sprints
  * inexistants.
  *
  * Utilité : si vous supprimez manuellement des Prospects (ou toute autre entité) en SQL brut,
- * les tables liées (contact, action, prospect_cible, prospect_user, prospect_sprint) conservent
+ * les tables liées (contact, action, prospect_produit, prospect_user, prospect_sprint) conservent
  * des FK pointant dans le vide. Doctrine refuse alors de charger ces entités et toute opération
  * qui y touche échoue ("Entity of type X for IDs id(Y) was not found").
  *
@@ -30,12 +30,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 #[AsCommand(
     name: 'app:cleanup-orphans',
-    description: 'Supprime les lignes orphelines (contact, action, prospect_cible, prospect_user, prospect_sprint) pointant vers des entités supprimées',
+    description: 'Supprime les lignes orphelines (contact, action, prospect_produit, prospect_user, prospect_sprint) pointant vers des entités supprimées',
 )]
 class CleanupOrphansCommand extends Command
 {
     /**
-     * Cibles (label SQL, table SQL, colonne FK).
+     * Produits (label SQL, table SQL, colonne FK).
      * L'ordre est important : on supprime d'abord les tables "profondes"
      * avant leurs parents logiques.
      */
@@ -76,17 +76,17 @@ class CleanupOrphansCommand extends Command
             'parentColumn' => 'id',
         ],
         [
-            'label' => 'ProspectCibles sans prospect',
-            'table' => 'prospect_cible',
+            'label' => 'ProspectProduits sans prospect',
+            'table' => 'prospect_produit',
             'fkColumn' => 'prospect_id',
             'parentTable' => 'prospect',
             'parentColumn' => 'id',
         ],
         [
-            'label' => 'ProspectCibles sans cible',
-            'table' => 'prospect_cible',
-            'fkColumn' => 'cible_id',
-            'parentTable' => 'cible',
+            'label' => 'ProspectProduits sans produit',
+            'table' => 'prospect_produit',
+            'fkColumn' => 'produit_id',
+            'parentTable' => 'produit',
             'parentColumn' => 'id',
         ],
         [
@@ -120,7 +120,7 @@ class CleanupOrphansCommand extends Command
 
         $io->title($dryRun ? 'CLEANUP ORPHANS — DRY RUN' : 'CLEANUP ORPHANS');
 
-        // 1) Compter les orphelins par catégorie
+        // 1) Compter les orphelins, cible par cible
         $stats = [];
         $total = 0;
         foreach (self::TARGETS as $target) {
@@ -151,7 +151,7 @@ class CleanupOrphansCommand extends Command
 
         // 2) Affichage du rapport
         $io->table(
-            ['Catégorie', 'Table.colonne', 'Orphelins'],
+            ['Type d\'orphelin', 'Table.colonne', 'Orphelins'],
             array_map(
                 static fn (array $row): array => [
                     $row['label'],
@@ -184,7 +184,7 @@ class CleanupOrphansCommand extends Command
             }
         }
 
-        // 4) Suppression effective (en transaction par catégorie)
+        // 4) Suppression effective (une transaction pour l'ensemble)
         $deleted = 0;
         $this->connection->beginTransaction();
         try {

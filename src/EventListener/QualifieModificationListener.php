@@ -2,7 +2,7 @@
 
 namespace App\EventListener;
 
-use App\Entity\ProspectCible;
+use App\Entity\ProspectProduit;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Doctrine\ORM\Event\PrePersistEventArgs;
@@ -11,8 +11,8 @@ use Doctrine\ORM\Events;
 use Symfony\Bundle\SecurityBundle\Security;
 
 /**
- * Date et signe chaque changement effectif de `ProspectCible::qualifie`
- * (null = Non, true = Oui, false = Hors cible).
+ * Date et signe chaque changement effectif de `ProspectProduit::qualifie`
+ * (null = Non, true = Oui, false = Hors produit).
  *
  * Tous les writers (toggle, formulaire, import, affectation en masse,
  * formulaire public) passent par `setQualifie()` ; l'audit est posé ici pour
@@ -33,13 +33,13 @@ class QualifieModificationListener
     }
 
     /**
-     * Création d'un lien : s'il naît déjà tranché (« Oui »/« Hors cible »),
+     * Création d'un lien : s'il naît déjà tranché (« Oui »/« Hors produit »),
      * la décision est datée et signée. Créé « Non », il reste sans audit.
      */
     public function prePersist(PrePersistEventArgs $args): void
     {
         $entity = $args->getObject();
-        if ($entity instanceof ProspectCible) {
+        if ($entity instanceof ProspectProduit) {
             $this->tracer($entity);
         }
     }
@@ -55,7 +55,7 @@ class QualifieModificationListener
     public function preUpdate(PreUpdateEventArgs $args): void
     {
         $entity = $args->getObject();
-        if (!$entity instanceof ProspectCible || !$args->hasChangedField('qualifie')) {
+        if (!$entity instanceof ProspectProduit || !$args->hasChangedField('qualifie')) {
             return;
         }
 
@@ -64,9 +64,9 @@ class QualifieModificationListener
 
     /**
      * État « Non » = aucune décision : pas de date ni d'auteur. Un état
-     * tranché (« Oui »/« Hors cible ») est daté et signé.
+     * tranché (« Oui »/« Hors produit ») est daté et signé.
      */
-    private function tracer(ProspectCible $entity): void
+    private function tracer(ProspectProduit $entity): void
     {
         if (null === $entity->getQualifie()) {
             $entity->setQualifieModifieAt(null);

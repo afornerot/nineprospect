@@ -16,28 +16,28 @@
                 <dt class="col-sm-3">Fichier</dt>
                 <dd class="col-sm-9"><code>{{ context.filename }}</code></dd>
 
-                <dt class="col-sm-3">Cible principale</dt>
+                <dt class="col-sm-3">Produit principale</dt>
                 <dd class="col-sm-9">
                     {% if 'new' == context.mode %}
-                        Nouvelle cible : <strong>{{ context.ciblePrincipaleTitle }}</strong>
-                    {% elseif context.ciblePrincipaleId %}
-                        Existante (id {{ context.ciblePrincipaleId }})
+                        Nouveau produit : <strong>{{ context.produitPrincipaleTitle }}</strong>
+                    {% elseif context.produitPrincipaleId %}
+                        Existante (id {{ context.produitPrincipaleId }})
                     {% else %}
-                        <em class="text-muted">Aucune (import sans rattachement à une cible)</em>
+                        <em class="text-muted">Aucune (import sans rattachement à un produit)</em>
                     {% endif %}
                 </dd>
+
+                {% if context.produitsSupplementairesIds is not empty %}
+                    <dt class="col-sm-3">Produits supplémentaires</dt>
+                    <dd class="col-sm-9">
+                        {% for id in context.produitsSupplementairesIds %}<span class="badge bg-secondary me-1">{{ id }}</span>{% endfor %}
+                    </dd>
+                {% endif %}
 
                 {% if context.ciblesSupplementairesIds is not empty %}
                     <dt class="col-sm-3">Cibles supplémentaires</dt>
                     <dd class="col-sm-9">
-                        {% for id in context.ciblesSupplementairesIds %}<span class="badge bg-secondary me-1">{{ id }}</span>{% endfor %}
-                    </dd>
-                {% endif %}
-
-                {% if context.categoriesSupplementairesIds is not empty %}
-                    <dt class="col-sm-3">Catégories supplémentaires</dt>
-                    <dd class="col-sm-9">
-                        {% for id in context.categoriesSupplementairesIds %}<span class="badge bg-info me-1">{{ id }}</span>{% endfor %}
+                        {% for id in context.ciblesSupplementairesIds %}<span class="badge bg-info me-1">{{ id }}</span>{% endfor %}
                     </dd>
                 {% endif %}
 
@@ -91,8 +91,8 @@
         </div>
     </div>
 
-    <form action="{{ path('app_user_cibles_import_execute') }}" method="post" class="mt-3">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token('cible-import-execute') }}">
+    <form action="{{ path('app_user_produits_import_execute') }}" method="post" class="mt-3">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('produit-import-execute') }}">
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
