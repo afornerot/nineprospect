@@ -49,10 +49,10 @@ class GroupeController extends AbstractController
             $this->em->persist($groupe);
             $this->em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_admin_groupe');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_admin_groupe');
         }
 
-        $retour = $this->contexteRetour->url($request, 'app_admin_groupe');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_admin_groupe');
 
         return $this->renderLayout('groupe/edit.html.twig', 'Création Groupe', [
             'retour' => $retour,
@@ -66,7 +66,7 @@ class GroupeController extends AbstractController
     {
         $groupe = $this->groupeRepository->find($id);
         if (!$groupe) {
-            return $this->contexteRetour->redirection($request, 'app_admin_groupe');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_admin_groupe');
         }
 
         $form = $this->createForm(GroupeType::class, $groupe, ['mode' => 'update']);
@@ -74,10 +74,10 @@ class GroupeController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_admin_groupe');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_admin_groupe');
         }
 
-        $retour = $this->contexteRetour->url($request, 'app_admin_groupe');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_admin_groupe');
 
         return $this->renderLayout('groupe/edit.html.twig', 'Modification Groupe = '.$groupe->getName(), [
             'retour' => $retour,
@@ -92,7 +92,7 @@ class GroupeController extends AbstractController
     {
         $groupe = $this->groupeRepository->find($id);
         if (!$groupe) {
-            return $this->contexteRetour->redirection($request, 'app_admin_groupe');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_admin_groupe');
         }
 
         return $this->deleteEntity($request, $groupe, $id, 'delete-groupe', 'groupe', $this->em, [

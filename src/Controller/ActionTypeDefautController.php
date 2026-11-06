@@ -49,10 +49,10 @@ class ActionTypeDefautController extends AbstractController
             $this->em->persist($type);
             $this->em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_user_action_types');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_action_types');
         }
 
-        $retour = $this->contexteRetour->url($request, 'app_user_action_types');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_action_types');
 
         return $this->renderLayout('action_types/edit.html.twig', "Nouveau type d'action", [
             'retour' => $retour,
@@ -66,7 +66,7 @@ class ActionTypeDefautController extends AbstractController
     {
         $type = $this->types->find($id);
         if (!$type) {
-            return $this->contexteRetour->redirection($request, 'app_user_action_types');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_action_types');
         }
 
         $form = $this->createForm(ActionTypeDefautType::class, $type);
@@ -74,10 +74,10 @@ class ActionTypeDefautController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_user_action_types');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_action_types');
         }
 
-        $retour = $this->contexteRetour->url($request, 'app_user_action_types');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_action_types');
 
         return $this->renderLayout('action_types/edit.html.twig', 'Modification = '.$type, [
             'retour' => $retour,
@@ -93,7 +93,7 @@ class ActionTypeDefautController extends AbstractController
     {
         $type = $this->types->find($id);
         if (!$type) {
-            return $this->contexteRetour->redirection($request, 'app_user_action_types');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_action_types');
         }
 
         return $this->deleteEntity($request, $type, $id, 'delete-action-type', 'action_types', $this->em, [

@@ -109,7 +109,7 @@ class CampagneController extends AbstractController
         $campagne = new Campagne();
 
         $form = $this->createForm(CampagneType::class, $campagne);
-        $retour = $this->contexteRetour->url($request, 'app_user_campagnes');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_campagnes');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->persist($campagne);
@@ -132,15 +132,15 @@ class CampagneController extends AbstractController
     {
         $campagne = $this->campagnes->find($id);
         if (!$campagne) {
-            return $this->contexteRetour->redirection($request, 'app_user_campagnes');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_campagnes');
         }
 
         $form = $this->createForm(CampagneType::class, $campagne, ['afficherProspects' => true]);
         $form->get('prospects')->setData($this->prospectsDe($campagne));
-        $retour = $this->contexteRetour->url($request, 'app_user_campagnes');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_campagnes');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid() && $this->sauverCampagne($campagne, $form)) {
-            return $this->contexteRetour->redirection($request, 'app_user_campagnes');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_campagnes');
         }
 
         $allProspects = $this->prospects->findBy([], ['nom' => SortDirection::Ascending]);

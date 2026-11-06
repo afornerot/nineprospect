@@ -43,7 +43,7 @@ class ConfigController extends AbstractController
     {
         $config = $this->configRepository->find($id);
         if (!$config) {
-            return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
+            return $this->contexteRetour->redirectionVersListe($request, self::ROUTE_PREFIX);
         }
 
         $form = $this->createForm(ConfigType::class, $config);
@@ -54,10 +54,10 @@ class ConfigController extends AbstractController
             $this->em->flush();
             $configParameterBag->reload();
 
-            return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
+            return $this->contexteRetour->redirectionVersListe($request, self::ROUTE_PREFIX);
         }
 
-        $retour = $this->contexteRetour->url($request, self::ROUTE_PREFIX);
+        $retour = $this->contexteRetour->listeDuModule($request, self::ROUTE_PREFIX);
 
         return $this->renderLayout('config/edit.html.twig', 'Modifier Configuration = '.$config->getCode(), [
             'config' => $config,
@@ -72,17 +72,17 @@ class ConfigController extends AbstractController
     {
         $config = $this->configRepository->find($id);
         if (!$config) {
-            return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
+            return $this->contexteRetour->redirectionVersListe($request, self::ROUTE_PREFIX);
         }
 
         if (!$this->isCsrfTokenValid('delete-config-'.$id, $request->request->get('_token'))) {
-            return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
+            return $this->contexteRetour->redirectionVersListe($request, self::ROUTE_PREFIX);
         }
 
         $config->setRawValue(null);
         $this->em->flush();
         $configParameterBag->reload();
 
-        return $this->contexteRetour->redirection($request, self::ROUTE_PREFIX);
+        return $this->contexteRetour->redirectionVersListe($request, self::ROUTE_PREFIX);
     }
 }

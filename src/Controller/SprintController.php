@@ -72,7 +72,7 @@ class SprintController extends AbstractController
             'prospectsAll' => $this->prospects->findAllPourAffectation(),
             'cibles' => $this->cibles->findAllOrdered(),
             'categories' => $this->categories->findAllOrdered(),
-            'retour' => $this->contexteRetour->url($request, 'app_user_vagues'),
+            'retour' => $this->contexteRetour->listeDuModule($request, 'app_user_vagues'),
         ]);
     }
 
@@ -123,7 +123,7 @@ class SprintController extends AbstractController
         $sprint->setNumero($this->sprints->nextNumero());
 
         $form = $this->createForm(SprintType::class, $sprint, ['numeroLectureSeule' => true]);
-        $retour = $this->contexteRetour->url($request, 'app_user_vagues');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_vagues');
         $form->handleRequest($request);
         // Toujours recalculer : le champ est `readonly` côté navigateur mais
         // rien n'empêche un client malveillant de poster une autre valeur.
@@ -146,15 +146,15 @@ class SprintController extends AbstractController
     {
         $sprint = $this->sprints->find($id);
         if (!$sprint) {
-            return $this->contexteRetour->redirection($request, 'app_user_vagues');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_vagues');
         }
 
         $form = $this->createForm(SprintType::class, $sprint, ['afficherProspects' => true]);
         $form->get('prospects')->setData($this->prospectsDe($sprint));
-        $retour = $this->contexteRetour->url($request, 'app_user_vagues');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_vagues');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid() && $this->sauverSprint($sprint, $form)) {
-            return $this->contexteRetour->redirection($request, 'app_user_vagues');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_vagues');
         }
 
         $allProspects = $this->prospects->findBy([], ['nom' => SortDirection::Ascending]);
@@ -260,7 +260,7 @@ class SprintController extends AbstractController
     {
         $sprint = $this->sprints->find($id);
         if (!$sprint) {
-            return $this->contexteRetour->redirection($request, 'app_user_vagues');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_vagues');
         }
 
         return $this->deleteEntity($request, $sprint, $id, 'delete-vague', 'vagues', $this->em, [

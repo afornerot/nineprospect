@@ -51,7 +51,7 @@ class CategoryController extends AbstractController
             return $this->redirectToRoute('app_user_categories_update', ['id' => $category->getId()]);
         }
 
-        $retour = $this->contexteRetour->url($request, 'app_user_categories');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_categories');
 
         return $this->renderLayout('categories/edit.html.twig', 'Nouvelle catégorie', [
             'retour' => $retour,
@@ -64,7 +64,7 @@ class CategoryController extends AbstractController
     {
         $category = $this->categories->find($id);
         if (!$category) {
-            return $this->contexteRetour->redirection($request, 'app_user_categories');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_categories');
         }
 
         $form = $this->createForm(CategoryType::class, $category);
@@ -72,10 +72,10 @@ class CategoryController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_user_categories');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_categories');
         }
 
-        $retour = $this->contexteRetour->url($request, 'app_user_categories');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_categories');
 
         return $this->renderLayout('categories/edit.html.twig', 'Modification = '.$category->getNom(), [
             'retour' => $retour,
@@ -90,7 +90,7 @@ class CategoryController extends AbstractController
     {
         $category = $this->categories->find($id);
         if (!$category) {
-            return $this->contexteRetour->redirection($request, 'app_user_categories');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_categories');
         }
 
         return $this->deleteEntity($request, $category, $id, 'delete-category', 'categories', $this->em, [

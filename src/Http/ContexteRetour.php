@@ -121,6 +121,32 @@ final class ContexteRetour
     }
 
     /**
+     * URL de retour vers la liste d'un module : l'URL mémorisée pour le
+     * chemin de cette liste (filtres et tri compris), sinon la route de
+     * repli.
+     *
+     * À utiliser pour les écrans CRUD dont la seule origine légitime est
+     * leur propre liste. `url()` prend « la page précédente » toutes
+     * sections confondues : un formulaire ouvert directement (lien, onglet
+     * voisin, rechargement) ramènerait ailleurs, typiquement au tableau de
+     * bord.
+     *
+     * @param array<string, mixed> $params
+     */
+    public function listeDuModule(Request $request, string $routeListe, array $params = [], ?string $ancre = null): string
+    {
+        return $this->listeOu($request, $this->urlGenerator->generate($routeListe), $routeListe, $params, $ancre);
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    public function redirectionVersListe(Request $request, string $routeListe, array $params = []): RedirectResponse
+    {
+        return new RedirectResponse($this->listeDuModule($request, $routeListe, $params));
+    }
+
+    /**
      * @param array<string, mixed> $params
      */
     public function redirection(Request $request, string $routeFallback, array $params = [], ?string $ancre = null): RedirectResponse

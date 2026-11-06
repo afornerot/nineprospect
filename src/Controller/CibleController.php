@@ -66,7 +66,7 @@ class CibleController extends AbstractController
         $cible = new Cible();
 
         $form = $this->createForm(CibleType::class, $cible);
-        $retour = $this->contexteRetour->url($request, 'app_user_cibles');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_cibles');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->persist($cible);
@@ -88,16 +88,16 @@ class CibleController extends AbstractController
     {
         $cible = $this->cibles->find($id);
         if (!$cible) {
-            return $this->contexteRetour->redirection($request, 'app_user_cibles');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_cibles');
         }
 
         $form = $this->createForm(CibleType::class, $cible);
-        $retour = $this->contexteRetour->url($request, 'app_user_cibles');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_cibles');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_user_cibles');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_cibles');
         }
 
         return $this->renderLayout('cibles/edit.html.twig', 'Modification = '.$cible->getTitre(), [
@@ -113,7 +113,7 @@ class CibleController extends AbstractController
     {
         $cible = $this->cibles->find($id);
         if (!$cible) {
-            return $this->contexteRetour->redirection($request, 'app_user_cibles');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_cibles');
         }
 
         return $this->deleteEntity($request, $cible, $id, 'delete-cible', 'cibles', $this->em, [
@@ -258,7 +258,7 @@ class CibleController extends AbstractController
         return $this->renderLayout('cibles/import.html.twig', 'Importer une cible', [
             'form' => $form->createView(),
             'routetemplate' => 'app_user_cibles_import_template',
-            'retour' => $this->contexteRetour->url($request, 'app_user_cibles'),
+            'retour' => $this->contexteRetour->listeDuModule($request, 'app_user_cibles'),
             'cibles' => $this->cibles->findAllOrdered(),
             'campagnes' => $this->campagnes->findAll(),
         ]);
@@ -338,7 +338,7 @@ class CibleController extends AbstractController
         return $this->renderLayout('cibles/import_report.html.twig', 'Rapport d\'import', [
             'result' => $result,
             'routecible' => 'app_user_cibles_update',
-            'retour' => $this->contexteRetour->url($request, 'app_user_cibles'),
+            'retour' => $this->contexteRetour->listeDuModule($request, 'app_user_cibles'),
         ]);
     }
 

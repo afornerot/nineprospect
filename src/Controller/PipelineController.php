@@ -60,7 +60,7 @@ class PipelineController extends AbstractController
         $etaitDefaut = false;
 
         $form = $this->createForm(PipelineType::class, $pipeline);
-        $retour = $this->contexteRetour->url($request, 'app_user_pipelines');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_pipelines');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid() && $this->finaliserPipeline($pipeline, $form, $etaitDefaut)) {
             $this->em->persist($pipeline);
@@ -84,7 +84,7 @@ class PipelineController extends AbstractController
     {
         $pipeline = $this->pipelines->find($id);
         if (!$pipeline) {
-            return $this->contexteRetour->redirection($request, 'app_user_pipelines');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_pipelines');
         }
 
         $etaitDefaut = $pipeline->isParDefaut();
@@ -93,7 +93,7 @@ class PipelineController extends AbstractController
         if ($form->isSubmitted() && $form->isValid() && $this->finaliserPipeline($pipeline, $form, $etaitDefaut)) {
             $this->em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_user_pipelines');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_pipelines');
         }
 
         return $this->vueEdition($request, $pipeline, $form);
@@ -104,7 +104,7 @@ class PipelineController extends AbstractController
     {
         $pipeline = $this->pipelines->find($id);
         if (!$pipeline) {
-            return $this->contexteRetour->redirection($request, 'app_user_pipelines');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_pipelines');
         }
 
         if ($pipeline->isParDefaut()) {
@@ -311,7 +311,7 @@ class PipelineController extends AbstractController
             'pipeline' => $pipeline,
             'formEtapes' => $this->formEtapes($pipeline, $formEtapesSoumis),
             'formAjout' => $formAjout,
-            'retour' => $this->contexteRetour->url($request, 'app_user_pipelines'),
+            'retour' => $this->contexteRetour->listeDuModule($request, 'app_user_pipelines'),
         ]);
 
         // Le 422 automatique du contrôleur ne couvre que les formulaires de

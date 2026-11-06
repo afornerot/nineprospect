@@ -44,7 +44,7 @@ class UserController extends AbstractController
         $user = new User();
 
         $form = $this->createForm(UserType::class, $user, ['mode' => 'submit', 'modeAuth' => $this->getParameter('modeAuth')]);
-        $retour = $this->contexteRetour->url($request, 'app_admin_user');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_admin_user');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $user = $form->getData();
@@ -65,7 +65,7 @@ class UserController extends AbstractController
             $em->persist($user);
             $em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_admin_user');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_admin_user');
         }
 
         return $this->renderLayout('user/edit.html.twig', 'Création Utilisateur', [
@@ -81,12 +81,12 @@ class UserController extends AbstractController
     {
         $user = $em->getRepository(User::class)->find($id);
         if (!$user) {
-            return $this->contexteRetour->redirection($request, 'app_admin_user');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_admin_user');
         }
         $hashedPassword = $user->getPassword();
 
         $form = $this->createForm(UserType::class, $user, ['mode' => 'update', 'modeAuth' => $this->getParameter('modeAuth')]);
-        $retour = $this->contexteRetour->url($request, 'app_admin_user');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_admin_user');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $user = $form->getData();
@@ -99,7 +99,7 @@ class UserController extends AbstractController
             $user->setPassword($hashedPassword);
             $em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_admin_user');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_admin_user');
         }
 
         return $this->renderLayout('user/edit.html.twig', 'Modification Utilisateur = '.$user->getUsername(), [
@@ -115,7 +115,7 @@ class UserController extends AbstractController
     {
         $user = $em->getRepository(User::class)->find($id);
         if (!$user) {
-            return $this->contexteRetour->redirection($request, 'app_admin_user');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_admin_user');
         }
 
         return $this->deleteEntity($request, $user, $id, 'delete-user', 'utilisateur', $em, [
@@ -130,12 +130,12 @@ class UserController extends AbstractController
     {
         $user = $em->getRepository(User::class)->find($this->getUser());
         if (!$user) {
-            return $this->contexteRetour->redirection($request, 'app_home');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_dashboard');
         }
         $hashedPassword = $user->getPassword();
 
         $form = $this->createForm(UserType::class, $user, ['mode' => 'profil', 'modeAuth' => $this->getParameter('modeAuth')]);
-        $retour = $this->contexteRetour->url($request, 'app_home');
+        $retour = $this->contexteRetour->listeDuModule($request, 'app_user_dashboard');
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $user = $form->getData();
@@ -149,7 +149,7 @@ class UserController extends AbstractController
 
             $em->flush();
 
-            return $this->contexteRetour->redirection($request, 'app_home');
+            return $this->contexteRetour->redirectionVersListe($request, 'app_user_dashboard');
         }
 
         return $this->render('user/edit.html.twig', [

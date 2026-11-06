@@ -53,7 +53,7 @@ class CibleBulkController extends AbstractController
             'cibles' => $cibles,
             'cibleId' => $cibleId,
             'prospectsHors' => $prospectsHors,
-            'retour' => $this->contexteRetour->url($request, 'app_user_cibles'),
+            'retour' => $this->contexteRetour->listeDuModule($request, 'app_user_cibles'),
         ]);
     }
 

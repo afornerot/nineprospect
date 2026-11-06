@@ -143,6 +143,34 @@ class ContexteRetourTest extends TestCase
         );
     }
 
+    public function testListeDuModuleIgnoreLaPageDUnAutreModule(): void
+    {
+        // Cas réel : formulaire ouvert sans être passé par sa liste
+        // (/user/dashboard puis /admin/user/update/1) — « Annuler » ne doit
+        // pas ramener au tableau de bord mais sur la liste du module.
+        $request = $this->requete('/admin/user/update/1');
+        $this->contexte()->memoriserPage($request, '/user/dashboard', false);
+
+        $this->assertSame(
+            '/admin/user',
+            $this->contexte()->listeDuModule($request, 'app_admin_user'),
+            'Sans liste visitée, on retombe sur la liste du module, jamais sur une page d\'une autre section.',
+        );
+    }
+
+    public function testListeDuModuleGardeLesFiltresDeSaPropreListe(): void
+    {
+        $request = $this->requete('/admin/user/update/1');
+        $this->contexte()->memoriserPage($request, '/user/action-types', true);
+        $this->contexte()->memoriserPage($request, '/admin/user?q=forn', true);
+
+        $this->assertSame(
+            '/admin/user?q=forn',
+            $this->contexte()->listeDuModule($request, 'app_admin_user'),
+            'Le contexte de la liste du module prime sur ceux des autres sections.',
+        );
+    }
+
     public function testRedirectionVersRetombeSurLaRouteDeRepliSiUrlInvalide(): void
     {
         $response = $this->contexte()->redirectionVers('https://evil.example', 'app_fallback');
@@ -177,6 +205,12 @@ class ContexteRetourTest extends TestCase
  */
 final class GenerateurDeRepli implements UrlGeneratorInterface
 {
+    /** Chemins des routes utilisées par les tests (les autres donnent `/repli`). */
+    private const CHEMINS = [
+        'app_admin_user' => '/admin/user',
+        'app_user_action_types' => '/user/action-types',
+    ];
+
     private RequestContext $contexte;
 
     public function __construct()
@@ -189,7 +223,9 @@ final class GenerateurDeRepli implements UrlGeneratorInterface
      */
     public function generate(string $name, array $parameters = [], int $referenceType = self::ABSOLUTE_PATH): string
     {
-        return '/repli'.($parameters ? '?'.http_build_query($parameters) : '');
+        $chemin = self::CHEMINS[$name] ?? '/repli';
+
+        return $chemin.($parameters ? '?'.http_build_query($parameters) : '');
     }
 
     public function setContext(RequestContext $context): void
