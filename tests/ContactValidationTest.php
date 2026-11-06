@@ -291,6 +291,83 @@ class ContactValidationTest extends WebTestCase
         }
     }
 
+    public function testUnSeulContactPrincipalParProspect(): void
+    {
+        $client = $this->loginAsUser();
+        $prospect = $this->unProspect();
+        if (null === $client || null === $prospect) {
+            static::markTestSkipped('Base de test indisponible.');
+        }
+
+        $em = $this->em();
+        $prospectId = (int) $prospect->getId();
+        $crees = [];
+        foreach (['ZZPRINC A', 'ZZPRINC B'] as $nom) {
+            $contact = new Contact();
+            $contact->setNom($nom);
+            $contact->setProspect($prospect);
+            $contact->setEstPrincipal(false);
+            $em->persist($contact);
+            $em->flush();
+            $crees[] = $contact;
+        }
+        [$premier, $second] = $crees;
+
+        $this->promouvoir($client, $premier);
+        $em->clear();
+        $this->assertTrue($this->contacts()->find($premier->getId())?->isEstPrincipal(), 'Le premier contact devient principal.');
+
+        // Promotion du second : l'ancien est démarqué automatiquement.
+        $this->promouvoir($client, $second);
+        $em->clear();
+        $this->assertTrue($this->contacts()->find($second->getId())?->isEstPrincipal());
+        $this->assertFalse(
+            $this->contacts()->find($premier->getId())?->isEstPrincipal(),
+            'Promouvoir un contact démarque le précédent principal.',
+        );
+
+        // Décochage refusé : un principal le reste.
+        $this->soumettre($client, $second, false);
+        $em->clear();
+        $this->assertTrue(
+            $this->contacts()->find($second->getId())?->isEstPrincipal(),
+            'Un contact principal ne peut pas être décoché.',
+        );
+
+        $em->clear();
+        foreach ($crees as $contact) {
+            $recharge = $this->contacts()->find($contact->getId());
+            if ($recharge instanceof Contact) {
+                $this->supprimer($recharge);
+            }
+        }
+    }
+
+    private function promouvoir(KernelBrowser $client, Contact $contact): void
+    {
+        $this->soumettre($client, $contact, true);
+    }
+
+    private function soumettre(KernelBrowser $client, Contact $contact, bool $principal): void
+    {
+        $token = $this->csrfContact($client, null, 'update', (int) $contact->getId());
+        $client->request('POST', '/user/contacts/update/'.$contact->getId(), [
+            'contact' => [
+                'prospect' => (string) $contact->getProspect()?->getId(),
+                'nom' => (string) $contact->getNom(),
+                'prenom' => '',
+                'email' => '',
+                'telephoneBrut' => '',
+                'poste' => '',
+                'linkedinUrl' => '',
+                'estPrincipal' => $principal ? '1' : '',
+                'submit' => 'Valider',
+                '_token' => $token,
+            ],
+        ], [], ['HTTP_ORIGIN' => 'http://localhost']);
+        $this->assertResponseRedirects();
+    }
+
     public function testChampRetourEstChampHiddenDansLeFormulaire(): void
     {
         $client = $this->loginAsUser();

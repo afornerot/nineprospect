@@ -72,6 +72,14 @@ class ContactType extends AbstractType
             ->add('estPrincipal', CheckboxType::class, [
                 'label' => 'Contact principal du prospect',
                 'required' => false,
+                // Le contact principal ne peut pas être retiré : la case est
+                // verrouillée (le champ "disabled" conserve la valeur portée
+                // par l'entité). Pour changer de principal, on coche un autre
+                // contact — la promotion démarque automatiquement l'ancien.
+                'disabled' => (bool) ($options['data'] ?? null)?->isEstPrincipal(),
+                'help' => (bool) ($options['data'] ?? null)?->isEstPrincipal()
+                    ? 'Contact principal actuel : cochez un autre contact de ce prospect pour le remplacer.'
+                    : 'Un seul contact principal par prospect : cocher celui-ci démarque l\'ancien.',
             ])
 
             ->add('retour', HiddenType::class, [

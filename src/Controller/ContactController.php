@@ -80,6 +80,7 @@ class ContactController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->persist($contact);
+            $this->appliquerContactPrincipal($contact);
             $this->em->flush();
 
             return $this->redirectionRetour($form, 'app_user_contacts');
@@ -100,12 +101,23 @@ class ContactController extends AbstractController
             return $this->contexteRetour->redirection($request, 'app_user_contacts');
         }
 
+        $etaitPrincipal = (bool) $contact->isEstPrincipal();
+
         $form = $this->createForm(ContactType::class, $contact);
         $retour = $this->contexteRetour->url($request, 'app_user_contacts');
         $form->get('retour')->setData($retour);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // « Principal » ne se retire pas : le prospect garde toujours son
+            // contact principal (pour en changer, on en promeut un autre).
+            // Le champ est verrouillé côté formulaire, ceci couvre le cas d'une
+            // soumission forgée ou d'un ancien formulaire resté ouvert.
+            if ($etaitPrincipal) {
+                $contact->setEstPrincipal(true);
+            }
+
+            $this->appliquerContactPrincipal($contact);
             $this->em->flush();
 
             return $this->redirectionRetour($form, 'app_user_contacts');
@@ -118,6 +130,21 @@ class ContactController extends AbstractController
             'contact' => $contact,
             'retour' => $retour,
         ]);
+    }
+
+    /**
+     * Applique la règle « au plus un contact principal par prospect » : quand
+     * le contact est (ou devient) principal, les autres contacts du même
+     * prospect sont démarqués.
+     */
+    private function appliquerContactPrincipal(Contact $contact): void
+    {
+        $prospect = $contact->getProspect();
+        if (null === $prospect || !$contact->isEstPrincipal()) {
+            return;
+        }
+
+        $prospect->promouvoirContactPrincipal($contact);
     }
 
     #[Route('/delete/{id}', name: 'app_user_contacts_delete', methods: ['POST'])]

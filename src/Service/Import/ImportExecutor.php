@@ -400,7 +400,7 @@ final class ImportExecutor
             // Si le Contact existe sur un AUTRE Prospect → on en crée un nouveau ici (pour
             // ne pas "voler" un contact à un autre prospect).
             if (null === $existingContact || $existingContact->getProspect()?->getId() !== $prospect->getId()) {
-                $this->createContact($prospect, $row, false);
+                $this->createContact($prospect, $row);
                 ++$result->contactsCreated;
             }
 
@@ -415,22 +415,29 @@ final class ImportExecutor
             return;
         }
 
-        // Nouveau contact (ou contact existant sur un AUTRE prospect → on en crée un nouveau)
-        // 1er contact créé = estPrincipal (cas typique d'un nouveau prospect).
-        $this->createContact($prospect, $row, true);
+        // Nouveau contact (ou contact existant sur un AUTRE prospect → on en crée un nouveau).
+        $this->createContact($prospect, $row);
         ++$result->contactsCreated;
     }
 
-    private function createContact(Prospect $prospect, ImportRow $row, bool $estPrincipal): Contact
+    /**
+     * Crée le contact et le rattache au prospect. Il devient contact principal
+     * seulement si le prospect n'en a encore aucun : quel que soit le nombre de
+     * lignes importées pour un même prospect, un seul contact est principal.
+     */
+    private function createContact(Prospect $prospect, ImportRow $row): Contact
     {
         $contact = new Contact();
-        $contact->setProspect($prospect);
+        // addContact() renseigne le prospect côté propriétaire ET ajoute le
+        // contact à la collection : les lignes suivantes du même groupe voient
+        // ainsi le principal déjà posé et n'en créent pas un second.
+        $prospect->addContact($contact);
         $contact->setNom($row->nom);
         $contact->setPrenom($row->prenom);
         $contact->setEmail($row->email);
         $contact->setPoste($row->fonction);
         $contact->setTelephoneBrut($row->telephoneBrut);
-        $contact->setEstPrincipal($estPrincipal);
+        $contact->setEstPrincipal(null === $prospect->getContactPrincipalMarque());
         $this->em->persist($contact);
 
         return $contact;

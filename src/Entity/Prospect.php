@@ -739,6 +739,9 @@ class Prospect
 
     /**
      * Contact marqué principal ; à défaut le premier de la liste.
+     *
+     * Un prospect a au plus un contact principal : `promouvoirContactPrincipal()`
+     * démarque les autres avant de marquer celui-ci.
      */
     public function getContactPrincipal(): ?Contact
     {
@@ -753,6 +756,40 @@ class Prospect
         }
 
         return null;
+    }
+
+    /**
+     * Contact explicitement marqué principal (sans repli sur le premier de la
+     * liste, contrairement à `getContactPrincipal()`). Sert aux writers qui
+     * doivent savoir si un principal existe déjà.
+     */
+    public function getContactPrincipalMarque(): ?Contact
+    {
+        foreach ($this->contacts as $contact) {
+            if ($contact->isEstPrincipal()) {
+                return $contact;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Marque `$contact` comme contact principal et démarque les autres
+     * (au plus un principal par prospect). Sans effet si le contact
+     * n'appartient pas au prospect : on ne démarque alors rien.
+     */
+    public function promouvoirContactPrincipal(Contact $contact): static
+    {
+        if (!$this->contacts->contains($contact)) {
+            return $this;
+        }
+
+        foreach ($this->contacts as $existant) {
+            $existant->setEstPrincipal($existant === $contact);
+        }
+
+        return $this;
     }
 
     /**
