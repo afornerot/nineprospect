@@ -8,6 +8,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\Service\Attribute\Required;
 
 /**
  * Logique partagée des suppressions admin : validation CSRF + flush + flash
@@ -42,7 +43,7 @@ trait CrudDeleteTrait
             $em->remove($entity);
             $em->flush();
         } catch (\Exception $e) {
-            $this->crudLogger()->error('Suppression '.$entityLabel.' en échec', ['id' => $id, 'exception' => $e]);
+            $this->crudLogger()?->error('Suppression '.$entityLabel.' en échec', ['id' => $id, 'exception' => $e]);
             $this->addFlash('error', $context['conflictMessage'] ?? 'Suppression impossible : erreur technique.');
 
             return $this->redirectAfterDelete($request, $context['list']);
@@ -55,15 +56,22 @@ trait CrudDeleteTrait
         return $this->redirectAfterDelete($request, $context['list']);
     }
 
-    private function crudLogger(): LoggerInterface
+    private ?LoggerInterface $crudLogger = null;
+
+    /**
+     * Journalise l'échec de suppression. `logger` n'est pas exposé par le
+     * locator d'`AbstractController` (absent de `getSubscribedServices()`),
+     * donc `$this->container->get('logger')` échoue : on l'injecte par setter.
+     */
+    #[Required]
+    public function setCrudLogger(LoggerInterface $logger): void
     {
-        $logger = $this->container->get('logger');
+        $this->crudLogger = $logger;
+    }
 
-        if (!$logger instanceof LoggerInterface) {
-            throw new \RuntimeException('Logger indisponible.');
-        }
-
-        return $logger;
+    private function crudLogger(): ?LoggerInterface
+    {
+        return $this->crudLogger;
     }
 
     /**
