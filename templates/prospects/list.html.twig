@@ -106,7 +106,7 @@
                 <th width="90px" class="no-sort">Action</th>
                 <th>Prospect</th>
                 <th width="150px">Contact principal</th>
-                <th width="200px">Catégories</th>
+                <th width="150px">Téléphone</th>
                 <th width="80px">Vague</th>
                 <th>Pipeline</th>
                 <th width="80px">Contacté</th>
@@ -126,6 +126,9 @@
                         </td>
                         <td>
                             <a href="{{ path(routeshow, {id: prospect.id}) }}">{{ prospect.nom }}</a>
+                            {% if prospect.email %}
+                                <br><small class="text-muted"><a href="mailto:{{ prospect.email }}">{{ prospect.email }}</a></small>
+                            {% endif %}
                             {% if prospect.ville or prospect.codePostal or prospect.departement %}
                                 <br><small class="text-muted">{{- prospect.ville -}}
                                     {%- if prospect.codePostal %} ({{ prospect.codePostal }}){% endif -%}
@@ -135,18 +138,15 @@
                         </td>
                         <td>
                             {% if contact %}
-                                {{ contact.nomComplet }}<br><small class="text-muted">{{ contact.email }}</small>
+                                {{ contact.nomComplet }}<br><small class="text-muted">{% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% else %}—{% endif %}</small>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if prospect.categories|length > 0 %}
-                                <div class="d-flex flex-wrap gap-1">
-                                    {% for cat in prospect.categories %}
-                                        <span class="badge text-bg-info">{{ cat.nom }}</span>
-                                    {% endfor %}
-                                </div>
+                            {% set telephone = contact and contact.telephone ? contact.telephone : prospect.telephone %}
+                            {% if telephone %}
+                                <a href="tel:{{ telephone|replace({' ': ''}) }}">{{ telephone }}</a>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}

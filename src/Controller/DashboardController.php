@@ -7,12 +7,11 @@ use App\Entity\Pipeline;
 use App\Entity\User;
 use App\Enum\PipelineStatut;
 use App\Repository\ActionRepository;
-use App\Repository\CampagneRepository;
 use App\Repository\CategoryRepository;
 use App\Repository\CibleRepository;
 use App\Repository\ContactRepository;
-use App\Repository\DepartementRepository;
 use App\Repository\PipelineRepository;
+use App\Repository\ProspectCibleRepository;
 use App\Repository\ProspectRepository;
 use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
@@ -30,8 +29,7 @@ class DashboardController extends AbstractController
         private ProspectRepository $prospects,
         private ContactRepository $contacts,
         private ActionRepository $actions,
-        private CampagneRepository $campagnes,
-        private DepartementRepository $departements,
+        private ProspectCibleRepository $prospectCibles,
         private SprintRepository $sprints,
         private PipelineRepository $pipelines,
         private UserRepository $users,
@@ -73,18 +71,9 @@ class DashboardController extends AbstractController
         $kpiProspects = $this->compteurProspects($user);
         $kpiContacts = $this->compteurContacts($user);
 
-        $campagnes = [];
-        foreach ($this->campagnes->findAllOrdered() as $campagne) {
-            $campagnes['noms'][] = $campagne->getLibelle();
-            $campagnes['totaux'][] = $this->prospects->countByCampagne((int) $campagne->getId(), $userId);
-        }
-
-        $geo = array_slice(array_values(array_filter(
-            null !== $userId
-                ? $this->departements->countProspectsGrouped($userId)
-                : $this->departements->countProspectsGrouped(),
-            static fn (array $ligne) => $ligne['total'] > 0
-        )), 0, 10);
+        $qualifications = $this->prospectCibles->countQualificationsParMoisParCible($userId);
+        $etapesStatuts = $this->pipelines->countStatutsEtapeParMoisParLibelle($userId);
+        $realisees = $this->actions->countRealiseesParMois($userId);
 
         return $this->renderLayout('dashboard/index.html.twig', 'Tableau de bord', [
             'kpi' => [
@@ -106,8 +95,12 @@ class DashboardController extends AbstractController
             'filtreCible' => $filtreCible,
             'categories' => $this->categories->findAllOrdered(),
             'filtreCategorie' => $filtreCategorie,
-            'campagnes' => $campagnes,
-            'geo' => $geo,
+            'moisQualifications' => $qualifications['mois'],
+            'seriesQualifications' => $qualifications['series'],
+            'moisEtapes' => $etapesStatuts['mois'],
+            'seriesEtapes' => $etapesStatuts['series'],
+            'moisRealisees' => $realisees['mois'],
+            'seriesRealisees' => $realisees['series'],
             'retard' => $this->actions->findDue(null, $user),
             'aujourdhui' => $this->actions->findToday(null, $user),
             'avenir' => $this->actions->findUpcoming(null, 50, $user),

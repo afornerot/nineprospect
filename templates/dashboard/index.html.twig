@@ -5,20 +5,22 @@
 {% block body %}
     <h1>{{ title }}</h1>
 
-    <form method="get" action="{{ path('app_user_dashboard') }}" class="d-flex align-items-center gap-2 mb-3">
-        <label for="filtre-utilisateur-dashboard" class="form-label mb-0">Affecté à</label>
-        <select id="filtre-utilisateur-dashboard" name="utilisateur" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-            <option value="">Tous</option>
-            {% for u in utilisateurs %}
-                <option value="{{ u.id }}" {% if utilisateurFiltre == u.id %}selected{% endif %}>{{ u.username }}</option>
-            {% endfor %}
-        </select>
+    <form method="get" action="{{ path('app_user_dashboard') }}" class="d-flex align-items-end gap-3 flex-wrap mb-3">
+        <div>
+            <label for="filtre-utilisateur-dashboard" class="form-label small text-muted mb-1 d-block">Affecté à</label>
+            <select id="filtre-utilisateur-dashboard" name="utilisateur" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                <option value="">Tous</option>
+                {% for u in utilisateurs %}
+                    <option value="{{ u.id }}" {% if utilisateurFiltre == u.id %}selected{% endif %}>{{ u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filtrer</button></noscript>
         <span class="text-muted small"><i class="fas fa-filter"></i> Les KPIs et cartes sont filtrés par l'utilisateur sélectionné.</span>
     </form>
 
     <div class="row g-2">
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="row text-center g-2 mb-2">
                 <div class="col">
                     <div class="card"><div class="card-body">
@@ -78,49 +80,46 @@
             </div>
 
             <div class="card mb-2">
-                <div class="card-header">Leads par campagne</div>
+                <div class="card-header">Pipeline</div>
                 <div class="card-body">
-                    <canvas id="campagneChart" height="220"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card mb-2">
-                <div class="card-header d-flex justify-content-between align-items-center gap-2">
-                    <span>Pipeline</span>
-                    <form method="get" action="{{ path('app_user_dashboard') }}" class="d-flex align-items-center gap-2 flex-wrap">
-                        <label for="filtre-pipeline-pipeline" class="text-muted small mb-0">Pipeline</label>
-                        <select name="pipeline" id="filtre-pipeline-pipeline" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-                            {% for pipeline in pipelines %}
-                                <option value="{{ pipeline.id }}" {% if filtrePipeline == pipeline.id %}selected{% endif %}>{{ pipeline }}</option>
-                            {% endfor %}
-                        </select>
-                        <label for="filtre-sprint-pipeline" class="text-muted small mb-0">Vague</label>
-                        <select name="sprint" id="filtre-sprint-pipeline" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-                            <option value="">Toutes les vagues</option>
-                            {% for sprint in sprints %}
-                                <option value="{{ sprint.id }}" {% if filtreSprint == sprint.id %}selected{% endif %}>{{ sprint }}</option>
-                            {% endfor %}
-                        </select>
-                        <label for="filtre-cible-pipeline" class="text-muted small mb-0">Cible</label>
-                        <select name="cible" id="filtre-cible-pipeline" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-                            <option value="">Toutes les cibles</option>
-                            {% for cible in cibles %}
-                                <option value="{{ cible.id }}" {% if filtreCible == cible.id %}selected{% endif %}>{{ cible.titre }}</option>
-                            {% endfor %}
-                        </select>
-                        <label for="filtre-categorie-pipeline" class="text-muted small mb-0">Catégorie</label>
-                        <select name="categorie" id="filtre-categorie-pipeline" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
-                            <option value="">Toutes les catégories</option>
-                            {% for categorie in categories %}
-                                <option value="{{ categorie.id }}" {% if filtreCategorie == categorie.id %}selected{% endif %}>{{ categorie.nom }}</option>
-                            {% endfor %}
-                        </select>
+                    <form method="get" action="{{ path('app_user_dashboard') }}" class="mb-3">
+                        <div class="mb-2">
+                            <label for="filtre-pipeline-pipeline" class="form-label small text-muted mb-1 d-block">Pipeline</label>
+                            <select name="pipeline" id="filtre-pipeline-pipeline" class="form-select form-select-sm w-100" onchange="this.form.submit()">
+                                {% for pipeline in pipelines %}
+                                    <option value="{{ pipeline.id }}" {% if filtrePipeline == pipeline.id %}selected{% endif %}>{{ pipeline }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label for="filtre-sprint-pipeline" class="form-label small text-muted mb-1 d-block">Vague</label>
+                            <select name="sprint" id="filtre-sprint-pipeline" class="form-select form-select-sm w-100" onchange="this.form.submit()">
+                                <option value="">Toutes les vagues</option>
+                                {% for sprint in sprints %}
+                                    <option value="{{ sprint.id }}" {% if filtreSprint == sprint.id %}selected{% endif %}>{{ sprint }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label for="filtre-cible-pipeline" class="form-label small text-muted mb-1 d-block">Cible</label>
+                            <select name="cible" id="filtre-cible-pipeline" class="form-select form-select-sm w-100" onchange="this.form.submit()">
+                                <option value="">Toutes les cibles</option>
+                                {% for cible in cibles %}
+                                    <option value="{{ cible.id }}" {% if filtreCible == cible.id %}selected{% endif %}>{{ cible.titre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label for="filtre-categorie-pipeline" class="form-label small text-muted mb-1 d-block">Catégorie</label>
+                            <select name="categorie" id="filtre-categorie-pipeline" class="form-select form-select-sm w-100" onchange="this.form.submit()">
+                                <option value="">Toutes les catégories</option>
+                                {% for categorie in categories %}
+                                    <option value="{{ categorie.id }}" {% if filtreCategorie == categorie.id %}selected{% endif %}>{{ categorie.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Filtrer</button></noscript>
                     </form>
-                </div>
-                <div class="card-body">
                     <canvas id="pipelineChart" height="220"></canvas>
                     <p class="text-muted small mb-0 mt-2">
                         {% if filtreSprint %}
@@ -131,19 +130,60 @@
                     </p>
                 </div>
             </div>
+        </div>
 
+        <div class="col-md-5">
             <div class="card mb-2">
-                <div class="card-header">Top départements</div>
+                <div class="card-header">Qualification des prospects</div>
                 <div class="card-body">
-                    <canvas id="geoChart" height="200"></canvas>
+                    <div style="position: relative; height: 235px;">
+                        <canvas id="qualificationChart"></canvas>
+                    </div>
+                    <p class="text-muted small mb-0 mt-2">
+                        Prospects qualifiés (« Oui » ou « Hors cible ») par mois, une courbe par cible.
+                        Un prospect qualifié sur plusieurs cibles apparaît dans chacune ; les
+                        qualifications sans date sont exclues.
+                    </p>
                 </div>
             </div>
+
+            <div class="card mb-2">
+                <div class="card-header">Étape de pipeline des prospects</div>
+                <div class="card-body">
+                    <div style="position: relative; height: 235px;">
+                        <canvas id="etapeChart"></canvas>
+                    </div>
+                    <p class="text-muted small mb-0 mt-2">
+                        Changements de statut par mois, une courbe par étape — tous pipelines
+                        confondus (une étape « Appel » regroupe tous les pipelines qui en ont
+                        une). Tous les statuts sont comptés ; les changements sans date sont exclus.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card mb-2">
+                <div class="card-header">Actions réalisées</div>
+                <div class="card-body">
+                    <div style="position: relative; height: 235px;">
+                        <canvas id="actionChart"></canvas>
+                    </div>
+                    <p class="text-muted small mb-0 mt-2">
+                        Actions clôturées par mois, tous types confondus. Le mois est celui de la
+                        date de réalisation ; le filtre « Affecté à » retient celles que
+                        l'intervenant a réalisées.
+                    </p>
+                </div>
+            </div>
+
         </div>
 
         <div class="col-md-3">
 
             <div class="card mb-2">
-                <div class="card-header">En retard</div>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>En retard</span>
+                    <span class="badge text-bg-danger">{{ kpi.actionsEnRetard }}</span>
+                </div>
                 <ul class="list-group list-group-flush">
                     {% for action in retard %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -160,7 +200,10 @@
             </div>
 
             <div class="card mb-2">
-                <div class="card-header">Aujourd'hui</div>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Aujourd'hui</span>
+                    <span class="badge text-bg-warning">{{ kpi.actionsAujourdhui }}</span>
+                </div>
                 <ul class="list-group list-group-flush">
                     {% for action in aujourdhui %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -177,7 +220,10 @@
             </div>
 
             <div class="card">
-                <div class="card-header">À venir</div>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>À venir</span>
+                    <span class="badge text-bg-secondary">{{ kpi.actionsAVenir }}</span>
+                </div>
                 <ul class="list-group list-group-flush">
                     {% for action in avenir %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -199,8 +245,8 @@
 {% block localscript %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var pipelineLabels = {{ etapes|json_encode|raw }};
-            var pipelineData = {{ donneesPipeline|json_encode|raw }};
+            var pipelineLabels = {{ etapes|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
+            var pipelineData = {{ donneesPipeline|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
             var colors = ['#6c757d', '#0dcaf0', '#ffc107', '#adb5bd', '#198754', '#dc3545'];
 
             new Chart(document.getElementById('pipelineChart'), {
@@ -211,22 +257,62 @@
                 options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } }
             });
 
-            new Chart(document.getElementById('campagneChart'), {
-                type: 'doughnut',
+            var qualificationMois = {{ moisQualifications|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
+            var qualificationSeries = {{ seriesQualifications|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
+            var qualificationCouleurs = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997', '#fd7e14', '#adb5bd'];
+
+            new Chart(document.getElementById('qualificationChart'), {
+                type: 'line',
                 data: {
-                    labels: {{ campagnes.noms|default([])|json_encode|raw }},
-                    datasets: [{ data: {{ campagnes.totaux|default([])|json_encode|raw }}, backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997'] }]
+                    labels: qualificationMois,
+                    datasets: qualificationSeries.map(function(d, i) {
+                        var couleur = qualificationCouleurs[i % qualificationCouleurs.length];
+                        return { label: d.label, data: d.data, borderColor: couleur, backgroundColor: couleur, tension: 0.3, pointRadius: 3 };
+                    })
                 },
-                options: { plugins: { legend: { position: 'bottom' } } }
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
             });
 
-            var geoLabels = {{ geo|map(l => (l.numero ~ ' — ' ~ (l.nom ?: '')))|json_encode|raw }};
-            var geoData = {{ geo|map(l => l.total)|json_encode|raw }};
+            var etapeMois = {{ moisEtapes|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
+            var etapeSeries = {{ seriesEtapes|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
 
-            new Chart(document.getElementById('geoChart'), {
-                type: 'bar',
-                data: { labels: geoLabels, datasets: [{ label: 'Prospects', data: geoData, backgroundColor: '#0d6efd' }] },
-                options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+            new Chart(document.getElementById('etapeChart'), {
+                type: 'line',
+                data: {
+                    labels: etapeMois,
+                    datasets: etapeSeries.map(function(d, i) {
+                        var couleur = qualificationCouleurs[i % qualificationCouleurs.length];
+                        return { label: d.label, data: d.data, borderColor: couleur, backgroundColor: couleur, tension: 0.3, pointRadius: 3 };
+                    })
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+
+            var actionMois = {{ moisRealisees|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
+            var actionSeries = {{ seriesRealisees|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
+
+            new Chart(document.getElementById('actionChart'), {
+                type: 'line',
+                data: {
+                    labels: actionMois,
+                    datasets: actionSeries.map(function(d, i) {
+                        var couleur = qualificationCouleurs[i % qualificationCouleurs.length];
+                        return { label: d.label, data: d.data, borderColor: couleur, backgroundColor: couleur, tension: 0.3, pointRadius: 3 };
+                    })
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
             });
         });
     </script>

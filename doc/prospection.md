@@ -7,7 +7,7 @@ pipeline commercial, sous les routes `/user/*` (firewall `main`, rôle `ROLE_USE
 
 | Module | Routes | Écran |
 |--------|--------|-------|
-| Tableau de bord | `/user/dashboard` | KPIs (prospects, contacts, actions en retard / aujourd'hui / à venir, prospects non contactés, non qualifiés), pipeline, leads par campagne, top départements, actions en retard / aujourd'hui / à venir |
+| Tableau de bord | `/user/dashboard` | KPIs (prospects, contacts, actions en retard / aujourd'hui / à venir, prospects non contactés, non qualifiés), qualification des prospects (courbe mensuelle), pipeline (avec ses filtres), actions en retard / aujourd'hui / à venir |
 | Prospects | `/user/prospects`, `/show/{id}`, `/submit`, `/update/{id}`, `/delete/{id}`, `/verify/{id}`, `/verify/{id}/apply` | Liste filtrée + fiche prospect (contacts, actions, pipeline, carte Mapbox). Vérification des données via Annuaire des Entreprises (data.gouv.fr) avec modale inline |
 | Créer depuis l'Annuaire | `/user/prospects/from-annuaire`, `/from-annuaire/create` | Page dédiée pour créer un prospect en cherchant par SIREN / raison sociale — n'écrase aucun prospect existant |
 | Carte | `/user/carte` | Vue plein écran Mapbox de tous les prospects géolocalisés. Style sélectionnable (Rues / Clair / Sombre / Satellite / Terrain, défaut Clair) |
@@ -31,7 +31,19 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
   (calculées via API Adresse sur autocompletion ou via l'Annuaire des Entreprises).
   - **Contacté** : booléen simple `contacte` (cycle `null → true → false → true`,
     date premier contact syncronisée automatiquement à `true`).
-  - **Qualifié** : `qualifie` nullable (`null` = Non, `true` = Oui, `false` = Hors cible).
+  - **Qualifié** : `qualifie` nullable (`null` = Non, `true` = Oui, `false` = Hors cible),
+    porté par le lien `ProspectCible` (une qualification par couple prospect × cible).
+  - **Audit de la qualification** : `qualifieModifieAt` (datetime) et
+    `qualifieModifiePar` (FK `user`, `SET NULL`) mémorisent la date et l'auteur du
+    dernier **changement effectif** de `qualifie`. Renseignés par
+    `App\EventListener\QualifieModificationListener` (`prePersist` / `preUpdate`
+    Doctrine) : tous les writers passent par `setQualifie()`, donc l'audit est
+    unique. Un enregistrement qui ne change pas la valeur ne réhorodate pas ;
+    un lien créé directement « Oui »/« Hors cible » est daté dès la création.
+    Le retour à « Non » (`null`) **vide** les deux champs : cet état ne porte
+    aucune décision. `qualifieModifiePar` reste `null` pour un changement hors
+    session (import, commande, formulaire public) et s'affiche alors « système ».
+    Affiché sous le titre « Qualifiée par » (fiche, édition, export PDF).
   - **Prochaine action** : `Prospect::getProchaineAction()` calcule l'action planifiée la
     plus proche dans le futur (`datePrevue >= today`, non réalisée).
   - **Dernière action (liste)** : `Prospect::getDerniereAction()` renvoie l'action à
@@ -52,13 +64,25 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
   pipeline figées.
 - `PipelineValeur` : valeur d'une étape pour **un lien prospect↔vague**
   (table `pipeline_valeur`, contrainte unique `(prospect_sprint_id, etape_id)` ;
-  `statut` SMALLINT `App\Enum\PipelineStatut` + `date` nullable). **Stockage creux** :
+  `statut` SMALLINT `App\Enum\PipelineStatut` + `date` nullable + `modifiePar`,
+  FK `user` `SET NULL`). **Stockage creux** :
   la ligne n'est créée que si `statut != NON_DEMARRE` ou `date != null`, sinon elle est
   retirée ; l'absence de ligne se lit `NON_DEMARRE` (`ProspectSprint::statutPour()`).
   **Cycle de statut cliquable** sur la liste et la fiche (`Prospect::cycleEtape()`,
-  `PipelineStatut::suivant()`) : avance `NON_DEMARRE → OUI → NON → EN_COURS → PERDU →
-  A_RELANCER → NON_DEMARRE` ; pose la date du jour à chaque clic et l'efface
-  quand le statut revient à `NON_DEMARRE`.
+  `PipelineStatut::suivant()`) : avance `NON_DEMARRE → A_QUALIFIER → RELANCER →
+  EN_ATTENTE → OUI → NON → NON_DEMARRE` ; pose la date du jour à chaque clic et
+  l'efface quand le statut revient à `NON_DEMARRE`.
+  **Qui et quand** : `date` et `modifiePar` mémorisent le dernier changement de
+  statut. L'auteur est posé par
+  `App\EventListener\PipelineValeurModificationListener` (`prePersist` / `preUpdate`
+  Doctrine), qui ne réagit qu'à un changement effectif de `statut` — éditer la seule
+  date ne resigne pas la valeur. Tous les writers passent par
+  `ProspectSprint::definirStatut()` / `definirValeur()`, l'audit est donc unique et
+  indépendant des contrôleurs. `modifiePar` reste `null` hors session (import,
+  commande) et s'affiche alors comme la date seule. Restitution :
+  `PipelineValeur::dateEtAuteur()` → « 12/03/2024 · alice », utilisé dans la cellule
+  date du tableau de pipeline de la fiche et de l'export PDF, ainsi que dans la
+  réponse JSON du cycle (mise à jour de la cellule après clic).
 - `Contact` : la personne, rattachée à un prospect ; contact principal choisi à l'import.
   Téléphone validé via `libphonenumber` (format E164 stocké, `default_region='FR'`).
 - `Action` : une action de prospection, **soit planifiée** (à faire à une date), **soit réalisée**
@@ -122,15 +146,59 @@ il ne supprime jamais d'enregistrement. Avoir un prospect dans plusieurs vagues 
   Les champs d'un ancien pipeline sont ignorés (`allow_extra_fields`).
 - Fiche prospect : badges des vagues + un tableau de pipeline **par vague** avec
   bouton de cycle cliquable sur chaque étape (badge `js-cycle-etape`).
-- Liste prospects : badges des vagues + pipeline de la vague courante (colonnes = étapes)
-  avec cycle cliquable. Colonne supplémentaire **« Prc Action »** : badge de statut
-  (`En retard / Aujourd'hui / À venir / Réalisée`) + date de l'action de suivi
-  (`Prospect::getDerniereAction()`), lien vers la fiche de l'action.
-- Tableau de bord : sélecteur **Pipeline** ET sélecteur de vague sur le graphe Pipeline
+- Liste prospects : colonnes **Prospect** (email en `mailto:`), **Contact principal**
+  (email en `mailto:`), **Téléphone** (celui du contact principal, à défaut celui du
+  prospect, lien `tel:`), **Vague**, **Pipeline** (une colonne par étape, cycle
+  cliquable), **Contacté**, **Cible**, **Prc Action** (badge de statut
+  `En retard / Aujourd'hui / À venir / Réalisée` + date de l'action de suivi
+  `Prospect::getDerniereAction()`, lien vers la fiche de l'action).
+  La colonne « Catégories » a été retirée de la liste (les catégories restent
+  éditables sur la fiche et filtrées via `/user/prospects?categorie=`).
+- Tableau de bord : pavé **« Qualification des prospects »** au-dessus du graphe
+  Pipeline — une courbe par **cible**, alignée sur les mois communs, du nombre de
+  prospects qualifiés (« Oui » ou « Hors cible »). Un prospect qualifié sur plusieurs
+  cibles apparaît dans chacune ; les qualifications **non datées** et l'état « Non »
+  sont exclus. La série respecte le filtre **Affecté à**, qui porte ici sur
+  **l'auteur du changement de qualification** (`qualifie_modifie_par_id`), et non sur
+  l'affectation commerciale (`prospect_user`) : sélectionner un intervenant montre les
+  décisions qu'il a prises, y compris sur des prospects qu'il n'a pas en portefeuille.
+  Les décisions non signées (import, commande) n'apparaissent que pour « Tous ».
+  Le pavé « Top départements » a été retiré (la répartition reste sur `/user/geographie`).
+  Le pavé **« Leads par campagne »** a été retiré du tableau de bord (le détail reste sur
+  `/user/campagnes`, colonne « Prospects »).
+  Le graphe **Pipeline** occupe la carte en bas de la colonne de gauche (colonne KPIs,
+  `col-md-4`), avec ses quatre filtres empilés **au-dessus** du graphe. Chaque filtre est
+  un couple libellé au-dessus / champ en dessous (le libellé porte `d-block`) : il ne peut
+  plus se retrouver seul en fin de ligne comme dans l'ancien en-tête en `flex-wrap`.
+  Le filtre global **Affecté à** suit la même règle. Colonnes : 4 (KPIs + Pipeline),
+  5 (Qualification des prospects), 3 (actions du jour).
+  Le graphe Pipeline conserve son sélecteur **Pipeline** ET son sélecteur de vague
   (défaut « Toutes les vagues » ; un prospect présent dans plusieurs vagues est compté
   dans chacune). Les libellés de séries sont les **noms d'étapes** du pipeline choisi.
   Le pipeline par défaut (`par_defaut=1`) est sélectionné automatiquement s'il n'y a pas
   de query param `?pipeline=`.
+  Sous « Qualification des prospects », le pavé **« Étape de pipeline des prospects »**
+  trace une courbe par **libellé d'étape**, tous pipelines confondus : l'étape « Appel »
+  du pipeline par défaut, d'« Essai » ou d'« EOLE » alimente la même série. Le
+  regroupement se fait sur la clé normalisée du libellé (`App\Service\Normalizer\LabelKey`,
+  casse/accents/ponctuation ignorés, partagée avec `CompanyKey`) ; le libellé affiché est
+  la forme la plus fréquente du groupe, indépendamment de l'utilisateur sélectionné.
+  Comptage : `PipelineRepository::countStatutsEtapeParMoisParLibelle()` compte les
+  `pipeline_valeur` **datées**, quel que soit le statut, dans le mois de leur date. Comme
+  la table ne conserve qu'une ligne par couple prospect↔vague↔étape, il s'agit de la
+  **valeur courante** de chaque étape : deux changements dans le même mois ne comptent
+  qu'une fois, et c'est le mois du dernier qui compte. Les valeurs sans date (antérieures
+  à l'audit) sont exclues, comme pour la qualification. Le filtre **Affecté à** restreint
+  à l'auteur du changement (`modifie_par_id`), sur le même principe que la qualification.
+  Sous ce pavé, la carte **« Actions réalisées »** trace le nombre de clôtures
+  par mois (`ActionRepository::countRealiseesParMois()`), tous types confondus. Le
+  mois est celui de `dateRealisee` ; les actions planifiées non clôturées n'entrent
+  pas. Le filtre **Affecté à** retient l'auteur de la clôture (`realise_par_user_id`),
+  même sémantique que les deux pavés ci-dessus ; les clôtures non signées n'apparaissent
+  que pour « Tous ».
+  Les en-têtes des cartes **En retard / Aujourd'hui / À venir** portent leur compteur
+  en badge (`kpi.actionsEnRetard / actionsAujourdhui / actionsAVenir`, mêmes requêtes
+  que les KPI), pour distinguer une liste tronquée d'une liste vide.
 - Import : les colonnes `Visio/Demo/Devis/Signature` du CSV sont associées aux étapes
   **par nom normalisé** (accents/espaces/casse ignorés) ; une colonne sans étape
   correspondante produit une anomalie.
@@ -516,12 +584,16 @@ docker compose exec -T nineprospect php bin/console lint:twig templates
 docker compose exec -T nineprospect php vendor/bin/phpunit
 ```
 
-Le projet vise **203 tests verts** (8 skipped quand la base de test n'est pas
+Le projet vise **221 tests verts** (8 skipped quand la base de test n'est pas
 disponible) couvrant : prospection, contacts, CRUD générique, contexte de
 retour (`tests/Http/ContexteRetourTest.php`,
 `tests/RetourNavigationTest.php`), affectation en masse des vagues
 (`tests/VaguesBulkTest.php`), agenda, agenda CSRF/déplacement,
-AnnuaireEntreprises, AdresseApi, services, etc.
+AnnuaireEntreprises, AdresseApi, services, audit de la qualification
+(`tests/QualificationAuditTest.php`), audit des étapes de pipeline
+(`tests/PipelineAuditTest.php`) et leurs pavés de tableau de bord
+(`tests/DashboardQualificationTest.php`, `tests/DashboardEtapesPipelineTest.php`,
+`tests/DashboardActionsRealiseesTest.php`), etc.
 
 ## Base de test
 

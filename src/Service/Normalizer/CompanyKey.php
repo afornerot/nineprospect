@@ -30,23 +30,7 @@ final class CompanyKey
 
     public static function for(string $libelle): string
     {
-        $valeur = mb_strtolower(trim($libelle));
-        if ('' === $valeur) {
-            return '';
-        }
-
-        if (class_exists(\Normalizer::class)) {
-            $sansAccents = \Normalizer::normalize($valeur, \Normalizer::FORM_KD);
-            if (is_string($sansAccents)) {
-                $valeur = $sansAccents;
-                $valeur = preg_replace('/\p{Mn}/u', '', $valeur) ?? $valeur;
-            }
-        }
-
-        $valeur = mb_strtolower($valeur);
-        $valeur = preg_replace('/[^a-z0-9]+/', ' ', $valeur) ?? $valeur;
-
-        return trim(preg_replace('/\s+/', ' ', $valeur) ?? $valeur);
+        return LabelKey::for($libelle);
     }
 
     /**

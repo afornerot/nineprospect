@@ -210,13 +210,13 @@
                                     {% if lien.sprint.pipeline %}
                                         {% for etape in lien.sprint.pipeline.etapes %}
                                             {% set valeur = lien.statutPour(etape) %}
-                                            {% set dateEtape = lien.datePour(etape) %}
+                                            {% set ligne = lien.valeurPour(etape) %}
                                             <tr>
                                                 <td>{{ etape.nom }}</td>
                                                 <td>
                                                     <button type="button" class="badge text-bg-{{ pipeline_color(valeur) }} js-cycle-etape" data-prospect="{{ prospect.id }}" data-etape="{{ etape.id }}" data-csrf="{{ csrf_token('cycle-etape-prospect-' ~ prospect.id) }}" title="{{ pipeline_label(valeur) }}" data-update-date="1">{{ pipeline_label(valeur) }}</button>
                                                 </td>
-                                                <td>{{ dateEtape ? dateEtape|date('d/m/Y') : '—' }}</td>
+                                                <td>{{ ligne ? ligne.dateEtAuteur : '—' }}</td>
                                             </tr>
                                         {% endfor %}
                                     {% else %}
@@ -238,9 +238,10 @@
                         <table class="table table-sm table-striped mb-0">
                             <thead>
                                 <tr>
-                                    <th style="width: 30%">Cible</th>
+                                    <th style="width: 25%">Cible</th>
                                     <th style="width: 15%">Qualifié</th>
-                                    <th style="width: 55%">Qualification</th>
+                                    <th style="width: 30%">Qualification</th>
+                                    <th style="width: 30%">Qualifiée par</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -251,6 +252,14 @@
                                             <button type="button" class="badge text-bg-{{ qualifie_color(pc.qualifie) }} js-cycle-cible" data-prospect="{{ prospect.id }}" data-cible="{{ pc.cible.id }}" data-csrf="{{ csrf_token('toggle-cible-prospect-' ~ prospect.id ~ '-' ~ pc.cible.id) }}" title="{{ qualifie_label(pc.qualifie) }}">{{ qualifie_label(pc.qualifie) }}</button>
                                         </td>
                                         <td>{{ pc.qualification ?: '—' }}</td>
+                                        <td>
+                                            {% if pc.qualifieModifieAt %}
+                                                {{ pc.qualifieModifiePar ? pc.qualifieModifiePar.username : 'système' }}
+                                                <span class="text-muted">le {{ pc.qualifieModifieAt|date('d/m/Y H:i') }}</span>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

@@ -153,6 +153,13 @@
                                                             <button type="submit" class="btn btn-sm btn-primary w-100" title="Enregistrer"><i class="fa-solid fa-floppy-disk"></i></button>
                                                         </div>
                                                     </div>
+                                                    <div class="form-text">
+                                                        {% if formCible.vars.data.qualifieModifieAt %}
+                                                            Qualifiée par {{ formCible.vars.data.qualifieModifiePar ? formCible.vars.data.qualifieModifiePar.username : 'système' }} le {{ formCible.vars.data.qualifieModifieAt|date('d/m/Y H:i') }}
+                                                        {% else %}
+                                                            Qualification jamais modifiée.
+                                                        {% endif %}
+                                                    </div>
                                                 </form>
                                             </td>
                                             <td style="vertical-align: middle">

@@ -161,6 +161,58 @@ class ActionRepository extends ServiceEntityRepository
     }
 
     /**
+     * Actions réalisées par mois, tous types confondus.
+     *
+     * Le mois retenu est celui de `dateRealisee` (date effective de clôture) ;
+     * les actions planifiées mais non clôturées n'entrent pas. Le filtre
+     * utilisateur porte sur `realisePar` — l'auteur de la clôture — et non sur
+     * `aFairePar` (l'affectation initiale) : c'est la même sémantique que les
+     * pavés de qualification et d'étapes de pipeline du tableau de bord.
+     *
+     * @param int|null $userId restreint à l'auteur de la réalisation
+     *
+     * @return array{
+     *     mois: list<string>,
+     *     series: list<array{label: string, data: list<int>}>
+     * } « mois » = clés « YYYY-MM » triées, « series[i].data » aligné sur « mois »
+     */
+    public function countRealiseesParMois(?int $userId = null): array
+    {
+        $qb = $this->createQueryBuilder('a')
+            ->select('a.dateRealisee AS realisee')
+            ->where('a.dateRealisee IS NOT NULL');
+
+        if (null !== $userId) {
+            $qb->andWhere('a.realisePar = :auteur')->setParameter('auteur', $userId);
+        }
+
+        /** @var array<string, int> $compteurs */
+        $compteurs = [];
+        foreach ($qb->getQuery()->getArrayResult() as $ligne) {
+            $realisee = $ligne['realisee'];
+            if (!$realisee instanceof \DateTimeInterface) {
+                $realisee = new \DateTime((string) $realisee);
+            }
+
+            $cle = $realisee->format('Y-m');
+            $compteurs[$cle] = ($compteurs[$cle] ?? 0) + 1;
+        }
+
+        $cles = array_keys($compteurs);
+        sort($cles);
+
+        $donnees = [];
+        foreach ($cles as $cle) {
+            $donnees[] = $compteurs[$cle];
+        }
+
+        return [
+            'mois' => $cles,
+            'series' => [] === $cles ? [] : [['label' => 'Actions réalisées', 'data' => $donnees]],
+        ];
+    }
+
+    /**
      * Actions visibles sur l'agenda dans une fenêtre de dates.
      * Inclut :
      *  - les planifiées à venir dans la fenêtre (datePrevue ∈ [start, end[)

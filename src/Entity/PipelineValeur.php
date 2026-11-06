@@ -35,6 +35,15 @@ class PipelineValeur
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTime $date = null;
 
+    /**
+     * Auteur du dernier changement de statut de l'étape (null pour une
+     * modification hors session : import, commande). Posé par
+     * App\EventListener\PipelineValeurModificationListener.
+     */
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'modifie_par_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?User $modifiePar = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -86,5 +95,32 @@ class PipelineValeur
         $this->date = $date;
 
         return $this;
+    }
+
+    public function getModifiePar(): ?User
+    {
+        return $this->modifiePar;
+    }
+
+    public function setModifiePar(?User $modifiePar): static
+    {
+        $this->modifiePar = $modifiePar;
+
+        return $this;
+    }
+
+    /**
+     * Date et auteur sous forme affichable : « 12/03/2024 · alice », ou
+     * seulement la date si l'auteur est inconnu, « — » sans date.
+     */
+    public function dateEtAuteur(): string
+    {
+        if (null === $this->date) {
+            return '—';
+        }
+
+        return null !== $this->modifiePar
+            ? $this->date->format('d/m/Y').' · '.$this->modifiePar->getUsername()
+            : $this->date->format('d/m/Y');
     }
 }

@@ -70,6 +70,7 @@
                 <th>Cible</th>
                 <th>Qualifié</th>
                 <th>Qualification</th>
+                <th>Qualifiée par</th>
             </tr>
         </thead>
         <tbody>
@@ -78,6 +79,13 @@
                 <td>{{ pc.cible ? pc.cible.titre : '—' }}</td>
                 <td>{{ qualifie_label(pc.qualifie) }}</td>
                 <td>{{ pc.qualification ?: '—' }}</td>
+                <td>
+                    {% if pc.qualifieModifieAt %}
+                        {{ pc.qualifieModifiePar ? pc.qualifieModifiePar.username : 'système' }} le {{ pc.qualifieModifieAt|date('d/m/Y H:i') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -101,11 +109,11 @@
         <tbody>
             {% for etape in lien.sprint.pipeline.etapes %}
             {% set valeur = lien.statutPour(etape) %}
-            {% set dateEtape = lien.datePour(etape) %}
+            {% set ligne = lien.valeurPour(etape) %}
             <tr>
                 <td>{{ etape.nom }}</td>
                 <td>{{ pipeline_label(valeur) }}</td>
-                <td>{{ dateEtape ? dateEtape|date('d/m/Y') : '—' }}</td>
+                <td>{{ ligne ? ligne.dateEtAuteur : '—' }}</td>
             </tr>
             {% endfor %}
         </tbody>

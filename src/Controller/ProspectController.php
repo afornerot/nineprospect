@@ -598,7 +598,7 @@ class ProspectController extends AbstractController
             'statut' => $suivant,
             'label' => PipelineStatut::label($suivant),
             'color' => $this->pipelineColor($suivant),
-            'date' => $lien->datePour($etape)?->format('d/m/Y'),
+            'date' => $lien->valeurPour($etape)?->dateEtAuteur(),
         ]);
     }
 
