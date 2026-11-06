@@ -125,25 +125,6 @@ docker compose exec -T nineprospect php bin/console doctrine:schema:update --for
 # 3. (optionnel) importer un nouveau fichier via l'écran /user/produits/import
 ```
 
-### Renommage de vocabulaire (cible → produit, catégorie → cible) — historique
-
-Renommer deux entités qui échangent leur nom (`cible` → `produit`, `category`
-→ `cible`) ne peut pas passer par `schema:update` : Doctrine voit deux
-créations et deux disparitions, et **DROPpe** `category` / `prospect_category`
-avec leurs données.
-
-La bascule a été faite **une seule fois**, en novembre 2026, par un script SQL
-jetable (renommage des tables, colonnes, index et contraintes, `id` conservés)
-exécuté **avant** le `schema:update`, qui n'a ensuite eu aucun changement à
-appliquer. Le script n'est plus dans le dépôt : les environnements sont tous
-migrés. Un environnement créé depuis zéro n'en a pas besoin, le mapping
-Doctrine actuel décrivant directement `produit` / `cible`.
-
-En cas de restauration d'une sauvegarde **antérieure** à cette date, il faut
-soit restaurer puis renommer les tables à la main, soit repartir de zéro :
-restaurer un dump ancien puis lancer `schema:update --force` détruirait
-`category` et `prospect_category`.
-
 Pour une correction ponctuelle de **données** (jamais de schéma) : `UPDATE` SQL
 direct autorisé. Exemple historique : réaligner `pipeline.par_defaut=1` sur le
 vrai « Pipeline par défaut » (id=1) :
