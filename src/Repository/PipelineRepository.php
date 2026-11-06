@@ -48,7 +48,11 @@ class PipelineRepository extends ServiceEntityRepository
     }
 
     /**
-     * Nombre de valeurs enregistrées sur une étape (bloque sa suppression).
+     * Nombre de valeurs **cohérentes** enregistrées sur une étape : celles
+     * dont la vague utilise bien le pipeline de l'étape. Les valeurs
+     * incohérentes (étape d'un ancien pipeline, laissées par un changement de
+     * pipeline de la vague) ne bloquent pas la suppression : elles sont
+     * invisibles dans l'UI et purgées par `purgerValeursIncoherentes()`.
      *
      * @param array<int> $etapeIds
      */
@@ -61,10 +65,35 @@ class PipelineRepository extends ServiceEntityRepository
         return (int) $this->getEntityManager()->createQueryBuilder()
             ->select('COUNT(v.id)')
             ->from(PipelineValeur::class, 'v')
+            ->innerJoin('v.etape', 'e')
+            ->innerJoin('v.prospectSprint', 'ps')
+            ->innerJoin('ps.sprint', 's')
             ->where('v.etape IN (:ids)')
+            ->andWhere('e.pipeline = s.pipeline')
             ->setParameter('ids', $etapeIds)
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /**
+     * Supprime les valeurs dont l'étape n'appartient pas au pipeline de leur
+     * vague (données laissées par un changement de pipeline de la vague).
+     *
+     * @param array<int> $etapeIds
+     */
+    public function purgerValeursIncoherentes(array $etapeIds): int
+    {
+        if ([] === $etapeIds) {
+            return 0;
+        }
+
+        return (int) $this->getEntityManager()->createQueryBuilder()
+            ->delete(PipelineValeur::class, 'v')
+            ->where('v.etape IN (:ids)')
+            ->andWhere('v.id IN (SELECT v2.id FROM App\Entity\PipelineValeur v2 INNER JOIN v2.etape e2 INNER JOIN v2.prospectSprint ps2 INNER JOIN ps2.sprint s2 WHERE e2.pipeline <> s2.pipeline)')
+            ->setParameter('ids', $etapeIds)
+            ->getQuery()
+            ->execute();
     }
 
     /**

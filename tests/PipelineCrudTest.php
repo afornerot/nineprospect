@@ -207,6 +207,95 @@ class PipelineCrudTest extends WebTestCase
     }
 
     /**
+     * Une étape dont les seules valeurs viennent d'un ancien pipeline de la
+     * vague (données invisibles dans l'UI) doit pouvoir être supprimée : ces
+     * valeurs sont purgées au passage, elles ne bloquent plus la FK.
+     */
+    public function testEtapeAvecValeursOrphelinesEstSupprimable(): void
+    {
+        $client = $this->loginAsUser();
+        if (null === $client) {
+            static::markTestSkipped('Base de données de test indisponible.');
+        }
+
+        $em = $this->em();
+        $suffixe = uniqid();
+
+        // Deux pipelines : la vague pointe sur `$actuel`, les valeurs portent
+        // une étape de `$ancien`.
+        $ancien = (new Pipeline())->setNom('ZZTEST ancien '.$suffixe);
+        $actuel = (new Pipeline())->setNom('ZZTEST actuel '.$suffixe);
+        $em->persist($ancien);
+        $em->persist($actuel);
+        $em->flush();
+
+        $etape = (new PipelineEtape())->setNom('ZZTEST orpheline '.$suffixe)->setOrdre(1);
+        $ancien->addEtape($etape);
+
+        $sprint = (new \App\Entity\Sprint())
+            ->setNumero($this->numeroLibre())
+            ->setPipeline($actuel);
+        $em->persist($sprint);
+
+        $prospect = (new \App\Entity\Prospect())->setNom('ZZTEST orphelin '.$suffixe);
+        $em->persist($prospect);
+        $em->flush();
+
+        $lien = new \App\Entity\ProspectSprint();
+        $lien->setProspect($prospect);
+        $lien->setSprint($sprint);
+        $em->persist($lien);
+        $em->flush();
+
+        // Valeur incohérente : étape de `$ancien` sur un lien de `$actuel`.
+        $valeur = new \App\Entity\PipelineValeur();
+        $valeur->setProspectSprint($lien);
+        $valeur->setEtape($etape);
+        $valeur->setStatut(\App\Enum\PipelineStatut::REALISE);
+        $em->persist($valeur);
+        $em->flush();
+
+        $idAncien = (int) $ancien->getId();
+        $idEtape = (int) $etape->getId();
+
+        $client->request('POST', '/user/pipelines/'.$idAncien.'/etapes/delete/'.$idEtape, [
+            '_csrf_token' => $this->csrfSurPage(
+                $client,
+                '/user/pipelines/update/'.$idAncien,
+                'form.delete-button[action$="/etapes/delete/'.$idEtape.'"] input[name="_csrf_token"]'
+            ),
+        ], [], ['HTTP_ORIGIN' => 'http://localhost']);
+
+        $this->assertResponseRedirects('/user/pipelines/update/'.$idAncien);
+
+        $em->clear();
+        $this->assertNull($em->find(PipelineEtape::class, $idEtape), 'L\'étape ne doit plus exister.');
+        $this->assertNull($em->find(\App\Entity\PipelineValeur::class, (int) $valeur->getId()), 'La valeur orpheline est purgée.');
+
+        // Nettoyage.
+        $em->clear();
+        foreach ([$prospect, $sprint, $actuel, $ancien] as $entite) {
+            $recharge = $em->find($entite::class, $entite->getId());
+            if (null !== $recharge) {
+                $em->remove($recharge);
+            }
+        }
+        $em->flush();
+    }
+
+    private function numeroLibre(): int
+    {
+        $em = $this->em();
+        $max = (int) $em->createQueryBuilder()
+            ->select('MAX(s.numero)')
+            ->from(\App\Entity\Sprint::class, 's')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $max + 1;
+    }
+
+    /**
      * Relecture fraîche d'un pipeline : purge l'identité map de l'EntityManager
      * courant avant de relire. Le noyau étant redémarré entre deux requêtes
      * cliente, le repository obtenu au début du test peut appartenir à un

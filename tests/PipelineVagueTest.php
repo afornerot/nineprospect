@@ -33,7 +33,7 @@ class PipelineVagueTest extends WebTestCase
         $client->request('POST', '/user/prospects/submit', [
             'prospect' => [
                 'nom' => 'ZZTEST sans vague',
-                'etape'.$etapes[0]->getId() => PipelineStatut::OUI,
+                'etape'.$etapes[0]->getId() => PipelineStatut::REALISE,
                 'submit' => 'Valider',
                 '_token' => $token,
             ],
@@ -62,8 +62,8 @@ class PipelineVagueTest extends WebTestCase
             'prospect' => [
                 'nom' => 'ZZTEST pipeline vague',
                 'sprints' => [$premiere->getId(), $seconde->getId()],
-                'etape'.$etapes[0]->getId() => PipelineStatut::OUI,
-                'etape'.$etapes[1]->getId() => PipelineStatut::RELANCER,
+                'etape'.$etapes[0]->getId() => PipelineStatut::REALISE,
+                'etape'.$etapes[1]->getId() => PipelineStatut::EN_COURS,
                 'submit' => 'Valider',
                 '_token' => $token,
             ],
@@ -78,13 +78,13 @@ class PipelineVagueTest extends WebTestCase
         $courant = $prospect->vagueCourante();
         $this->assertNotNull($courant);
         $this->assertSame($seconde->getId(), $courant->getSprint()?->getId());
-        $this->assertSame(PipelineStatut::OUI, $courant->statutPour($etapes[0]));
-        $this->assertSame(PipelineStatut::RELANCER, $courant->statutPour($etapes[1]));
+        $this->assertSame(PipelineStatut::REALISE, $courant->statutPour($etapes[0]));
+        $this->assertSame(PipelineStatut::EN_COURS, $courant->statutPour($etapes[1]));
         $this->assertNull($courant->datePour($etapes[0]));
 
         $premierLien = $prospect->lienPour($premiere);
         $this->assertNotNull($premierLien);
-        $this->assertSame(PipelineStatut::NON_DEMARRE, $premierLien->statutPour($etapes[0]));
+        $this->assertSame(PipelineStatut::A_FAIRE, $premierLien->statutPour($etapes[0]));
 
         $this->supprimer($prospect);
     }
@@ -362,6 +362,120 @@ class PipelineVagueTest extends WebTestCase
         $this->assertNull($this->sprints()->find($idVague));
     }
 
+
+    /**
+     * Bascule de pipeline d'une vague : les valeurs de statut saisies sur
+     * l'ancien pipeline ne disparaissent pas en silence. Sans confirmation,
+     * l'enregistrement est refusé ; avec, elles sont supprimées.
+     */
+    public function testBasculePipelineExigeConfirmationAvantPurge(): void
+    {
+        $client = $this->loginAsUser();
+        if (null === $client) {
+            static::markTestSkipped('Base de données de test indisponible.');
+        }
+
+        $em = $this->em();
+        $suffixe = uniqid();
+
+        $pipelineA = (new \App\Entity\Pipeline())->setNom('ZZTEST vagueA '.$suffixe);
+        $pipelineB = (new \App\Entity\Pipeline())->setNom('ZZTEST vagueB '.$suffixe);
+        $em->persist($pipelineA);
+        $em->persist($pipelineB);
+        $em->flush();
+
+        $etapeA = (new PipelineEtape())->setNom('ZZTEST etapeA '.$suffixe)->setOrdre(1);
+        $pipelineA->addEtape($etapeA);
+        $etapeB = (new PipelineEtape())->setNom('ZZTEST etapeB '.$suffixe)->setOrdre(1);
+        $pipelineB->addEtape($etapeB);
+
+        $numero = $this->numeroLibre();
+        if (null === $numero) {
+            static::markTestSkipped('Base de données de test indisponible.');
+        }
+        $sprint = (new Sprint())->setNumero($numero)->setPipeline($pipelineA)->setLibelle('ZZTEST bascule');
+        $em->persist($sprint);
+
+        $prospect = (new Prospect())->setNom('ZZTEST bascule '.$suffixe);
+        $em->persist($prospect);
+        $em->flush();
+
+        $lien = new \App\Entity\ProspectSprint();
+        $lien->setProspect($prospect);
+        $lien->setSprint($sprint);
+        $em->persist($lien);
+        $em->flush();
+        $lien->definirStatut($etapeA, PipelineStatut::REALISE);
+        $em->flush();
+
+        $idSprint = (int) $sprint->getId();
+        $fiche = '/user/vagues/update/'.$idSprint;
+        $champs = [
+            'numero' => $numero,
+            'libelle' => 'ZZTEST bascule',
+            'dateDebut' => '',
+            'dateFin' => '',
+            'notes' => '',
+            'submit' => 'Valider',
+        ];
+        $compter = static function () use ($em, $etapeA): int {
+            return (int) $em->createQueryBuilder()->select('COUNT(v.id)')
+                ->from(\App\Entity\PipelineValeur::class, 'v')
+                ->where('v.etape = :etape')->setParameter('etape', $etapeA)
+                ->getQuery()->getSingleScalarResult();
+        };
+
+        // Sans confirmation : refus, rien n'est supprimé.
+        $token = $this->csrfVague($client, $fiche);
+        $client->request('POST', $fiche, [
+            'sprint' => $champs + ['pipeline' => $pipelineB->getId(), '_token' => $token],
+        ], [], ['HTTP_ORIGIN' => 'http://localhost']);
+
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertStringContainsString('Cette vague porte 1 valeur(s) de statut', (string) $client->getResponse()->getContent());
+        $em->clear();
+        $this->assertSame(1, $compter(), 'Aucune valeur n\'est supprimée sans confirmation.');
+        $this->assertSame(
+            (int) $pipelineA->getId(),
+            (int) $this->sprints()->find($idSprint)?->getPipeline()?->getId(),
+            'Le pipeline reste inchangé sans confirmation.',
+        );
+
+        // Avec confirmation : bascule effective et valeurs purgées.
+        $token = $this->csrfVague($client, $fiche);
+        $client->request('POST', $fiche, [
+            'sprint' => $champs + [
+                'pipeline' => $pipelineB->getId(),
+                'purgerValeurs' => '1',
+                '_token' => $token,
+            ],
+        ], [], ['HTTP_ORIGIN' => 'http://localhost']);
+
+        $this->assertResponseRedirects('/user/vagues');
+        $em->clear();
+        $vague = $this->sprints()->find($idSprint);
+        $this->assertSame((int) $pipelineB->getId(), (int) $vague?->getPipeline()?->getId());
+        $this->assertSame(0, $compter(), 'Les valeurs de l\'ancien pipeline sont supprimées après confirmation.');
+
+        // Nettoyage.
+        $em->clear();
+        $recharge = $em->find(Prospect::class, $prospect->getId());
+        if (null !== $recharge) {
+            $em->remove($recharge);
+        }
+        $vague = $em->find(Sprint::class, $idSprint);
+        if (null !== $vague) {
+            $em->remove($vague);
+        }
+        $em->flush();
+        foreach ([$pipelineA, $pipelineB] as $pipeline) {
+            $recharge = $em->find(\App\Entity\Pipeline::class, $pipeline->getId());
+            if (null !== $recharge) {
+                $em->remove($recharge);
+            }
+        }
+        $em->flush();
+    }
     private function loginAsUser(): ?KernelBrowser
     {
         $client = static::createClient();

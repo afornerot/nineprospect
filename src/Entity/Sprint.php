@@ -90,11 +90,50 @@ class Sprint
         return $this->pipeline;
     }
 
+    /**
+     * Affecte le pipeline de la vague. Aucun effet de bord : les valeurs
+     * saisies restent en base et deviennent incohérentes si elles portent sur
+     * des étapes de l'ancien pipeline. Le contrôleur demande confirmation
+     * avant de les purger (`Sprint::purgerValeursHorsPipeline()`).
+     */
     public function setPipeline(?Pipeline $pipeline): static
     {
         $this->pipeline = $pipeline;
 
         return $this;
+    }
+
+    /**
+     * Nombre de valeurs saisies sur des étapes qui n'appartiennent pas au
+     * pipeline donné (par défaut celui de la vague). Passer le pipeline cible
+     * mesure ce qu'une bascule ferait perdre, avant de l'appliquer.
+     */
+    public function compterValeursHorsPipeline(?Pipeline $pipeline = null): int
+    {
+        $total = 0;
+        foreach ($this->liens as $lien) {
+            $total += $lien->compterValeursHorsPipeline($pipeline);
+        }
+
+        return $total;
+    }
+
+    /**
+     * Supprime les valeurs saisies sur des étapes hors du pipeline donné (par
+     * défaut celui de la vague). Opération destructive, à n'appeler qu'après
+     * confirmation explicite.
+     */
+    public function purgerValeursHorsPipeline(?Pipeline $pipeline = null): int
+    {
+        $total = 0;
+        foreach ($this->liens as $lien) {
+            foreach ($lien->valeursHorsPipeline($pipeline) as $valeur) {
+                $lien->getValeurs()->removeElement($valeur);
+                ++$total;
+            }
+        }
+
+        return $total;
     }
 
     public function getDateDebut(): ?\DateTime

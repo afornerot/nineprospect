@@ -180,6 +180,15 @@ class PipelineController extends AbstractController
             return $this->redirectToRoute('app_user_pipelines_update', ['id' => $pipeline->getId()]);
         }
 
+        // Les valeurs rattachées à une étape hors du pipeline de leur vague
+        // sont invisibles dans l'UI (la fiche n'itère que sur le pipeline
+        // courant) : elles ne doivent pas bloquer la suppression, on les purge
+        // d'abord. Les valeurs réellement utilisées, elles, bloquent toujours.
+        $identifiants = [(int) $etape->getId()];
+        if (0 === $this->pipelines->countValeurs($identifiants)) {
+            $this->pipelines->purgerValeursIncoherentes($identifiants);
+        }
+
         return $this->deleteEntity($request, $etape, $id, 'delete-pipeline-etape', 'etapes de pipeline', $this->em, [
             'list' => 'app_user_pipelines',
             'update' => 'app_user_pipelines_update',

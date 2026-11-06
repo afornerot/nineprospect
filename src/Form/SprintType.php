@@ -9,6 +9,7 @@ use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
@@ -65,6 +66,22 @@ class SprintType extends AbstractType
                 'required' => false,
                 'attr' => ['rows' => 4],
             ]);
+
+        // Bascule de pipeline : les valeurs saisies sur les étapes de l'ancien
+        // pipeline ne sont plus affichées nulle part. Leur suppression n'est
+        // faite qu'après cette confirmation explicite (jamais silencieuse).
+        // La case reste toujours active : le nombre de valeurs menacées dépend
+        // du pipeline choisi dans le formulaire, il n'est donc connu qu'à la
+        // soumission (et rappelé dans le message d'erreur le cas échéant).
+        if ($options['afficherProspects']) {
+            $builder->add('purgerValeurs', CheckboxType::class, [
+                'label' => 'Supprimer les valeurs de statut saisies sur les étapes de l\'ancien pipeline',
+                'help' => 'À cocher si vous changez le pipeline : ces valeurs deviendraient invisibles.',
+                'mapped' => false,
+                'required' => false,
+                'attr' => ['class' => 'form-check-input js-purger-valeurs'],
+            ]);
+        }
 
         // Composition de la vague : ajouté uniquement sur la page de
         // modification (la création renvoie dessus juste après le POST).

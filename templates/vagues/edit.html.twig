@@ -29,6 +29,11 @@
                             <div class="col-md-3">{{ form_row(form.dateDebut) }}</div>
                             <div class="col-md-3">{{ form_row(form.dateFin) }}</div>
                         </div>
+                        {% if form.purgerValeurs is defined %}
+                            <div class="alert alert-warning mt-2 mb-2">
+                                {{ form_row(form.purgerValeurs) }}
+                            </div>
+                        {% endif %}
                         {{ form_row(form.notes) }}
                     </div>
                 </div>

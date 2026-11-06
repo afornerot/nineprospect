@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Controller\Trait\CrudDeleteTrait;
 use App\Controller\Trait\LayoutRenderTrait;
+use App\Entity\Pipeline;
 use App\Entity\Prospect;
 use App\Entity\ProspectSprint;
 use App\Entity\Sprint;
@@ -149,15 +150,20 @@ class SprintController extends AbstractController
             return $this->contexteRetour->redirectionVersListe($request, 'app_user_vagues');
         }
 
+        // On mémorise le pipeline d'avant soumission : après `handleRequest()`,
+        // `$sprint` porte déjà le pipeline choisi par l'utilisateur.
+        $pipelineAvant = $sprint->getPipeline();
+
         $form = $this->createForm(SprintType::class, $sprint, ['afficherProspects' => true]);
         $form->get('prospects')->setData($this->prospectsDe($sprint));
         $retour = $this->contexteRetour->listeDuModule($request, 'app_user_vagues');
         $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid() && $this->sauverSprint($sprint, $form)) {
+        if ($form->isSubmitted() && $form->isValid() && $this->sauverSprint($sprint, $form, $pipelineAvant)) {
             return $this->contexteRetour->redirectionVersListe($request, 'app_user_vagues');
         }
 
         $allProspects = $this->prospects->findBy([], ['nom' => SortDirection::Ascending]);
+        $sprint->setPipeline($pipelineAvant);
 
         return $this->renderLayout('vagues/edit.html.twig', 'Modification = Vague '.$sprint->getNumero(), [
             'routedelete' => 'app_user_vagues_delete',
@@ -174,15 +180,48 @@ class SprintController extends AbstractController
      * au flush (ou détectée avant) devient une erreur de formulaire (422) au
      * lieu d'une exception 500.
      *
+     * Bascule de pipeline : les valeurs saisies sur les étapes de l'ancien
+     * pipeline deviennent invisibles. Leur suppression n'est faite qu'après
+     * confirmation explicite (case à cocher) ; sans elle, l'enregistrement est
+     * refusé plutôt que de perdre des décisions en silence.
+     *
      * @param FormInterface<Sprint> $form
      */
-    private function sauverSprint(Sprint $sprint, FormInterface $form): bool
+    private function sauverSprint(Sprint $sprint, FormInterface $form, ?Pipeline $pipelineAvant = null): bool
     {
         $existant = $this->sprints->findOneByNumero((int) $sprint->getNumero());
         if (null !== $existant && $existant->getId() !== $sprint->getId()) {
             $form->get('numero')->addError(new FormError('Ce numéro de vague est déjà utilisé.'));
 
             return false;
+        }
+
+        $pipelineSoumis = $sprint->getPipeline();
+        $basculePipeline = null !== $pipelineAvant
+            && $pipelineSoumis?->getId() !== $pipelineAvant->getId();
+
+        // Valeurs qui deviendraient invisibles : mesurées contre le pipeline
+        // choisi, pas contre l'ancien (sinon on ne compterait que les valeurs
+        // déjà orphelines).
+        $menacees = $basculePipeline ? $sprint->compterValeursHorsPipeline($pipelineSoumis) : 0;
+        $confirmePurger = $form->has('purgerValeurs') && true === $form->get('purgerValeurs')->getData();
+
+        if ($menacees > 0 && !$confirmePurger) {
+            $form->get('pipeline')->addError(new FormError(sprintf(
+                'Cette vague porte %d valeur(s) de statut saisies sur les étapes de l\'ancien pipeline : '
+                .'cochez « Supprimer les valeurs » pour confirmer leur perte, ou laissez le pipeline inchangé.',
+                $menacees,
+            )));
+
+            return false;
+        }
+
+        if ($basculePipeline) {
+            $supprimees = $sprint->purgerValeursHorsPipeline($pipelineSoumis);
+            $this->addFlash('success', sprintf(
+                'Pipeline de la vague modifié : %d valeur(s) de statut de l\'ancien pipeline supprimée(s).',
+                $supprimees,
+            ));
         }
 
         if ($form->has('prospects')) {

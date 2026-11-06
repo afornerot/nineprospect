@@ -114,12 +114,63 @@ class ProspectSprint
 
     public function statutPour(PipelineEtape $etape): int
     {
-        return $this->valeurPour($etape)?->getStatut() ?? PipelineStatut::NON_DEMARRE;
+        return $this->valeurPour($etape)?->getStatut() ?? PipelineStatut::A_FAIRE;
     }
 
     public function datePour(PipelineEtape $etape): ?\DateTime
     {
         return $this->valeurPour($etape)?->getDate();
+    }
+
+    /**
+     * Valeurs dont l'étape n'appartient pas au pipeline donné (par défaut
+     * celui de la vague). Passer le pipeline *cible* permet de compter ce qui
+     * serait perdu par une bascule, avant de l'appliquer.
+     *
+     * @return list<PipelineValeur>
+     */
+    public function valeursHorsPipeline(?\App\Entity\Pipeline $pipeline = null): array
+    {
+        $pipeline ??= $this->sprint?->getPipeline();
+
+        $etapes = [];
+        foreach ($pipeline?->getEtapes() ?? [] as $etape) {
+            $etapes[(int) $etape->getId()] = true;
+        }
+
+        $hors = [];
+        foreach ($this->valeurs as $valeur) {
+            $idEtape = $valeur->getEtape()?->getId();
+            if (null === $idEtape || !isset($etapes[(int) $idEtape])) {
+                $hors[] = $valeur;
+            }
+        }
+
+        return $hors;
+    }
+
+    /**
+     * Nombre de valeurs saisies sur des étapes hors du pipeline donné (par
+     * défaut le pipeline actuel de la vague).
+     */
+    public function compterValeursHorsPipeline(?\App\Entity\Pipeline $pipeline = null): int
+    {
+        return \count($this->valeursHorsPipeline($pipeline));
+    }
+
+    /**
+     * Supprime les valeurs saisies sur des étapes hors du pipeline actuel.
+     * Destructif : à n'appeler qu'après confirmation explicite. Renvoie le
+     * nombre de valeurs supprimées.
+     */
+    public function purgerValeursHorsPipeline(): int
+    {
+        $hors = $this->valeursHorsPipeline();
+        foreach ($hors as $valeur) {
+            $this->valeurs->removeElement($valeur);
+        }
+
+        return \count($hors);
     }
 
     /**
@@ -129,7 +180,7 @@ class ProspectSprint
     public function definirValeur(PipelineEtape $etape, int $statut, ?\DateTime $date): static
     {
         $valeur = $this->valeurPour($etape);
-        $auDefaut = PipelineStatut::NON_DEMARRE === $statut && null === $date;
+        $auDefaut = PipelineStatut::A_FAIRE === $statut && null === $date;
 
         if (null === $valeur) {
             if (!$auDefaut) {
@@ -157,12 +208,12 @@ class ProspectSprint
 
     /**
      * Ne change que le statut d'une étape (date conservée). Crée ou supprime
-     * la PipelineValeur si elle passe à NON_DEMARRE.
+     * la PipelineValeur si elle passe à A_FAIRE.
      */
     /**
      * Met à jour le statut (et la date du jour) d'une étape via le cycle
      * de la liste prospects. Comportement :
-     *  - statut = NON_DEMARRE : la PipelineValeur (et donc sa date) est supprimée
+     *  - statut = A_FAIRE : la PipelineValeur (et donc sa date) est supprimée
      *  - autre statut : la PipelineValeur est créée si absente (date = today)
      *    ou mise à jour avec date = today (la date est posée à chaque clic,
      *    écrasant la précédente — le clic est une action datée).
@@ -170,7 +221,7 @@ class ProspectSprint
     public function definirStatut(PipelineEtape $etape, int $statut): static
     {
         $valeur = $this->valeurPour($etape);
-        if (PipelineStatut::NON_DEMARRE === $statut) {
+        if (PipelineStatut::A_FAIRE === $statut) {
             if (null !== $valeur) {
                 $this->valeurs->removeElement($valeur);
             }
