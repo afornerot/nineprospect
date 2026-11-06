@@ -53,21 +53,21 @@ class PipelineAuditTest extends WebTestCase
 
         $valeur = $this->valeur($prospectId, $etapeId);
         $this->assertInstanceOf(PipelineValeur::class, $valeur);
-        $this->assertSame(PipelineStatut::A_QUALIFIER, $valeur->getStatut());
+        $this->assertSame(PipelineStatut::EN_COURS, $valeur->getStatut());
         $this->assertSame((new \DateTime())->format('Y-m-d'), $valeur->getDate()?->format('Y-m-d'));
         $this->assertSame($username, $valeur->getModifiePar()?->getUsername());
 
         // Re-clic : nouveau statut, l'auteur reste celui de la session.
         $corps = $this->cycler($client, $prospectId, $etapeId, $csrf);
-        $this->assertSame(PipelineStatut::RELANCER, $corps['statut']);
+        $this->assertSame(PipelineStatut::REALISE, $corps['statut']);
         $valeur = $this->valeur($prospectId, $etapeId);
         $this->assertInstanceOf(PipelineValeur::class, $valeur);
         $this->assertSame($username, $valeur->getModifiePar()?->getUsername());
 
-        // Retour à NON_DEMARRE : la ligne disparaît, l'audit avec elle.
-        $this->lien($prospectId)->definirStatut($this->etape($etapeId), PipelineStatut::NON_DEMARRE);
+        // Retour à À faire : la ligne disparaît, l'audit avec elle.
+        $this->lien($prospectId)->definirStatut($this->etape($etapeId), PipelineStatut::A_FAIRE);
         $this->em()->flush();
-        $this->assertNull($this->valeur($prospectId, $etapeId), 'Le retour à NON_DEMARRE supprime la valeur.');
+        $this->assertNull($this->valeur($prospectId, $etapeId), 'Le retour à À faire supprime la valeur.');
     }
 
     public function testUneDateModifieeSansChangementDeStatutNeResignePas(): void
@@ -76,7 +76,7 @@ class PipelineAuditTest extends WebTestCase
 
         // Valeur créée hors session : la date est celle fournie, l'auteur
         // n'est pas connu, l'affichage se réduit à la date.
-        $this->lien($prospectId)->definirValeur($this->etape($etapeId), PipelineStatut::OUI, new \DateTime('2024-05-06'));
+        $this->lien($prospectId)->definirValeur($this->etape($etapeId), PipelineStatut::REALISE, new \DateTime('2024-05-06'));
         $this->em()->flush();
 
         $valeur = $this->valeur($prospectId, $etapeId);
@@ -104,7 +104,7 @@ class PipelineAuditTest extends WebTestCase
 
         [$prospectId, $etapeId] = $this->contextePipeline();
 
-        $this->lien($prospectId)->definirValeur($this->etape($etapeId), PipelineStatut::EN_ATTENTE, new \DateTime('2024-03-12'));
+        $this->lien($prospectId)->definirValeur($this->etape($etapeId), PipelineStatut::EN_COURS, new \DateTime('2024-03-12'));
         $this->em()->flush();
         $valeur = $this->valeur($prospectId, $etapeId);
         $this->assertInstanceOf(PipelineValeur::class, $valeur);

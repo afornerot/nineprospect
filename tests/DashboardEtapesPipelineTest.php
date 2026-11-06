@@ -73,7 +73,7 @@ class DashboardEtapesPipelineTest extends WebTestCase
 
         // Valeur sans date (antérieure à l'audit) : exclue.
         [$sansDate, $etapeSansDate] = $this->contexteEtape('Relance');
-        $this->poserStatut($sansDate, $etapeSansDate, PipelineStatut::OUI, null, $user);
+        $this->poserStatut($sansDate, $etapeSansDate, PipelineStatut::REALISE, null, $user);
 
         $resultat = $this->repository()->countStatutsEtapeParMoisParLibelle(null);
 
@@ -91,7 +91,7 @@ class DashboardEtapesPipelineTest extends WebTestCase
 
         // Une ligne par couple prospect↔vague↔étape : le second changement
         // écrase le premier, et c'est le mois du dernier qui compte.
-        $this->poserStatut($prospect, $etape, PipelineStatut::NON, '2024-04-02 09:00:00', $user);
+        $this->poserStatut($prospect, $etape, PipelineStatut::REALISE, '2024-04-02 09:00:00', $user);
 
         $resultat = $this->repository()->countStatutsEtapeParMoisParLibelle(null);
 
@@ -243,7 +243,7 @@ class DashboardEtapesPipelineTest extends WebTestCase
         $etapeId = (int) $etape->getId();
 
         if (null !== $quand) {
-            $this->poserStatut($prospectId, $etapeId, PipelineStatut::A_QUALIFIER, $quand, $auteur);
+            $this->poserStatut($prospectId, $etapeId, PipelineStatut::EN_COURS, $quand, $auteur);
         }
 
         return [$prospectId, $etapeId];

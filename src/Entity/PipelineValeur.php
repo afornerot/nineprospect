@@ -9,7 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * Valeur du pipeline pour un prospect dans une vague donnée (statut + date).
  * Une ligne n'existe que si la valeur sort du défaut « non démarré » ; les
- * lectures sans ligne renvoient donc PipelineStatut::NON_DEMARRE.
+ * lectures sans ligne renvoient donc PipelineStatut::A_FAIRE.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'pipeline_valeur')]
@@ -29,8 +29,8 @@ class PipelineValeur
     #[ORM\JoinColumn(nullable: false, onDelete: 'RESTRICT')]
     private ?PipelineEtape $etape = null;
 
-    #[ORM\Column(type: Types::SMALLINT)]
-    private int $statut = PipelineStatut::NON_DEMARRE;
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => PipelineStatut::A_FAIRE])]
+    private int $statut = PipelineStatut::A_FAIRE;
 
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTime $date = null;

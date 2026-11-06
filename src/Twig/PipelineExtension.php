@@ -26,13 +26,6 @@ class PipelineExtension extends AbstractExtension
 
     public function color(?int $valeur): string
     {
-        return match ($valeur) {
-            PipelineStatut::OUI => 'success',
-            PipelineStatut::RELANCER => 'warning',
-            PipelineStatut::NON => 'danger',
-            PipelineStatut::EN_ATTENTE => 'secondary',
-            PipelineStatut::A_QUALIFIER => 'info',
-            default => 'light',
-        };
+        return null === $valeur ? 'light' : PipelineStatut::color($valeur);
     }
 }

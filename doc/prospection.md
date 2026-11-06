@@ -68,13 +68,15 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
 - `PipelineValeur` : valeur d'une étape pour **un lien prospect↔vague**
   (table `pipeline_valeur`, contrainte unique `(prospect_sprint_id, etape_id)` ;
   `statut` SMALLINT `App\Enum\PipelineStatut` + `date` nullable + `modifiePar`,
-  FK `user` `SET NULL`). **Stockage creux** :
-  la ligne n'est créée que si `statut != NON_DEMARRE` ou `date != null`, sinon elle est
-  retirée ; l'absence de ligne se lit `NON_DEMARRE` (`ProspectSprint::statutPour()`).
+  FK `user` `SET NULL`). **Trois statuts seulement** : `A_FAIRE` (0),
+  `EN_COURS` (1), `REALISE` (2). Les six anciennes valeurs ont été repliées
+  sans perte : `NON_DEMARRE`/`A_QUALIFIER` → À faire, `RELANCER`/`EN_ATTENTE` →
+  En cours, `OUI`/`NON` → Réalisé. **Stockage creux** :
+  la ligne n'est créée que si `statut != A_FAIRE` ou `date != null`, sinon elle est
+  retirée ; l'absence de ligne se lit `A_FAIRE` (`ProspectSprint::statutPour()`).
   **Cycle de statut cliquable** sur la liste et la fiche (`Prospect::cycleEtape()`,
-  `PipelineStatut::suivant()`) : avance `NON_DEMARRE → A_QUALIFIER → RELANCER →
-  EN_ATTENTE → OUI → NON → NON_DEMARRE` ; pose la date du jour à chaque clic et
-  l'efface quand le statut revient à `NON_DEMARRE`.
+  `PipelineStatut::suivant()`) : avance `À faire → En cours → Réalisé → À faire` ;
+  pose la date du jour à chaque clic et l'efface quand le statut revient à `A_FAIRE`.
   **Qui et quand** : `date` et `modifiePar` mémorisent le dernier changement de
   statut. L'auteur est posé par
   `App\EventListener\PipelineValeurModificationListener` (`prePersist` / `preUpdate`
@@ -159,9 +161,10 @@ il ne supprime jamais d'enregistrement. Avoir un prospect dans plusieurs vagues 
   éditables sur la fiche et filtrées via `/user/prospects?cible=`).
 - Tableau de bord : pavé **« Qualification des prospects »** au-dessus du graphe
   Pipeline — une courbe par **produit**, alignée sur les mois communs, du nombre de
-  prospects qualifiés (« Oui » ou « Hors produit »). Un prospect qualifié sur plusieurs
-  produits apparaît dans chacune ; les qualifications **non datées** et l'état « Non »
-  sont exclus. La série respecte le filtre **Affecté à**, qui porte ici sur
+  prospects qualifiés (« Oui », « Hors produit » ou « Injoignable »). Un prospect
+  qualifié sur plusieurs produits apparaît dans chacune ; les qualifications
+  **non datées** et l'état « Non » sont exclus.
+  La série respecte le filtre **Affecté à**, qui porte ici sur
   **l'auteur du changement de qualification** (`qualifie_modifie_par_id`), et non sur
   l'affectation commerciale (`prospect_user`) : sélectionner un intervenant montre les
   décisions qu'il a prises, y compris sur des prospects qu'il n'a pas en portefeuille.

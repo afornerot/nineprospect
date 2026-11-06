@@ -176,7 +176,7 @@ class ProspectRepository extends ServiceEntityRepository
 
         $result = [];
         foreach ($qb->getQuery()->getArrayResult() as $ligne) {
-            $statut = null === $ligne['valeur'] ? PipelineStatut::NON_DEMARRE : (int) $ligne['valeur'];
+            $statut = null === $ligne['valeur'] ? PipelineStatut::A_FAIRE : (int) $ligne['valeur'];
             $result[(int) $ligne['etape']][$statut] = (int) $ligne['total'];
         }
 

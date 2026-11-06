@@ -43,7 +43,7 @@ class PipelineValeurModificationListener
     public function prePersist(PrePersistEventArgs $args): void
     {
         $entity = $args->getObject();
-        if (!$entity instanceof PipelineValeur || PipelineStatut::NON_DEMARRE === $entity->getStatut()) {
+        if (!$entity instanceof PipelineValeur || PipelineStatut::A_FAIRE === $entity->getStatut()) {
             return;
         }
 

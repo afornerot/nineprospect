@@ -76,7 +76,7 @@ class PipelineRepository extends ServiceEntityRepository
      * prospect↔vague↔étape, le comptage porte sur la **valeur courante** de
      * chaque étape, dans le mois de sa date : un prospect qui change deux fois
      * de statut dans le même mois ne compte qu'une fois, dans le mois de son
-     * dernier changement. Tous les statuts sont comptés (« Non démarré » n'a
+     * dernier changement. Tous les statuts sont comptés (« À faire » n'a
      * pas de ligne et n'apparaît donc jamais). Les valeurs sans date
      * (antérieures à l'audit) sont exclues, comme pour la qualification.
      *

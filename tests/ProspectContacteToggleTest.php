@@ -182,7 +182,7 @@ class ProspectContacteToggleTest extends WebTestCase
         }
 
         // Cycle via repository : on exerce directement le service.
-        $lien->definirStatut($etape, \App\Enum\PipelineStatut::NON_DEMARRE);
+        $lien->definirStatut($etape, \App\Enum\PipelineStatut::A_FAIRE);
         $em->flush();
 
         $prospectId = $prospect->getId();
@@ -200,14 +200,11 @@ class ProspectContacteToggleTest extends WebTestCase
             static::markTestSkipped('Token CSRF pipeline indisponible.');
         }
 
-        // Cycle : NON_DEMARRE → A_QUALIFIER → RELANCER → EN_ATTENTE → OUI → NON → NON_DEMARRE.
+        // Cycle : À faire → En cours → Réalisé → À faire.
         $attendu = [
-            \App\Enum\PipelineStatut::A_QUALIFIER,
-            \App\Enum\PipelineStatut::RELANCER,
-            \App\Enum\PipelineStatut::EN_ATTENTE,
-            \App\Enum\PipelineStatut::OUI,
-            \App\Enum\PipelineStatut::NON,
-            \App\Enum\PipelineStatut::NON_DEMARRE,
+            \App\Enum\PipelineStatut::EN_COURS,
+            \App\Enum\PipelineStatut::REALISE,
+            \App\Enum\PipelineStatut::A_FAIRE,
         ];
         foreach ($attendu as $prochain) {
             $client->request('POST', '/user/prospects/cycle-etape', [
@@ -231,18 +228,18 @@ class ProspectContacteToggleTest extends WebTestCase
         $courant = $prospect->vagueCourante();
         $this->assertNotNull($courant, 'Le prospect doit toujours avoir une vague courante.');
         $this->assertSame(
-            \App\Enum\PipelineStatut::NON_DEMARRE,
+            \App\Enum\PipelineStatut::A_FAIRE,
             $courant->statutPour($etape),
-            'Après le cycle complet, le statut doit être revenu à NON_DEMARRE.'
+            'Après le cycle complet, le statut doit être revenu à À faire.'
         );
-        // Retour à NON_DEMARRE : la valeur (et donc la date) est supprimée.
+        // Retour à A_FAIRE : la valeur (et donc la date) est supprimée.
         $this->assertNull(
             $courant->datePour($etape),
-            'Au retour à NON_DEMARRE, la date doit être vidée.'
+            'Au retour à À faire, la date doit être vidée.'
         );
 
-        // Re-cycle : clic → OUI → la date est posée à aujourd'hui.
-        $courant->definirStatut($etape, \App\Enum\PipelineStatut::OUI);
+        // Re-cycle : clic → Réalisé → la date est posée à aujourd'hui.
+        $courant->definirStatut($etape, \App\Enum\PipelineStatut::REALISE);
         $em->flush();
         $this->assertNotNull($courant->datePour($etape), 'Après un clic, la date doit être renseignée.');
         $this->assertSame(

@@ -6,6 +6,7 @@ use App\Controller\Trait\LayoutRenderTrait;
 use App\Entity\Pipeline;
 use App\Entity\User;
 use App\Enum\PipelineStatut;
+use App\Enum\QualificationProduit;
 use App\Repository\ActionRepository;
 use App\Repository\CibleRepository;
 use App\Repository\ProduitRepository;
@@ -200,7 +201,8 @@ class DashboardController extends AbstractController
     private function compteurNonQualifie(?User $user): int
     {
         $qb = $this->prospects->createQueryBuilder('p')->select('COUNT(p.id)')
-            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie = true)');
+            ->where('NOT EXISTS (SELECT 1 FROM App\Entity\ProspectProduit pc2 WHERE pc2.prospect = p AND pc2.qualifie IN (:tranchees))')
+            ->setParameter('tranchees', QualificationProduit::tranchees());
         if (null !== $user) {
             $qb->innerJoin('p.users', 'nq_u')->andWhere('nq_u.id = :nq_uId')->setParameter('nq_uId', $user);
         }
