@@ -163,6 +163,18 @@ $(document).ready(function () {
 							: '');
 					}
 				}
+				// Signature du contact : ligne « Contacté par » de la fiche
+				// (.js-contacte-par), vidée quand le prospect repasse à
+				// « non contacté ». Hors fiche, le marqueur est absent.
+				if (r.data.contactePar !== undefined) {
+					const $par = $('.js-contacte-par');
+					if ($par.length) {
+						$par.text(r.data.contactePar || '—');
+					}
+					const $input = $wrapper.find('.js-toggle-contacte');
+					const base = 'Contacté';
+					$input.attr('title', r.data.contactePar ? base + ' par ' + r.data.contactePar : base);
+				}
 			}
 		}).catch(function () {
 			$checkbox.prop('checked', !$checkbox.prop('checked'));

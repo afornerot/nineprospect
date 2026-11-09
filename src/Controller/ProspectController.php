@@ -448,6 +448,7 @@ class ProspectController extends AbstractController
             'ok' => true,
             'contacte' => $prospect->getContacte(),
             'datePremierContact' => $prospect->getDatePremierContact()?->format('Y-m-d'),
+            'contactePar' => $prospect->getContactePar()?->getUsername(),
         ]);
     }
 

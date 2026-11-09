@@ -114,6 +114,11 @@
                         <div class="row">
                             <div class="col-md-12">{{ form_row(form.contacte) }}</div>
                             <div class="col-md-12">{{ form_row(form.datePremierContact) }}</div>
+                            {% if form.vars.data.contactePar %}
+                                <div class="col-md-12">
+                                    <div class="form-text mb-2">Contacté par {{ form.vars.data.contactePar.username }}</div>
+                                </div>
+                            {% endif %}
                             <div class="col-md-6">{{ form_row(form.campagne) }}</div>
                             <div class="col-md-6">{{ form_row(form.sprints) }}</div>
                             <div class="col-md-12">{{ form_row(form.users) }}</div>

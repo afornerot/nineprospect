@@ -118,12 +118,17 @@
                         <dd class="col-sm-8">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="form-check form-switch js-toggle-contacte-wrapper m-0" data-action-id="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-contacte-prospect' ~ prospect.id) }}" data-contacte="{{ prospect.contacte is same as(true) ? '1' : '0' }}">
-                                    <input type="checkbox" class="form-check-input js-toggle-contacte" role="switch" {% if prospect.contacte %}checked{% endif %} aria-label='Contacte' title='Contacte'>
+                                    <input type="checkbox" class="form-check-input js-toggle-contacte" role="switch" {% if prospect.contacte %}checked{% endif %} aria-label='Contacté' title='Contacté{% if prospect.contactePar %} par {{ prospect.contactePar.username }}{% endif %}'>
                                 </div>
                                 <span class="js-contacte-date text-muted">
                                     {{- prospect.datePremierContact ? prospect.datePremierContact|date('d/m/Y') : '' -}}
                                 </span>
                             </div>
+                        </dd>
+
+                        <dt class="col-sm-4">Contacté par</dt>
+                        <dd class="col-sm-8">
+                            <span class="js-contacte-par text-muted">{{- prospect.contactePar ? prospect.contactePar.username : '—' -}}</span>
                         </dd>
 
                         <dt class="col-sm-4">Affecté à</dt>

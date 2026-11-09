@@ -34,7 +34,7 @@
 
     <h2>Suivi</h2>
     <table>
-        <tr><th>Contacté</th><td>{{ prospect.contacte ? 'Oui' : 'Non' }}{% if prospect.datePremierContact %} le {{ prospect.datePremierContact|date('d/m/Y') }}{% endif %}</td></tr>
+        <tr><th>Contacté</th><td>{{ prospect.contacte ? 'Oui' : 'Non' }}{% if prospect.datePremierContact %} le {{ prospect.datePremierContact|date('d/m/Y') }}{% endif %}{% if prospect.contacte and prospect.contactePar %} par {{ prospect.contactePar.username }}{% endif %}</td></tr>
         <tr><th>Campagne</th><td>{{ prospect.campagne ? prospect.campagne.libelle : '—' }}</td></tr>
     </table>
 

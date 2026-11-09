@@ -53,7 +53,8 @@ class ProspectRepository extends ServiceEntityRepository
             ->leftJoin('p.prospectProduits', 'pc')
             ->leftJoin('pc.produit', 'ci')
             ->leftJoin('p.cibles', 'cat')
-            ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'ct', 'u', 'a', 'pc', 'ci', 'cat')
+            ->leftJoin('p.contactePar', 'cp')
+            ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'ct', 'u', 'a', 'pc', 'ci', 'cat', 'cp')
             ->orderBy('p.nom', SortDirection::Ascending);
 
         if (isset($filtres['campagne'])) {

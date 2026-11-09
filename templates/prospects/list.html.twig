@@ -167,7 +167,7 @@
                         </td>
                         <td>
                             <div class="form-check form-switch js-toggle-contacte-wrapper" data-action-id="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-contacte-prospect' ~ prospect.id) }}" data-contacte="{{ prospect.contacte is same as(true) ? '1' : '0' }}">
-                                <input type="checkbox" class="form-check-input js-toggle-contacte" role="switch" {% if prospect.contacte %}checked{% endif %} aria-label="Contacté" title="Contacté">
+                                <input type="checkbox" class="form-check-input js-toggle-contacte" role="switch" {% if prospect.contacte %}checked{% endif %} aria-label="Contacté" title="Contacté{% if prospect.contactePar %} par {{ prospect.contactePar.username }}{% endif %}">
                             </div>
                         </td>
                         <td>

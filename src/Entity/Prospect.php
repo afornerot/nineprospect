@@ -90,6 +90,17 @@ class Prospect
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTime $datePremierContact = null;
 
+    /**
+     * Auteur du dernier passage à « Contacté » (FK user, SET NULL).
+     * Renseigné par App\EventListener\ContacteModificationListener à chaque
+     * changement effectif de `contacte`, vidé quand le prospect repasse à
+     * non contacté. Reste vide pour un changement hors session (import,
+     * commande) et pour l'historique antérieur à l'audit.
+     */
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'contacte_par_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?User $contactePar = null;
+
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
 
@@ -444,6 +455,23 @@ class Prospect
     public function setDatePremierContact(?\DateTime $datePremierContact): static
     {
         $this->datePremierContact = $datePremierContact;
+
+        return $this;
+    }
+
+    /**
+     * Auteur du dernier passage à « Contacté ». Posé/vidé par
+     * App\EventListener\ContacteModificationListener, jamais par
+     * `setContacte()` (l'entité ne connaît pas la session).
+     */
+    public function getContactePar(): ?User
+    {
+        return $this->contactePar;
+    }
+
+    public function setContactePar(?User $contactePar): static
+    {
+        $this->contactePar = $contactePar;
 
         return $this;
     }

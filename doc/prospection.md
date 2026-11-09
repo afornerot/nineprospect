@@ -31,6 +31,17 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
   (calculées via API Adresse sur autocompletion ou via l'Annuaire des Entreprises).
   - **Contacté** : booléen simple `contacte` (cycle `null → true → false → true`,
     date premier contact syncronisée automatiquement à `true`).
+  - **Auteur du contact** : `contactePar` (FK `user`, `SET NULL`) signe le
+    passage à `contacte = true` avec l'utilisateur qui l'a déclenché. Posé par
+    `App\EventListener\ContacteModificationListener` (`prePersist` /
+    `preUpdate`) qui ne réagit qu'à un changement effectif de `contacte` :
+    passage à `true` → auteur de la session ; retour à `false`/`null` → champ
+    vidé. Un enregistrement sans changement du drapeau (édition de notes,
+    re-datage manuel) ne resigne pas. Reste `null` hors session (import,
+    commande, formulaire public) et pour l'historique antérieur à l'audit.
+    La fiche affiche deux lignes : « Contacté le » (date) et « Contacté par »
+    (auteur, `—` si inconnu) ; la liste reprend l'auteur dans le `title` du
+    switch et l'export PDF affiche « le JJ/MM/AAAA par \<auteur\> ».
   - **Qualifié** : `qualifie` (enum `App\Enum\QualificationProduit`, stockée en
     VARCHAR : `non`, `oui`, `hors_produit`, `injoignable`), porté par le lien
     `ProspectProduit` (une qualification par couple prospect × produit). Le badge
