@@ -73,6 +73,7 @@ class DashboardController extends AbstractController
         $kpiContacts = $this->compteurContacts($user);
 
         $qualifications = $this->prospectProduits->countQualificationsParMoisParProduit($userId);
+        $contactes = $this->prospects->countContactesParMois($userId);
         $etapesStatuts = $this->pipelines->countStatutsEtapeParMoisParLibelle($userId);
         $realisees = $this->actions->countRealiseesParMois($userId);
 
@@ -98,6 +99,8 @@ class DashboardController extends AbstractController
             'filtreCible' => $filtreCible,
             'moisQualifications' => $qualifications['mois'],
             'seriesQualifications' => $qualifications['series'],
+            'moisContactes' => $contactes['mois'],
+            'seriesContactes' => $contactes['series'],
             'moisEtapes' => $etapesStatuts['mois'],
             'seriesEtapes' => $etapesStatuts['series'],
             'moisRealisees' => $realisees['mois'],

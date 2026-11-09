@@ -134,6 +134,20 @@
 
         <div class="col-md-5">
             <div class="card mb-2">
+                <div class="card-header">Prospects contactés par mois</div>
+                <div class="card-body">
+                    <div style="position: relative; height: 235px;">
+                        <canvas id="contacteChart"></canvas>
+                    </div>
+                    <p class="text-muted small mb-0 mt-2">
+                        Prospects passés à « contacté » par mois, à la date de leur premier contact.
+                        Un prospect décontacté puis recontacté repart à zéro (la date est effacée à la
+                        déconnexion) ; les prospects jamais contactés sont exclus.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card mb-2">
                 <div class="card-header">Qualification des prospects</div>
                 <div class="card-body">
                     <div style="position: relative; height: 235px;">
@@ -266,6 +280,25 @@
                 data: {
                     labels: qualificationMois,
                     datasets: qualificationSeries.map(function(d, i) {
+                        var couleur = qualificationCouleurs[i % qualificationCouleurs.length];
+                        return { label: d.label, data: d.data, borderColor: couleur, backgroundColor: couleur, tension: 0.3, pointRadius: 3 };
+                    })
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+
+            var contacteMois = {{ moisContactes|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
+            var contacteSeries = {{ seriesContactes|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
+
+            new Chart(document.getElementById('contacteChart'), {
+                type: 'line',
+                data: {
+                    labels: contacteMois,
+                    datasets: contacteSeries.map(function(d, i) {
                         var couleur = qualificationCouleurs[i % qualificationCouleurs.length];
                         return { label: d.label, data: d.data, borderColor: couleur, backgroundColor: couleur, tension: 0.3, pointRadius: 3 };
                     })

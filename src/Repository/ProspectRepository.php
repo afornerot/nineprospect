@@ -578,4 +578,55 @@ class ProspectRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Prospects contactés par mois (date du premier contact), dans la même
+     * logique que ProspectProduitRepository::countQualificationsParMoisParProduit
+     * : mois triés, une seule série, filtre par « Affecté à ».
+     *
+     * @return array{mois: list<string>, series: list<array{label: string, data: list<int>}>}
+     */
+    public function countContactesParMois(?int $userId = null): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->select('p.datePremierContact AS decision')
+            ->andWhere('p.datePremierContact IS NOT NULL')
+            ->orderBy('p.datePremierContact', SortDirection::Ascending);
+
+        if (null !== $userId) {
+            $qb->innerJoin('p.contactePar', 'pcp')
+                ->andWhere('pcp.id = :auteur')
+                ->setParameter('auteur', $userId);
+        }
+
+        /** @var array<string, true> $mois */
+        $mois = [];
+        /** @var array<string, int> $compteurs */
+        $compteurs = [];
+
+        foreach ($qb->getQuery()->getArrayResult() as $ligne) {
+            $decision = $ligne['decision'];
+            if (!$decision instanceof \DateTimeInterface) {
+                $decision = new \DateTime((string) $decision);
+            }
+
+            $cle = $decision->format('Y-m');
+            $mois[$cle] = true;
+            $compteurs[$cle] = ($compteurs[$cle] ?? 0) + 1;
+        }
+
+        $cles = array_keys($mois);
+        sort($cles);
+
+        $donnees = [];
+        foreach ($cles as $cle) {
+            $donnees[] = $compteurs[$cle];
+        }
+
+        return [
+            'mois' => $cles,
+            'series' => [['label' => 'Contactés', 'data' => $donnees]],
+        ];
+    }
+
 }
