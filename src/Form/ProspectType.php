@@ -129,12 +129,6 @@ class ProspectType extends AbstractType
                 'attr' => ['maxlength' => 32],
             ])
 
-            ->add('idDolibarr', TextType::class, [
-                'label' => 'ID Dolibarr',
-                'required' => false,
-                'attr' => ['maxlength' => 32, 'placeholder' => 'ex. 1234'],
-            ])
-
             ->add('adresse', TextType::class, [
                 'label' => 'Adresse',
                 'required' => false,

@@ -28,6 +28,10 @@ parameters:
   aiBaseUrl: "%env(resolve:AI_BASE_URL)%"
   mapboxPublicToken: "%env(string:MAPBOX_PUBLIC_TOKEN)%"
   altchaHmacKey: "%env(ALTCHA_HMAC_KEY)%"
+  # Intégration Dolibarr : URL de base et clé API globale (lecture seule).
+  # Clé vide → l'intégration est désactivée et aucune requête n'est émise.
+  dolibarrUrl: "%env(default::DOLIBARR_URL)%"
+  dolibarrApiKey: "%env(default::DOLIBARR_API_KEY)%"
 
 services:
   _defaults:

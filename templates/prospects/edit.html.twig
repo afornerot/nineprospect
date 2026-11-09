@@ -61,7 +61,20 @@
                             <div class="col-md-6">{{ form_row(form.naf) }}</div>
                             <div class="col-md-6">{{ form_row(form.rcsRm) }}</div>
                             <div class="col-md-6">{{ form_row(form.numTva) }}</div>
-                            <div class="col-md-6">{{ form_row(form.idDolibarr) }}</div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tiers Dolibarr</label>
+                                <div class="form-control-plaintext">
+                                    {%- if form.vars.data.idDolibarr -%}
+                                        #{{ form.vars.data.idDolibarr }}
+                                    {%- else -%}
+                                        <span class="text-muted">Non lié</span>
+                                    {%- endif -%}
+                                </div>
+                                <div class="form-text">
+                                    La liaison se fait depuis la fiche du prospect
+                                    (bouton « Lier à Dolibarr »).
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

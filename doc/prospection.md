@@ -421,8 +421,44 @@ Bouton **« Créer depuis l'Annuaire »** dans la liste prospects à côté de
 
 ## Champs étendus du prospect
 
-- **SIREN / SIRET / NAF / RCS/RM / N° TVA / ID Dolibarr** : stockés sur
-  `Prospect`, pré-remplis via l'Annuaire des Entreprises.
+- **SIREN / SIRET / NAF / RCS/RM / N° TVA** : stockés sur `Prospect`,
+  pré-remplis via l'Annuaire des Entreprises.
+- **Tiers Dolibarr** : `Prospect::$idDolibarr` (colonne `id_dolibarr`) stocke
+  l'identifiant du tiers Dolibarr lié. La liaison se fait exclusivement depuis
+  la fiche (bouton « Lier à Dolibarr » / « Changer ») : le champ n'est plus
+  saisissable librement dans le formulaire d'édition.
+  - `src/Service/DolibarrApi.php` : client REST **lecture seule** de l'API
+    Dolibarr (`{DOLIBARR_URL}/api/index.php`), authentifié par la clé API
+    **globale du produit** (`DOLIBARR_API_KEY`) — pas de clé par utilisateur,
+    l'intégration ne lisant que des tiers. `search()` filtre par nom, code
+    client ou code fournisseur (`sqlfilters` assaini : `'`, `\`, `%`, `_`
+    neutralisés), `findById()` relit un tiers (cache 10 min, `cache.app`).
+    Toutes les méthodes renvoient `['results' => [], 'error' => '…']` plutôt
+    que de lever ; un 404 Dolibarr est un résultat vide, pas une panne.
+  - `ProspectController::dolibarrSearch()` (`GET
+    /user/prospects/{id}/dolibarr/search`) rend le fragment
+    `templates/prospects/_dolibarr_modal.html.twig`, injecté dans la fiche par
+    `public/lib/app/app.js` (classes `js-dolibarr-*`). Sans `q`, la recherche
+    est pré-remplie avec le nom du prospect.
+  - `ProspectController::dolibarrLink()` (`POST
+    /user/prospects/dolibarr/link`, CSRF `dolibarr-prospect`) écrit
+    `id_dolibarr` **après revalidation du tiers** côté serveur ; un
+    `thirdpartyId` vide retire la liaison. Un tiers inconnu renvoie 422.
+  - La fiche affiche le nom du tiers lié avec un lien vers sa fiche Dolibarr
+    (`/societe/card.php?socid=…`) ; `—` si non lié, « tiers introuvable » si
+    l'ID stocké n'existe plus.
+  - **Pavé « Dolibarr »** (sous la carte Entreprise, seulement si le prospect
+    est lié) : `DolibarrApi::documentsForThirdparty()` interroge les endpoints
+    `proposals` / `orders` / `invoices` avec
+    `sqlfilters=(t.fk_soc:=:<id>) and (t.fk_statut:>:0)` — **les brouillons
+    (statut 0) sont donc exclus** — triés par `t.rowid DESC` (cet API n'expose
+    pas les colonnes `date*` au tri). 10 documents par type, cache 5 min.
+    Chaque ligne affiche référence (lien vers la fiche Dolibarr), date,
+    statut (libellés alignés sur Dolibarr), montants HT et TTC ; les factures
+    d'avoir / acompte / pro forma portent en plus leur sous-type
+    (`total_ht`/`total_ttc` restent signés comme dans Dolibarr). Une panne sur
+    un type n'empêche pas l'affichage des autres (bandeau « Dolibarr
+    incomplet »).
 - **Email / Téléphone / LinkedIn / Site web** : stockés sur `Prospect`,
   **auto-initialisés depuis le contact principal** à la soumission du
   formulaire si le champ prospect est vide (helpers

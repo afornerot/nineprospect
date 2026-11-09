@@ -654,4 +654,136 @@ $(document).ready(function () {
 			$btn.prop('disabled', false);
 		});
 	});
+
+	// Liaison d'un prospect à un tiers Dolibarr (lecture seule côté Dolibarr).
+	// La modale est chargée à la demande, la recherche reste en AJAX et la
+	// liaison est un POST JSON revalidé côté serveur.
+	$(document).on('click', '.js-dolibarr-open', function () {
+		const $btn = $(this);
+		if ($btn.prop('disabled')) return;
+		const url = $btn.data('search-url');
+		if (!url) return;
+
+		$btn.prop('disabled', true);
+		fetch(url, {
+			method: 'GET',
+			credentials: 'same-origin',
+			headers: {
+				'X-Requested-With': 'XMLHttpRequest',
+				'Origin': window.location.origin,
+			},
+		}).then(function (resp) {
+			if (!resp.ok) throw new Error('HTTP ' + resp.status);
+			return resp.text();
+		}).then(function (html) {
+			const $modal = $(html).appendTo('body');
+			const modalEl = $modal.get(0);
+			const modalId = modalEl.id;
+			if (modalId) {
+				openModals[modalId] = modalEl;
+			}
+			bootstrap.Modal.getOrCreateInstance(modalEl).show();
+			$modal.on('hidden.bs.modal', function () {
+				if (modalId) delete openModals[modalId];
+				$modal.remove();
+			});
+		}).catch(function (e) {
+			showError('Erreur de chargement : ' + (e.message || ''));
+		}).finally(function () {
+			$btn.prop('disabled', false);
+		});
+	});
+
+	// Re-recherche dans la modale Dolibarr : on remplace body + footer pour
+	// rester sur la même instance Bootstrap.
+	$(document).on('submit', '[id^="js-dolibarr-search-"]', function (e) {
+		e.preventDefault();
+		const $form = $(this);
+		const searchUrl = $form.data('search-url');
+		const q = $form.find('input[name="q"]').val();
+		const modalEl = openModals[$form.attr('id').replace('js-dolibarr-search-', 'js-dolibarr-modal-')];
+		if (!searchUrl || !modalEl) return;
+
+		const $btn = $form.find('button[type="submit"]');
+		$btn.prop('disabled', true);
+		fetch(searchUrl + '?q=' + encodeURIComponent(q || ''), {
+			method: 'GET',
+			credentials: 'same-origin',
+			headers: {
+				'X-Requested-With': 'XMLHttpRequest',
+				'Origin': window.location.origin,
+			},
+		}).then(function (resp) {
+			if (!resp.ok) throw new Error('HTTP ' + resp.status);
+			return resp.text();
+		}).then(function (html) {
+			const doc = new DOMParser().parseFromString(html, 'text/html');
+			const newBody = doc.querySelector('.modal-body');
+			const newFooter = doc.querySelector('.modal-footer');
+			const $modal = $(modalEl);
+			const oldBody = $modal.find('.modal-body').get(0);
+			const oldFooter = $modal.find('.modal-footer').get(0);
+			if (newBody && oldBody) oldBody.innerHTML = newBody.innerHTML;
+			if (newFooter && oldFooter) oldFooter.innerHTML = newFooter.innerHTML;
+		}).catch(function (err) {
+			showError('Erreur de recherche Dolibarr : ' + (err.message || ''));
+		}).finally(function () {
+			$btn.prop('disabled', false);
+		});
+	});
+
+	// Liaison / retrait : POST JSON puis recharge la fiche pour refléter l'état.
+	function lierDolibarr($btn, thirdpartyId) {
+		const $form = $($btn.data('form'));
+		const linkUrl = $form.data('link-url');
+		const csrf = $form.find('input[name="_csrf_token"]').val();
+		const prospectId = $form.find('input[name="prospectId"]').val();
+		if (!linkUrl || !csrf || !prospectId) return;
+
+		$btn.prop('disabled', true);
+		fetch(linkUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-Requested-With': 'XMLHttpRequest',
+				'Origin': window.location.origin,
+			},
+			body: JSON.stringify({
+				prospectId: prospectId,
+				thirdpartyId: thirdpartyId,
+				csrf_token: csrf,
+			}),
+		}).then(function (resp) {
+			return resp.json().then(function (data) {
+				return { ok: resp.ok, status: resp.status, data: data };
+			});
+		}).then(function (r) {
+			if (!r.ok || !r.data.ok) {
+				showError((r.data && r.data.error) ? r.data.error : ('Erreur ' + r.status));
+				return;
+			}
+			window.location.reload();
+		}).catch(function () {
+			showError('Erreur réseau. Veuillez réessayer.');
+		}).finally(function () {
+			$btn.prop('disabled', false);
+		});
+	}
+
+	$(document).on('click', '.js-dolibarr-link', function () {
+		const $btn = $(this);
+		if ($btn.prop('disabled')) return;
+		const $form = $($btn.data('form'));
+		const id = $form.find('input[name="thirdpartyId"]:checked').val();
+		if (!id) {
+			showError('Sélectionnez un tiers.');
+			return;
+		}
+		lierDolibarr($btn, id);
+	});
+
+	$(document).on('click', '.js-dolibarr-unlink', function () {
+		lierDolibarr($(this), '');
+	});
 });

@@ -55,6 +55,28 @@ Le défaut (vide) désactive ces deux vues avec un message d'avertissement invit
 à renseigner la clé. La saisie d'un token dans `.env` ne nécessite **pas** de
 rebuild d'image (Symfony lit `.env` au boot du conteneur ; un `cache:clear` suffit).
 
+## Dolibarr (liaison prospect ↔ tiers)
+
+La fiche prospect permet de lier le prospect à un tiers Dolibarr existant
+(bouton « Lier à Dolibarr »). L'intégration est **en lecture seule** : elle
+cherche et affiche des tiers, sans jamais écrire dans Dolibarr.
+
+| Variable | Description |
+|----------|-------------|
+| `DOLIBARR_URL` | URL de base de l'instance, sans `/api` (ex. `https://doli.example/dolibarr`) |
+| `DOLIBARR_API_KEY` | Clé API **globale du produit** (`DOLAPIKEY`), pas de clé par utilisateur |
+
+La clé se renseigne dans `.env.local` (jamais dans `.env`, versionné) :
+
+```dotenv
+DOLIBARR_URL=https://doli.example/dolibarr
+DOLIBARR_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Variable vide ⇒ l'intégration est désactivée : le bouton n'apparaît pas sur la
+fiche et aucune requête n'est émise. Un `cache:clear` suffit après modification
+(pas de rebuild d'image).
+
 ## Notifications
 
 Les notifications admin sont envoyées à l'adresse `APP_ADMIN_EMAIL`.

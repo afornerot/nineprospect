@@ -106,10 +106,34 @@
                             </dd>
                         {% endif %}
 
-                        {% if prospect.idDolibarr %}
-                            <dt class="col-sm-4">ID Dolibarr</dt>
-                            <dd class="col-sm-8">{{ prospect.idDolibarr }}</dd>
-                        {% endif %}
+                        <dt class="col-sm-4">Tiers Dolibarr</dt>
+                        <dd class="col-sm-8">
+                            <span class="js-dolibarr-tiers">
+                                {%- if tiers -%}
+                                    {%- if tiersUrl -%}
+                                        <a href="{{ tiersUrl }}" target="_blank" rel="noopener">{{ tiers.nom }}</a>
+                                    {%- else -%}
+                                        {{ tiers.nom }}
+                                    {%- endif -%}
+                                    <span class="text-muted small">#{{ tiers.id }}</span>
+                                {%- elseif prospect.idDolibarr -%}
+                                    #{{ prospect.idDolibarr }}
+                                    <span class="text-muted small">
+                                        ({{ dolibarrActif ? 'tiers introuvable' : 'intégration inactive' }})
+                                    </span>
+                                {%- else -%}
+                                    <span class="text-muted">—</span>
+                                {%- endif -%}
+                            </span>
+                            {% if dolibarrActif %}
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary ms-2 js-dolibarr-open"
+                                        data-prospect="{{ prospect.id }}"
+                                        data-search-url="{{ path('app_user_prospects_dolibarr_search', {prospectId: prospect.id}) }}">
+                                    <i class="fas fa-building me-1"></i>{{ prospect.idDolibarr ? 'Changer' : 'Lier à Dolibarr' }}
+                                </button>
+                            {% endif %}
+                        </dd>
 
                         <dt class="col-sm-4">Campagne</dt>
                         <dd class="col-sm-8">{{ prospect.campagne ? prospect.campagne.libelle : 'Hors Meta' }}</dd>
@@ -141,6 +165,88 @@
                     </dl>
                 </div>
             </div>
+            {% if documents %}
+                <div class="card mb-2">
+                    <div class="card-header">
+                        Dolibarr
+                        {% if tiers %}
+                            <span class="text-muted fw-normal small">— {{ tiers.nom }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% if documents.error %}
+                            <div class="alert alert-warning py-2 mb-2 small">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                Dolibarr incomplet : {{ documents.error }}
+                            </div>
+                        {% endif %}
+
+                        {% set sections = [
+                            {key: 'proposals', titre: 'Devis'},
+                            {key: 'orders', titre: 'Commandes'},
+                            {key: 'invoices', titre: 'Factures'}
+                        ] %}
+                        {% set total = documents.proposals|length + documents.orders|length + documents.invoices|length %}
+
+                        {% if total == 0 %}
+                            <p class="text-muted mb-0 small">
+                                Aucun devis, commande ni facture pour ce tiers
+                                (les brouillons ne sont pas listés).
+                            </p>
+                        {% else %}
+                            {% for section in sections %}
+                                {% set lignes = attribute(documents, section.key) %}
+                                <div {% if not loop.last %}class="mb-3"{% endif %}>
+                                    <div class="fw-bold small mb-1">
+                                        {{ section.titre }}
+                                        <span class="text-muted fw-normal">({{ lignes|length }})</span>
+                                    </div>
+                                    {% if lignes is empty %}
+                                        <p class="text-muted small mb-0">Aucun.</p>
+                                    {% else %}
+                                        <table class="table table-sm table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Référence</th>
+                                                    <th width="90px">Date</th>
+                                                    <th width="120px">Statut</th>
+                                                    <th width="100px" class="text-end">HT</th>
+                                                    <th width="100px" class="text-end">TTC</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for doc in lignes %}
+                                                    <tr>
+                                                        <td>
+                                                            {% if doc.url %}
+                                                                <a href="{{ doc.url }}" target="_blank" rel="noopener">{{ doc.ref }}</a>
+                                                            {% else %}
+                                                                {{ doc.ref }}
+                                                            {% endif %}
+                                                            {% if doc.typeLabel and doc.typeLabel != 'Facture' %}
+                                                                <span class="badge text-bg-light border">{{ doc.typeLabel }}</span>
+                                                            {% endif %}
+                                                            {% if doc.refClient %}
+                                                                <br><span class="text-muted small">réf. client {{ doc.refClient }}</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>{{ doc.date ? doc.date|date('d/m/Y') : '—' }}</td>
+                                                        <td>
+                                                            <span class="badge text-bg-{{ doc.statutCouleur }}">{{ doc.statutLabel }}</span>
+                                                        </td>
+                                                        <td class="text-end">{{ doc.totalHt is not null ? doc.totalHt|number_format(2, ',', ' ') ~ ' €' : '—' }}</td>
+                                                        <td class="text-end">{{ doc.totalTtc is not null ? doc.totalTtc|number_format(2, ',', ' ') ~ ' €' : '—' }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
 
             <div class="card mb-2">
                 <div class="card-header">Localisation</div>

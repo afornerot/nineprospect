@@ -24,6 +24,7 @@ use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
 use App\Service\AdresseApi;
 use App\Service\AnnuaireEntreprises;
+use App\Service\DolibarrApi;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -57,6 +58,7 @@ class ProspectController extends AbstractController
         private AnnuaireEntreprises $annuaire,
         private AdresseApi $adresseApi,
         private ActionTypeDefautRepository $types,
+        private DolibarrApi $dolibarr,
         protected ContexteRetour $contexteRetour,
     ) {
     }
@@ -106,6 +108,15 @@ class ProspectController extends AbstractController
             'mapboxToken' => $this->mapboxPublicToken,
             'typesSuggestions' => $this->types->findActifsOrdonnes(),
             'prevNext' => $prevNext,
+            // Tiers Dolibarr lié : null si non lié ou intégration muette.
+            'tiers' => $this->dolibarr->findById((string) $prospect->getIdDolibarr()),
+            'tiersUrl' => $this->dolibarr->cardUrl($prospect->getIdDolibarr()),
+            'dolibarrActif' => $this->dolibarr->isConfigured(),
+            // Devis / commandes / factures du tiers lié, brouillons exclus.
+            // Reste vide quand le prospect n'est pas lié.
+            'documents' => null !== $prospect->getIdDolibarr()
+                ? $this->dolibarr->documentsForThirdparty((string) $prospect->getIdDolibarr())
+                : null,
             'listeUrl' => $this->contexteRetour->listeOu(
                 $request,
                 '/user/prospects',
@@ -208,6 +219,100 @@ class ProspectController extends AbstractController
         return new JsonResponse([
             'ok' => true,
             'redirect' => $this->contexteRetour->url($request, 'app_user_prospects_show', ['id' => $id]),
+        ]);
+    }
+
+    /**
+     * GET /user/prospects/{prospectId}/dolibarr/search?q=…
+     * Recherche de tiers Dolibarr (lecture seule) pour la modale de liaison.
+     * Renvoie un fragment HTML injecté dans la fiche prospect.
+     */
+    #[Route('/{prospectId}/dolibarr/search', name: 'app_user_prospects_dolibarr_search', methods: ['GET'])]
+    public function dolibarrSearch(int $prospectId, Request $request): Response
+    {
+        $prospect = $this->prospects->find($prospectId);
+        if (!$prospect) {
+            return new Response('Prospect introuvable.', 404);
+        }
+
+        // Critère : `q` explicite, sinon le nom du prospect (recherche
+        // pré-remplie à l'ouverture, comme la modale Annuaire).
+        $q = trim((string) $request->query->get('q', ''));
+        if ('' === $q) {
+            $q = trim((string) $prospect->getNom());
+        }
+
+        $rows = [];
+        $apiError = null;
+        if ('' !== $q) {
+            $response = $this->dolibarr->search($q);
+            $apiError = $response['error'];
+            foreach ($response['results'] as $raw) {
+                $rows[] = $this->dolibarr->normalize($raw);
+            }
+        }
+
+        return $this->render('prospects/_dolibarr_modal.html.twig', [
+            'prospect' => $prospect,
+            'query' => $q,
+            'rows' => $rows,
+            'apiError' => $apiError,
+            'actif' => $this->dolibarr->isConfigured(),
+            'csrf' => $this->container->get('security.csrf.token_manager')
+                ->getToken('dolibarr-prospect')->getValue(),
+            'searchUrl' => $this->generateUrl('app_user_prospects_dolibarr_search', ['prospectId' => $prospectId]),
+            'linkUrl' => $this->generateUrl('app_user_prospects_dolibarr_link'),
+        ]);
+    }
+
+    /**
+     * POST /user/prospects/dolibarr/link
+     * Lie un prospect à un tiers Dolibarr (`prospect.id_dolibarr`).
+     * Body JSON : {prospectId, thirdpartyId, csrf_token}. Un `thirdpartyId`
+     * vide retire la liaison.
+     */
+    #[Route('/dolibarr/link', name: 'app_user_prospects_dolibarr_link', methods: ['POST'])]
+    public function dolibarrLink(Request $request): JsonResponse
+    {
+        $body = json_decode((string) $request->getContent(), true);
+        if (!\is_array($body)) {
+            return new JsonResponse(['ok' => false, 'error' => 'Body JSON invalide.'], 400);
+        }
+
+        if (!$this->isCsrfTokenValid('dolibarr-prospect', (string) ($body['csrf_token'] ?? ''))) {
+            return new JsonResponse(['ok' => false, 'error' => 'Token CSRF invalide.'], 403);
+        }
+
+        $prospectId = (int) ($body['prospectId'] ?? 0);
+        $prospect = $this->prospects->find($prospectId);
+        if (!$prospect) {
+            return new JsonResponse(['ok' => false, 'error' => 'Prospect introuvable.'], 404);
+        }
+
+        $thirdpartyId = trim((string) ($body['thirdpartyId'] ?? ''));
+
+        if ('' === $thirdpartyId) {
+            $prospect->setIdDolibarr(null);
+            $this->em->flush();
+
+            return new JsonResponse(['ok' => true, 'thirdpartyId' => null]);
+        }
+
+        // Le tiers est revalidé côté serveur : on n'écrit jamais un ID fourni
+        // par le client sans vérifier qu'il existe dans Dolibarr.
+        $tiers = $this->dolibarr->findById($thirdpartyId);
+        if (null === $tiers) {
+            return new JsonResponse(['ok' => false, 'error' => 'Tiers Dolibarr introuvable.'], 422);
+        }
+
+        $prospect->setIdDolibarr((string) $tiers['id']);
+        $this->em->flush();
+
+        return new JsonResponse([
+            'ok' => true,
+            'thirdpartyId' => $tiers['id'],
+            'nom' => $tiers['nom'],
+            'url' => $this->dolibarr->cardUrl((string) $tiers['id']),
         ]);
     }
 
