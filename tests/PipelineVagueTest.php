@@ -187,6 +187,59 @@ class PipelineVagueTest extends WebTestCase
         $this->assertLessThanOrEqual($total, array_sum($filtre[(int) $premiereEtape->getId()] ?? []));
     }
 
+    /**
+     * Chaque étape du pipeline doit totaliser le même nombre de liens : un
+     * `ProspectSprint` compte une fois par étape, quel que soit son statut
+     * (y compris sans valeur, compté « à faire »).
+     *
+     * Régression : l'agrégation écrasait le statut « à faire » quand deux
+     * lignes le portaient (lien sans valeur + lien explicitement à 0), ce qui
+     * faisait fondre le total d'une étape par rapport aux autres.
+     */
+    public function testChaqueEtapeTotaliseLeMemeNombreDeLiens(): void
+    {
+        $pipeline = $this->pipelineDefaut();
+        if (null === $pipeline) {
+            static::markTestSkipped('Pipeline par défaut absent.');
+        }
+
+        $vagues = $this->deuxVagues();
+        $prospects = $this->deuxProspects();
+        if (null === $vagues || null === $prospects) {
+            static::markTestSkipped('Vagues ou prospects absents de la base de test.');
+        }
+
+        try {
+            $liens = $this->prospects()->getEntityManager()->createQueryBuilder()
+                ->select('COUNT(ps.id)')
+                ->from(\App\Entity\ProspectSprint::class, 'ps')
+                ->innerJoin('ps.sprint', 's')
+                ->where('s.pipeline = :pipeline')
+                ->setParameter('pipeline', $pipeline->getId())
+                ->getQuery()
+                ->getSingleScalarResult();
+        } catch (\Doctrine\DBAL\Exception) {
+            static::markTestSkipped('Base de test indisponible.');
+        }
+
+        $attendus = (int) $liens;
+        if (0 === $attendus) {
+            static::markTestSkipped('Aucun lien prospect↔vague sur ce pipeline.');
+        }
+
+        $compteurs = $this->prospects()->countPipeline((int) $pipeline->getId());
+        $this->assertNotEmpty($compteurs);
+
+        foreach ($pipeline->getEtapes() as $etape) {
+            $total = array_sum($compteurs[(int) $etape->getId()] ?? []);
+            $this->assertSame(
+                $attendus,
+                $total,
+                sprintf('L\'étape « %s » doit totaliser %d liens, comme les autres.', $etape->getNom(), $attendus),
+            );
+        }
+    }
+
     public function testCreationCalculeLeNumeroSuivantEtLeVerrouille(): void
     {
         $client = $this->loginAsUser();

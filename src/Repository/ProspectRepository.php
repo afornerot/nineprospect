@@ -175,10 +175,17 @@ class ProspectRepository extends ServiceEntityRepository
                 ->setParameter('cp_cible', $cibleId);
         }
 
+        // Deux lignes peuvent porter le même statut : un lien sans valeur
+        // (`v.statut` NULL, compté « à faire ») et un lien explicitement à
+        // faire (`v.statut = 0`). Il faut donc **additionner**, pas écraser —
+        // sinon les 806 liens sans valeur disparaissaient au profit des 32
+        // explicitement à 0, et le total d'une étape ne valait plus le nombre
+        // de liens.
         $result = [];
         foreach ($qb->getQuery()->getArrayResult() as $ligne) {
             $statut = null === $ligne['valeur'] ? PipelineStatut::A_FAIRE : (int) $ligne['valeur'];
-            $result[(int) $ligne['etape']][$statut] = (int) $ligne['total'];
+            $etape = (int) $ligne['etape'];
+            $result[$etape][$statut] = ($result[$etape][$statut] ?? 0) + (int) $ligne['total'];
         }
 
         return $result;
