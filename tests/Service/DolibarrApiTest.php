@@ -238,20 +238,18 @@ class DolibarrApiTest extends TestCase
         $this->assertSame('Archivée', $devis['statutLabel']);
         $this->assertSame('dark', $devis['statutCouleur']);
         $this->assertSame(3990.0, $devis['totalHt']);
-        $this->assertSame(4772.04, $devis['totalTtc']);
         $this->assertSame('https://doli.example/dolibarr/comm/propal/card.php?id=2', $devis['url']);
-        $this->assertNull($devis['refClient']);
+        $this->assertArrayNotHasKey('totalTtc', $devis, 'Le TTC n\'est plus exposé.');
+        $this->assertArrayNotHasKey('refClient', $devis, 'La réf. client n\'est plus exposée.');
 
         $commande = $documents['orders'][0];
         $this->assertSame('Réceptionnée', $commande['statutLabel']);
-        $this->assertSame('bc1404000592', $commande['refClient']);
         $this->assertSame('https://doli.example/dolibarr/commande/card.php?id=1', $commande['url']);
 
         $facture = $documents['invoices'][0];
         $this->assertSame('Acompte', $facture['typeLabel'], 'Le sous-type de facture est nommé.');
         $this->assertSame('Payée', $facture['statutLabel']);
-        $this->assertTrue($facture['paye']);
-        $this->assertSame(14553.6, $facture['totalTtc']);
+        $this->assertSame(12128.0, $facture['totalHt']);
         $this->assertSame('https://doli.example/dolibarr/compta/facture/card.php?facid=346', $facture['url']);
     }
 
@@ -307,5 +305,43 @@ class DolibarrApiTest extends TestCase
         $api->documentsForThirdparty('2');
         $api->documentsForThirdparty('2');
         $this->assertSame(3, $appels, 'Un seul aller-retour par type, puis cache.');
+    }
+
+    public function testDocumentsSontRecuperesSansLimite(): void
+    {
+        // Le serveur Dolibarr plafonne chaque page : on simule 120 devis
+        // (100 + 20) → la pagination doit tout récupérer, pas les 10 derniers.
+        $pagesDemandees = [];
+        $client = new MockHttpClient(function (string $method, string $url) use (&$pagesDemandees) {
+            if (!str_contains($url, '/proposals')) {
+                return new MockResponse('[]', ['http_code' => 200]);
+            }
+
+            $query = [];
+            parse_str((string) parse_url($url, \PHP_URL_QUERY), $query);
+            $page = (int) ($query['page'] ?? 0);
+            $pagesDemandees[] = $page;
+
+            $count = match ($page) {
+                0 => 100,
+                1 => 20,
+                default => 0,
+            };
+            $rows = [];
+            for ($i = 0; $i < $count; ++$i) {
+                $id = $page * 100 + $i + 1;
+                $rows[] = ['id' => (string) $id, 'ref' => 'PR'.$id, 'statut' => '1', 'date' => 1505433600, 'total_ht' => '10'];
+            }
+
+            return new MockResponse(json_encode($rows, \JSON_THROW_ON_ERROR), ['http_code' => 200]);
+        });
+        $api = new DolibarrApi($client, new NullLogger(), new ArrayAdapter(), 'https://doli.example/dolibarr', 'cle');
+
+        $documents = $api->documentsForThirdparty('2');
+
+        $this->assertCount(120, $documents['proposals'], 'Tous les devis sont récupérés, pas seulement la première page.');
+        $this->assertSame([0, 1], $pagesDemandees, 'La pagination s\'arrête dès qu\'une page est incomplète.');
+        $this->assertSame('PR1', $documents['proposals'][0]['ref']);
+        $this->assertSame('PR120', $documents['proposals'][119]['ref']);
     }
 }

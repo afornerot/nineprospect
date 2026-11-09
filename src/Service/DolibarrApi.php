@@ -37,8 +37,11 @@ class DolibarrApi
     /** Durée de mise en cache des documents d'un tiers (secondes). */
     private const TTL_DOCUMENTS = 300;
 
-    /** Nombre de documents listés par type sur la fiche prospect. */
-    private const DEFAULT_DOCUMENTS = 10;
+    /** Taille de page pour énumérer exhaustivement les documents d'un tiers. */
+    private const DOCUMENTS_PAGE_SIZE = 100;
+
+    /** Garde-fou : nombre maximal de pages par type (100 × 50 = 5000 docs). */
+    private const DOCUMENTS_MAX_PAGES = 50;
 
     /**
      * Endpoints Dolibarr des documents commerciaux d'un tiers, avec leur
@@ -145,7 +148,8 @@ class DolibarrApi
     }
 
     /**
-     * Devis, commandes et factures d'un tiers, brouillons exclus.
+     * Devis, commandes et factures d'un tiers, brouillons exclus, **sans
+     * limite** : chaque type est paginé jusqu'à épuisement.
      *
      * Dolibarr expose un endpoint par type (`proposals`, `orders`,
      * `invoices`) et son `sqlfilters` ne connaît que les colonnes réelles :
@@ -161,7 +165,7 @@ class DolibarrApi
      *   error: ?string
      * }
      */
-    public function documentsForThirdparty(string $thirdpartyId, int $limitPerType = self::DEFAULT_DOCUMENTS): array
+    public function documentsForThirdparty(string $thirdpartyId): array
     {
         $vide = ['proposals' => [], 'orders' => [], 'invoices' => [], 'error' => null];
 
@@ -171,32 +175,42 @@ class DolibarrApi
         }
 
         return $this->cache->get(
-            'dolibarr.documents.'.$id.'.'.$limitPerType,
-            function (ItemInterface $item) use ($id, $limitPerType, $vide): array {
+            'dolibarr.documents.'.$id,
+            function (ItemInterface $item) use ($id, $vide): array {
                 $item->expiresAfter(self::TTL_DOCUMENTS);
 
                 $filtre = sprintf('(t.fk_soc:=:%s) and (t.fk_statut:>:0)', $id);
-                $limite = max(1, min(100, $limitPerType));
                 $documents = $vide;
 
                 foreach (self::DOCUMENT_TYPES as $type => $config) {
-                    $response = $this->request($type, [
-                        'limit' => $limite,
-                        'sqlfilters' => $filtre,
-                        'sortfield' => 't.rowid',
-                        'sortorder' => 'DESC',
-                    ]);
+                    // Toute la liste, pas un échantillon : on pagine jusqu'à
+                    // épuisement (le serveur Dolibarr plafonne chaque page).
+                    $rows = [];
+                    for ($page = 0; $page < self::DOCUMENTS_MAX_PAGES; ++$page) {
+                        $response = $this->request($type, [
+                            'limit' => self::DOCUMENTS_PAGE_SIZE,
+                            'page' => $page,
+                            'sqlfilters' => $filtre,
+                            'sortfield' => 't.rowid',
+                            'sortorder' => 'DESC',
+                        ]);
 
-                    if (null !== $response['error']) {
-                        // Une panne partielle ne masque pas les autres types.
-                        $documents['error'] ??= $response['error'];
+                        if (null !== $response['error']) {
+                            // Une panne partielle ne masque pas les autres types.
+                            $documents['error'] ??= $response['error'];
 
-                        continue;
+                            break;
+                        }
+
+                        $rows = array_merge($rows, $response['rows']);
+                        if (\count($response['rows']) < self::DOCUMENTS_PAGE_SIZE) {
+                            break;
+                        }
                     }
 
                     $documents[$type] = array_map(
                         fn (array $row): array => $this->normalizeDocument($row, $config['label'], $config['url']),
-                        $response['rows'],
+                        $rows,
                     );
                 }
 
@@ -206,14 +220,15 @@ class DolibarrApi
     }
 
     /**
-     * Aplatit un document Dolibarr (devis, commande, facture).
+     * Aplatit un document Dolibarr (devis, commande, facture) pour le pavé
+     * de la fiche prospect : référence, date, statut et montant HT.
      *
      * @param array<string, mixed> $row
      *
      * @return array{
-     *   id: string, type: string, typeLabel: ?string, ref: string, refClient: ?string,
-     *   date: ?string, statut: int, statutLabel: string, statutCouleur: string,
-     *   totalHt: ?float, totalTtc: ?float, paye: ?bool, url: ?string
+     *   id: string, type: string, typeLabel: ?string, ref: string,
+     *   date: ?string, statutLabel: string, statutCouleur: string,
+     *   totalHt: ?float, url: ?string
      * }
      */
     public function normalizeDocument(array $row, string $type, string $urlPrefix): array
@@ -229,14 +244,10 @@ class DolibarrApi
             // facture définitive.
             'typeLabel' => 'Facture' === $type ? self::libelleTypeFacture($typeFacture) : null,
             'ref' => (string) ($row['ref'] ?? ''),
-            'refClient' => $this->str($row['ref_client'] ?? null),
             'date' => $this->timestampToDate($row['date'] ?? null),
-            'statut' => $statut,
             'statutLabel' => self::statutLabel($type, $statut),
             'statutCouleur' => self::statutCouleur($type, $statut),
             'totalHt' => $this->montant($row['total_ht'] ?? null),
-            'totalTtc' => $this->montant($row['total_ttc'] ?? null),
-            'paye' => $this->boolOuNull($row['paye'] ?? null),
             'url' => '' !== (string) ($row['id'] ?? '') && $this->isConfigured()
                 ? rtrim((string) $this->url, '/').$urlPrefix.(string) $row['id']
                 : null,
@@ -334,15 +345,6 @@ class DolibarrApi
         }
 
         return round((float) $value, 2);
-    }
-
-    private function boolOuNull(mixed $value): ?bool
-    {
-        if (!\is_scalar($value) || '' === (string) $value) {
-            return null;
-        }
-
-        return (bool) (int) $value;
     }
 
     /**

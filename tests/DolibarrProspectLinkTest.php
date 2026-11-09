@@ -86,7 +86,11 @@ class DolibarrProspectLinkTest extends WebTestCase
         $this->assertStringContainsString('PR1110-0002', $html, 'Le devis non brouillon est listé.');
         $this->assertStringContainsString('comm/propal/card.php?id=2', $html);
         $this->assertStringNotContainsString('PR-BROUILLON', $html, 'Les brouillons sont exclus.');
-        $this->assertStringContainsString('9 148,90 €', $html, 'Le montant TTC est formaté en euros.');
+        $this->assertStringContainsString('Montant HT', $html);
+        $this->assertStringContainsString('7 624,08 €', $html, 'Le montant HT est formaté en euros.');
+        $this->assertStringContainsString('Total HT', $html, 'Chaque table porte son total HT.');
+        $this->assertStringNotContainsString('TTC', $html, 'Le TTC a été retiré du pavé.');
+        $this->assertStringNotContainsString('réf. client', $html, 'La référence client a été retirée.');
 
         // Retrait : thirdpartyId vide.
         $r = $this->postLink($client, $prospectId, '', $csrf);

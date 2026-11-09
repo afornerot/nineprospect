@@ -156,6 +156,25 @@ button.badge.js-cycle-etape:disabled {
     overflow-wrap: anywhere;
 }
 
+/* Documents Dolibarr (fiche prospect) : la carte est étroite (col-md-4),
+   le tableau tient en trois colonnes (la date est empilée sous la référence)
+   pour laisser ~130 px à « Montant HT », jamais coupé. */
+.table-dolibarr-documents {
+    font-size: 0.78rem;
+}
+.table-dolibarr-documents th,
+.table-dolibarr-documents td {
+    padding: 0.2rem 0.3rem;
+}
+.table-dolibarr-documents .badge {
+    font-size: 0.66rem;
+}
+.table-dolibarr-documents th:last-child,
+.table-dolibarr-documents td:last-child {
+    white-space: nowrap;
+    min-width: 130px;
+}
+
 @media (max-width: 991px) {
     aside.app-sidebar {
         display: none;

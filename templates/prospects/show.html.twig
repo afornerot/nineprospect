@@ -204,14 +204,25 @@
                                     {% if lignes is empty %}
                                         <p class="text-muted small mb-0">Aucun.</p>
                                     {% else %}
-                                        <table class="table table-sm table-striped mb-0">
+                                        {# Total HT de la section : seuls les documents
+                                           portant un montant sont additionnés. #}
+                                        {% set totalHt = 0 %}
+                                        {% for doc in lignes %}
+                                            {% if doc.totalHt is not null %}
+                                                {% set totalHt = totalHt + doc.totalHt %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {# Trois colonnes seulement : la carte (col-md-4)
+                                           est trop étroite pour quatre colonnes lisibles. La
+                                           date est donc empilée sous la référence, ce qui
+                                           laisse ~130 px à la colonne « Montant HT » sans
+                                           défilement horizontal. #}
+                                        <table class="table table-sm table-striped mb-0 table-dolibarr-documents">
                                             <thead>
                                                 <tr>
                                                     <th>Référence</th>
-                                                    <th width="90px">Date</th>
-                                                    <th width="120px">Statut</th>
-                                                    <th width="100px" class="text-end">HT</th>
-                                                    <th width="100px" class="text-end">TTC</th>
+                                                    <th>Statut</th>
+                                                    <th class="text-end">Montant HT</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -226,19 +237,23 @@
                                                             {% if doc.typeLabel and doc.typeLabel != 'Facture' %}
                                                                 <span class="badge text-bg-light border">{{ doc.typeLabel }}</span>
                                                             {% endif %}
-                                                            {% if doc.refClient %}
-                                                                <br><span class="text-muted small">réf. client {{ doc.refClient }}</span>
+                                                            {% if doc.date %}
+                                                                <br><span class="text-muted">{{ doc.date|date('d/m/Y') }}</span>
                                                             {% endif %}
                                                         </td>
-                                                        <td>{{ doc.date ? doc.date|date('d/m/Y') : '—' }}</td>
                                                         <td>
                                                             <span class="badge text-bg-{{ doc.statutCouleur }}">{{ doc.statutLabel }}</span>
                                                         </td>
-                                                        <td class="text-end">{{ doc.totalHt is not null ? doc.totalHt|number_format(2, ',', ' ') ~ ' €' : '—' }}</td>
-                                                        <td class="text-end">{{ doc.totalTtc is not null ? doc.totalTtc|number_format(2, ',', ' ') ~ ' €' : '—' }}</td>
+                                                        <td class="text-end text-nowrap">{{ doc.totalHt is not null ? doc.totalHt|number_format(2, ',', ' ') ~ ' €' : '—' }}</td>
                                                     </tr>
                                                 {% endfor %}
                                             </tbody>
+                                            <tfoot>
+                                                <tr class="fw-bold">
+                                                    <td colspan="2">Total HT</td>
+                                                    <td class="text-end text-nowrap">{{ totalHt|number_format(2, ',', ' ') }} €</td>
+                                                </tr>
+                                            </tfoot>
                                         </table>
                                     {% endif %}
                                 </div>

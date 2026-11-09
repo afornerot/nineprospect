@@ -452,13 +452,16 @@ Bouton **« Créer depuis l'Annuaire »** dans la liste prospects à côté de
     `proposals` / `orders` / `invoices` avec
     `sqlfilters=(t.fk_soc:=:<id>) and (t.fk_statut:>:0)` — **les brouillons
     (statut 0) sont donc exclus** — triés par `t.rowid DESC` (cet API n'expose
-    pas les colonnes `date*` au tri). 10 documents par type, cache 5 min.
-    Chaque ligne affiche référence (lien vers la fiche Dolibarr), date,
-    statut (libellés alignés sur Dolibarr), montants HT et TTC ; les factures
-    d'avoir / acompte / pro forma portent en plus leur sous-type
-    (`total_ht`/`total_ttc` restent signés comme dans Dolibarr). Une panne sur
-    un type n'empêche pas l'affichage des autres (bandeau « Dolibarr
-    incomplet »).
+    pas les colonnes `date*` au tri). La liste est **exhaustive** : chaque type
+    est paginé (100 par page) jusqu'à épuisement, avec un garde-fou de 50 pages
+    par type ; cache 5 min.
+    Tableau **3 colonnes** (la date est empilée sous la référence) pour laisser
+    la place à « Montant HT », jamais coupé : référence (lien vers la fiche
+    Dolibarr), statut (libellés alignés sur Dolibarr) et montant HT ; chaque
+    section se termine par un **Total HT**. Les factures d'avoir / acompte /
+    pro forma portent en plus leur sous-type (`total_ht` reste signé comme
+    dans Dolibarr). Une panne sur un type n'empêche pas l'affichage des autres
+    (bandeau « Dolibarr incomplet »).
 - **Email / Téléphone / LinkedIn / Site web** : stockés sur `Prospect`,
   **auto-initialisés depuis le contact principal** à la soumission du
   formulaire si le champ prospect est vide (helpers
