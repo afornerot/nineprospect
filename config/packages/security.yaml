@@ -53,6 +53,17 @@ security:
       custom_authenticators:
         - App\Security\McpAuthenticator
 
+    # API REST : authentification machine-to-machine par `X-API-SECRET`
+    # (valeur de APP_SECRET). Firewall stateless : aucune session, donc aucun
+    # flow de login interactif possible pour un client API.
+    api:
+      pattern: ^/v1/api
+      security: true
+      stateless: true
+      provider: mcp_provider
+      custom_authenticators:
+        - App\Security\ApiKeyAuthenticator
+
     main:
       pattern: ^/
       provider: sql_provider
@@ -79,6 +90,9 @@ security:
     # /mcp est machine-to-machine : un client API ne sait pas suivre
     # un flow de login interactif (CAS/OIDC).
     - { path: ^/mcp, roles: PUBLIC_ACCESS }
+    # Même principe pour /v1/api : la protection est portée par
+    # ApiKeyAuthenticator (X-API-SECRET obligatoire) => 401, pas 403.
+    - { path: ^/v1/api, roles: ROLE_MCP }
     - { path: ^/user, roles: ROLE_USER }
     - { path: ^/, roles: PUBLIC_ACCESS }
 

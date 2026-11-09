@@ -7,7 +7,7 @@ dans `.env.local` (jamais commité).
 
 | Variable | Description |
 |----------|-------------|
-| `APP_SECRET` | Secret Symfony (générer via `php -r "echo bin2hex(random_bytes(16));"`) |
+| `APP_SECRET` | Secret Symfony **et** clé de l'API REST (`X-API-SECRET`) — générer via `php -r "echo bin2hex(random_bytes(32));"`. La valeur `changeme` est refusée par l'API |
 | `APP_ENCRYPT_KEY` | Clé de chiffrement |
 | `MCP_SECRET` | Secret du serveur MCP — à modifier avant prod (voir [authentification.md](authentification.md)) |
 | `DATABASE_URL` | Connexion base de données |

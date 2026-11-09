@@ -259,6 +259,18 @@
 {% block localscript %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Chart.js v4 dessine libellés, axes et grille en gris fixe
+            // (`#666`, grille noire translucide) : illisible sur le thème
+            // sombre Darkly. On force le texte en blanc et une grille claire
+            // translucide, quelle que soit la variable CSS du thème.
+            Chart.defaults.color = '#fff';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.15)';
+            var chartFontFamily = getComputedStyle(document.documentElement)
+                .getPropertyValue('--bs-body-font-family').trim();
+            if (chartFontFamily) {
+                Chart.defaults.font.family = chartFontFamily;
+            }
+
             var pipelineLabels = {{ etapes|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
             var pipelineData = {{ donneesPipeline|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
             var colors = ['#6c757d', '#0dcaf0', '#ffc107', '#adb5bd', '#198754', '#dc3545'];
