@@ -31,7 +31,7 @@ class ProspectDocument
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Prospect::class, inversedBy: 'documentsDolibarr')]
+    #[ORM\ManyToOne(targetEntity: Prospect::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Prospect $prospect = null;
 

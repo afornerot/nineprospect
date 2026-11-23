@@ -161,6 +161,12 @@
                                 <i class="fas fa-cog fa-fw"></i>
                                 <span>Configuration</span>
                             </a>
+                            {% if dolibarr.isConfigured() %}
+                                <a href="{{ path('app_admin_dolibarr') }}" title="Gestion Dolibarr">
+                                    <i class="fas fa-dolly fa-fw"></i>
+                                    <span>Gestion Dolibarr</span>
+                                </a>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </aside>

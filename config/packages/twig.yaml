@@ -4,6 +4,7 @@ twig:
   globals:
     appName: "%appName%"
     app_config: '@App\Service\ConfigParameterBag'
+    dolibarr: '@App\Service\DolibarrApi'
   paths:
       '%kernel.project_dir%/vendor/bnine/filesbundle/templates': BnineFilesBundle
 when@test:
