@@ -50,6 +50,14 @@ class Action
     private ?\DateTime $datePrevue = null;
 
     /**
+     * Horaire optionnel de l'échéance (HH:MM). Purement informatif : les
+     * statuts (retard / aujourd'hui / à venir) et les tris restent sur la
+     * date seule.
+     */
+    #[ORM\Column(length: 5, nullable: true)]
+    private ?string $heurePrevue = null;
+
+    /**
      * Date effective à laquelle l'action a été réalisée. Statut "réalisée" si non null.
      * Colonne SQL : `date` (conservée pour ne pas perdre les données existantes).
      */
@@ -126,6 +134,18 @@ class Action
     public function setDatePrevue(?\DateTime $datePrevue): static
     {
         $this->datePrevue = $datePrevue;
+
+        return $this;
+    }
+
+    public function getHeurePrevue(): ?string
+    {
+        return $this->heurePrevue;
+    }
+
+    public function setHeurePrevue(?string $heurePrevue): static
+    {
+        $this->heurePrevue = null === $heurePrevue || '' === $heurePrevue ? null : $heurePrevue;
 
         return $this;
     }

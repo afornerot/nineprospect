@@ -34,6 +34,15 @@ class Sprint
     #[ORM\JoinColumn(nullable: true, onDelete: 'RESTRICT')]
     private ?Pipeline $pipeline = null;
 
+    /**
+     * Produit principal poussé par cette vague. Informatif : ne pré-affecte
+     * rien aux prospects de la vague (l'affectation produit reste par prospect,
+     * sur la liste et la fiche).
+     */
+    #[ORM\ManyToOne(targetEntity: Produit::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Produit $produit = null;
+
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTime $dateDebut = null;
 
@@ -99,6 +108,18 @@ class Sprint
     public function setPipeline(?Pipeline $pipeline): static
     {
         $this->pipeline = $pipeline;
+
+        return $this;
+    }
+
+    public function getProduit(): ?Produit
+    {
+        return $this->produit;
+    }
+
+    public function setProduit(?Produit $produit): static
+    {
+        $this->produit = $produit;
 
         return $this;
     }

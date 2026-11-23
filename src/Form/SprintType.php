@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Pipeline;
+use App\Entity\Produit;
 use App\Entity\Prospect;
 use App\Entity\Sprint;
 use Doctrine\ORM\EntityRepository;
@@ -42,6 +43,14 @@ class SprintType extends AbstractType
                 'class' => Pipeline::class,
                 'choice_label' => 'nom',
                 'required' => true,
+            ])
+
+            ->add('produit', EntityType::class, [
+                'label' => 'Produit associé',
+                'class' => Produit::class,
+                'choice_label' => 'titre',
+                'placeholder' => '—',
+                'required' => false,
             ])
 
             ->add('libelle', TextType::class, [

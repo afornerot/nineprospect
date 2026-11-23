@@ -13,6 +13,7 @@ use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\TimeType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -88,6 +89,15 @@ class ActionType extends AbstractType
                 'label' => 'À faire le',
                 'widget' => 'single_text',
                 'required' => false,
+            ])
+
+            ->add('heurePrevue', TimeType::class, [
+                'label' => 'À faire à',
+                'widget' => 'single_text',
+                'required' => false,
+                'input' => 'string',
+                'input_format' => 'H:i',
+                'help' => 'Facultatif.',
             ])
 
             ->add('dateRealisee', DateType::class, [

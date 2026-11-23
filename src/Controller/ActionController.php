@@ -368,6 +368,7 @@ class ActionController extends AbstractController
         $resultat = $request->request->get('resultat');
         $dateRealiseeStr = (string) $request->request->get('dateRealisee', '');
         $dateSuivanteStr = (string) $request->request->get('datePrevueSuivante', '');
+        $heureSuivanteStr = trim((string) $request->request->get('heurePrevueSuivante', ''));
         $typeSuivant = (string) $request->request->get('typeSuivant', '');
         $realiseParId = $request->request->get('realisePar');
 
@@ -399,6 +400,16 @@ class ActionController extends AbstractController
             $suivante->setProspect($action->getProspect());
             $suivante->setContact($action->getContact());
             $suivante->setDatePrevue(new \DateTime($dateSuivanteStr));
+            if ('' !== $heureSuivanteStr) {
+                // Horaire facultatif : accepté seulement au format HH:MM.
+                if (!preg_match('/^\d{1,2}:\d{2}$/', $heureSuivanteStr)) {
+                    return new JsonResponse([
+                        'ok' => false,
+                        'error' => 'Horaire invalide (format attendu HH:MM).',
+                    ], 422);
+                }
+                $suivante->setHeurePrevue($heureSuivanteStr);
+            }
             $suivante->setTypeAction($typeSuivant);
             // L'utilisateur courant hérite de l'affectation par défaut.
             if (null !== $user) {

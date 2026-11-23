@@ -21,6 +21,7 @@
                 <th>Numéro</th>
                 <th>Libellé</th>
                 <th>Pipeline</th>
+                <th>Produit</th>
                 <th>Période</th>
                 <th>Prospects</th>
                 <th>Notes</th>
@@ -43,6 +44,7 @@
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
+                        <td>{{ sprint.produit ? sprint.produit.titre : '—' }}</td>
                         <td data-order="{{ sprint.dateDebut ? sprint.dateDebut|date('Y-m-d') : '' }}">
                             {{ sprint.dateDebut ? sprint.dateDebut|date('d/m/Y') : '—' }}
                             →

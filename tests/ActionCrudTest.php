@@ -160,6 +160,7 @@ class ActionCrudTest extends WebTestCase
             'dateRealisee' => '2026-09-25',
             'resultat' => 'Appel abouti',
             'datePrevueSuivante' => '2099-12-20',
+            'heurePrevueSuivante' => '14:30',
             'typeSuivant' => 'Visio',
         ], [], [
             'HTTP_ORIGIN' => 'http://localhost',
@@ -181,11 +182,51 @@ class ActionCrudTest extends WebTestCase
         $suivante = $this->derniereActionParDatePrevue('2099-12-20');
         $this->assertInstanceOf(Action::class, $suivante);
         $this->assertTrue($suivante->estPlanifiee());
+        $this->assertSame('14:30', $suivante->getHeurePrevue());
         $this->assertNotSame($planifieeId, $suivante->getId());
 
         $this->em()->remove($suivante);
         $this->em()->remove($planifiee);
         $this->em()->flush();
+    }
+
+    public function testCloturerRejetteHoraireInvalide(): void
+    {
+        $client = $this->loginAsUser();
+        $prospect = $this->unProspect();
+        if (null === $client || null === $prospect) {
+            static::markTestSkipped('Base de test indisponible.');
+        }
+
+        $planifiee = $this->creerPlanifiee($prospect, '2099-12-10');
+        $planifieeId = $planifiee->getId();
+        $this->assertNotNull($planifieeId);
+        $this->em()->clear();
+
+        $token = $this->recupererCsrfCloture($client, $planifieeId);
+
+        $client->request('POST', '/user/actions/cloturer/'.$planifieeId, [
+            '_csrf_token' => $token,
+            'dateRealisee' => '2026-09-25',
+            'datePrevueSuivante' => '2099-12-20',
+            'heurePrevueSuivante' => '25h99',
+            'typeSuivant' => 'Visio',
+        ], [], [
+            'HTTP_ORIGIN' => 'http://localhost',
+            'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true);
+        $this->assertSame('Horaire invalide (format attendu HH:MM).', $body['error'] ?? null);
+
+        // Rien ne doit avoir été créé : la clôture est refusée en bloc.
+        $this->em()->clear();
+        $this->assertNull($this->derniereActionParDatePrevue('2099-12-20'));
+
+        $planifiee = $this->actions()->find($planifieeId);
+        $this->assertInstanceOf(Action::class, $planifiee);
+        $this->assertFalse($planifiee->estRealisee());
     }
 
     public function testCloturerSansSuivanteNeCreeRien(): void

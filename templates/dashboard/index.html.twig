@@ -205,7 +205,7 @@
                                 {% if action.prospect %}<a href="{{ path(routeProspect, {id: action.prospect.id}) }}">{{ action.prospect.nom }}</a>{% endif %}
                                 {% if action.contact %}<br><small class="text-muted">{{ action.contact.nomComplet }}</small>{% endif %}
                             </span>
-                            <span class="badge text-bg-danger">{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}</span>
+                            <span class="badge text-bg-danger">{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}{% if action.heurePrevue %} {{ action.heurePrevue }}{% endif %}</span>
                         </li>
                     {% else %}
                         <li class="list-group-item text-muted">Aucune action en retard</li>
@@ -225,7 +225,7 @@
                                 {% if action.prospect %}<a href="{{ path(routeProspect, {id: action.prospect.id}) }}">{{ action.prospect.nom }}</a>{% endif %}
                                 {% if action.contact %}<br><small class="text-muted">{{ action.contact.nomComplet }}</small>{% endif %}
                             </span>
-                            <span class="badge text-bg-warning">{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}</span>
+                            <span class="badge text-bg-warning">{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}{% if action.heurePrevue %} {{ action.heurePrevue }}{% endif %}</span>
                         </li>
                     {% else %}
                         <li class="list-group-item text-muted">Aucune action à faire aujourd'hui</li>
@@ -245,7 +245,7 @@
                                 {% if action.prospect %}<a href="{{ path(routeProspect, {id: action.prospect.id}) }}">{{ action.prospect.nom }}</a>{% endif %}
                                 {% if action.contact %}<br><small class="text-muted">{{ action.contact.nomComplet }}</small>{% endif %}
                             </span>
-                            <span class="badge text-bg-secondary">{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}</span>
+                            <span class="badge text-bg-secondary">{{ action.datePrevue ? action.datePrevue|date('d/m/Y') : '—' }}{% if action.heurePrevue %} {{ action.heurePrevue }}{% endif %}</span>
                         </li>
                     {% else %}
                         <li class="list-group-item text-muted">Aucune action planifiée</li>

@@ -112,7 +112,7 @@
                 <th>Pipeline</th>
                 <th width="80px">Contacté</th>
                 <th width="180px">Produit</th>
-                <th width="100px">Prc Action</th>
+                <th width="140px">Prc Action</th>
             </tr>
             </thead>
             <tbody>
@@ -212,7 +212,7 @@
                             {% if actionSuivi %}
                                 <a href="{{ path('app_user_actions_update', {id: actionSuivi.id}) }}" title="{{ actionSuivi.typeAction ?: '—' }}">
                                     <span class="badge text-bg-{{ actionSuivi.statutColor }} d-block">{{ actionSuivi.statutLabel }}</span>
-                                    {{ actionSuivi.dateAffichee ? actionSuivi.dateAffichee|date('d/m/Y') : '—' }}
+                                    <small class="text-muted">{{ actionSuivi.dateAffichee ? actionSuivi.dateAffichee|date('d/m/Y') : '—' }}{% if not actionSuivi.dateRealisee and actionSuivi.heurePrevue %} {{ actionSuivi.heurePrevue }}{% endif %}</small>
                                 </a>
                             {% else %}
                                 <a href="{{ path('app_user_actions_submit', {prospect: prospect.id}) }}" class="btn btn-sm btn-outline-primary" title="Créer une action"><i class="fas fa-plus"></i></a>
