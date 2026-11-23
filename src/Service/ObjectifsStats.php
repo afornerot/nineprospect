@@ -62,6 +62,15 @@ class ObjectifsStats
                 'objective' => $objective,
                 'realise' => $this->realise($objective, $auteurId),
             ];
+            // Prospects contactés : étapes « Contact » réalisées sur les vagues
+            // du produit, sur la période de la ligne (hors cible : simple comptage).
+            $rows[$cle]['contactes'] = $this->pipelineValeurs->countEtapesRealiseesParPeriode(
+                'Contact',
+                $objective->getStartDate(),
+                $objective->getEndDate(),
+                $objective->getProduit()?->getId(),
+                $auteurId,
+            );
         }
 
         // Total sur tous les objectifs : réalisé et cible additionnés par type.
@@ -92,6 +101,7 @@ class ObjectifsStats
                     'id' => $objective->getProduit()?->getId(),
                     'titre' => $objective->getProduit()?->getTitre() ?? 'Tous les produits',
                 ],
+                'contactes' => $row['contactes'],
                 'cellules' => $cells,
             ];
         }
