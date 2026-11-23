@@ -62,6 +62,33 @@
                             </tr>
                         {% endfor %}
                     </tbody>
+                    {% if objectifsTotaux is defined and objectifsTotaux|length > 0 %}
+                        <tfoot>
+                            <tr class="table-secondary fw-bold">
+                                <td>Total</td>
+                                <td>Tous les produits</td>
+                                {% for type in types|keys %}
+                                    <td class="text-center" style="width: 180px">
+                                        {% set total = objectifsTotaux[type] ?? null %}
+                                        {% if total is not null %}
+                                            {% set pct = total.target > 0 ? (total.realise / total.target * 100)|round : 0 %}
+                                            {% set couleur = pct >= 100 ? 'success' : (pct >= 50 ? 'warning' : 'danger') %}
+                                            {% if type == 'montant_commandes' %}
+                                                <div>{{ total.realise|number_format(2, ',', ' ') }}/{{ total.target|number_format(2, ',', ' ') }} €</div>
+                                            {% else %}
+                                                <div>{{ total.realise }}/{{ total.target|number_format(0, ',', ' ') }}</div>
+                                            {% endif %}
+                                            <div class="progress mt-1" role="progressbar" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100" style="height: 8px;">
+                                                <div class="progress-bar bg-{{ couleur }}" style="width: {{ pct > 100 ? 100 : pct }}%"></div>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        </tfoot>
+                    {% endif %}
                 </table>
             </div>
         </div>

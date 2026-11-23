@@ -69,6 +69,17 @@ class DashboardController extends AbstractController
             ];
         }
 
+        // Total sur tous les objectifs : réalisé et cible additionnés par type.
+        // `montant_commandes` est additionné en €, les autres en unités.
+        $totaux = [];
+        foreach ($rows as $row) {
+            foreach ($row['cells'] as $type => $cell) {
+                $totaux[$type] ??= ['realise' => 0, 'target' => 0.0];
+                $totaux[$type]['realise'] += $cell['realise'];
+                $totaux[$type]['target'] += $cell['objective']->getTarget();
+            }
+        }
+
         return $this->renderLayout('dashboard/index.html.twig', 'Tableau de bord', $donnees + [
             'pipelines' => $this->pipelines->findAllOrdered(),
             'sprints' => $this->sprints->findAllOrdered(),
@@ -81,6 +92,7 @@ class DashboardController extends AbstractController
             'routeProspect' => 'app_user_prospects_show',
             'utilisateurs' => $this->users->findAll(),
             'objectifsQualifies' => array_values($rows),
+            'objectifsTotaux' => $totaux,
         ]);
     }
 
