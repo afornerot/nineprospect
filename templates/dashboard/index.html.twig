@@ -29,6 +29,7 @@
                         <tr>
                             <th width="180px">Période</th>
                             <th width="200px">Produit</th>
+                            <th width="140px" class="text-center no-string">Prospects contactés</th>
                             {% for label in types %}
                                 <th width="180px" class="text-center no-string">{{ label }}</th>
                             {% endfor %}
@@ -40,6 +41,7 @@
                             <tr>
                                 <td>{{ o.periodeDebut|date('d/m/Y') }} → {{ o.periodeFin|date('d/m/Y') }}</td>
                                 <td>{{ o.produit.titre }}</td>
+                                <td class="text-center fw-bold">{{ o.contactes|default(0) }}</td>
                                 {% for type in types|keys %}
                                     <td class="text-center" style="width: 180px">
                                         {% if o.cellules[type] is defined %}
@@ -67,6 +69,7 @@
                             <tr class="table-secondary fw-bold">
                                 <td>Total</td>
                                 <td>Tous les produits</td>
+                                <td class="text-center">{% set totalContactes = 0 %}{% for r in objectifsQualifies %}{% set totalContactes = totalContactes + r.contactes|default(0) %}{% endfor %}{{ totalContactes }}</td>
                                 {% for type in types|keys %}
                                     <td class="text-center" style="width: 180px">
                                         {% set total = objectifsTotaux[type] ?? null %}
