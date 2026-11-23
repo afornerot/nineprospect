@@ -3,10 +3,16 @@
 namespace App\Controller;
 
 use App\Controller\Trait\LayoutRenderTrait;
+use App\Entity\Objective;
+use App\Entity\ProspectDocument;
 use App\Repository\ActionRepository;
 use App\Repository\CibleRepository;
+use App\Repository\ObjectiveRepository;
 use App\Repository\PipelineRepository;
+use App\Repository\PipelineValeurRepository;
 use App\Repository\ProduitRepository;
+use App\Repository\ProspectDocumentRepository;
+use App\Repository\ProspectProduitRepository;
 use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
 use App\Service\DashboardStats;
@@ -28,6 +34,10 @@ class DashboardController extends AbstractController
         private UserRepository $users,
         private ProduitRepository $produits,
         private CibleRepository $cibles,
+        private ObjectiveRepository $objectives,
+        private ProspectProduitRepository $prospectProduits,
+        private PipelineValeurRepository $pipelineValeurs,
+        private ProspectDocumentRepository $prospectDocuments,
     ) {
     }
 
@@ -37,6 +47,27 @@ class DashboardController extends AbstractController
         // Chiffres partagés avec l'API REST (voir DashboardStats).
         $donnees = $this->stats->collect($request);
         $user = null !== $donnees['utilisateurFiltre'] ? $this->users->find($donnees['utilisateurFiltre']) : null;
+
+        // Réalisé vs objectif : une ligne par période + produit, une colonne
+        // par type (voir index.html.twig). Le filtre utilisateur s'applique
+        // au réalisé.
+        // - prospects_qualifies : liens ProspectProduit passés « Oui » ;
+        // - rdv : étapes « RDV » des vagues du produit passées à Réalisé (Oui).
+        $rows = [];
+        $objectives = $this->objectives->findAll();
+        usort($objectives, fn (Objective $a, Objective $b): int => [$a->getStartDate()->format('Y-m-d'), $a->getProduit()?->getTitre() ?? '']
+            <=> [$b->getStartDate()->format('Y-m-d'), $b->getProduit()?->getTitre() ?? '']);
+
+        foreach ($objectives as $objective) {
+            $cle = $objective->getStartDate()->format('Y-m-d').'|'
+                .$objective->getEndDate()->format('Y-m-d').'|'
+                .($objective->getProduit()?->getId() ?? 0);
+            $rows[$cle] ??= ['objective' => $objective, 'cells' => []];
+            $rows[$cle]['cells'][$objective->getType()] = [
+                'objective' => $objective,
+                'realise' => $this->realise($objective, $user?->getId()),
+            ];
+        }
 
         return $this->renderLayout('dashboard/index.html.twig', 'Tableau de bord', $donnees + [
             'pipelines' => $this->pipelines->findAllOrdered(),
@@ -49,6 +80,26 @@ class DashboardController extends AbstractController
             'avenir' => $this->actions->findUpcoming(null, 50, $user),
             'routeProspect' => 'app_user_prospects_show',
             'utilisateurs' => $this->users->findAll(),
+            'objectifsQualifies' => array_values($rows),
         ]);
+    }
+
+    /**
+     * Réalisé d'un objectif selon son type, sur sa période et son produit.
+     * Types sans source branchée (montant, jours) renvoient 0.
+     */
+    private function realise(Objective $objective, ?int $auteurId): int
+    {
+        $debut = $objective->getStartDate();
+        $fin = $objective->getEndDate();
+        $produitId = $objective->getProduit()?->getId();
+
+        return match ($objective->getType()) {
+            Objective::TYPE_PROSPECTS_QUALIFIES => $this->prospectProduits->countQualifiesOuiParPeriode($debut, $fin, $produitId, $auteurId),
+            Objective::TYPE_RDV => $this->pipelineValeurs->countEtapesRealiseesParPeriode('RDV', $debut, $fin, $produitId, $auteurId),
+            Objective::TYPE_PROPOSITIONS => $this->prospectDocuments->countParTypeEtPeriode(ProspectDocument::TYPE_DEVIS, $debut, $fin, $produitId),
+            Objective::TYPE_COMMANDES => $this->prospectDocuments->countParTypeEtPeriode(ProspectDocument::TYPE_COMMANDE, $debut, $fin, $produitId),
+            default => 0,
+        };
     }
 }

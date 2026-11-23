@@ -29,6 +29,35 @@ class ProspectProduitRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    /**
+     * Nombre de prospects qualifiés « Oui » sur la période (décision datée
+     * par `qualifieModifieAt`), pour un produit donné ou tous.
+     */
+    public function countQualifiesOuiParPeriode(?\DateTimeInterface $debut, ?\DateTimeInterface $fin, ?int $produitId, ?int $auteurId): int
+    {
+        $qb = $this->createQueryBuilder('pc')
+            ->select('COUNT(pc.id)')
+            ->andWhere('pc.qualifie = :oui')
+            ->setParameter('oui', QualificationProduit::OUI->value);
+
+        if (null !== $debut) {
+            $qb->andWhere('pc.qualifieModifieAt >= :debut')->setParameter('debut', $debut);
+        }
+        if (null !== $fin) {
+            // Jour de fin inclus ; immuable pour ne pas modifier l'entité source.
+            $finExclue = \DateTimeImmutable::createFromInterface($fin)->modify('+1 day');
+            $qb->andWhere('pc.qualifieModifieAt < :finExclue')->setParameter('finExclue', $finExclue);
+        }
+        if (null !== $produitId) {
+            $qb->andWhere('pc.produit = :produit')->setParameter('produit', $produitId);
+        }
+        if (null !== $auteurId) {
+            $qb->andWhere('pc.qualifieModifiePar = :auteur')->setParameter('auteur', $auteurId);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
     public function save(ProspectProduit $prospectProduit, bool $flush = true): void
     {
         $this->getEntityManager()->persist($prospectProduit);

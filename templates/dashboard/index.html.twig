@@ -19,6 +19,50 @@
         <span class="text-muted small"><i class="fas fa-filter"></i> Les KPIs et cartes sont filtrés par l'utilisateur sélectionné.</span>
     </form>
 
+    {% if objectifsQualifies|length > 0 %}
+        {% set types = constant('App\\Entity\\Objective::TYPES') %}
+        <div class="card mb-3">
+            <div class="card-header"><i class="fas fa-bullseye me-1"></i> Objectifs</div>
+            <div class="card-body p-0">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th width="180px">Période</th>
+                            <th width="200px">Produit</th>
+                            {% for label in types %}
+                                <th width="180px" class="text-center no-string">{{ label }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in objectifsQualifies %}
+                            {% set o = row.objective %}
+                            <tr>
+                                <td>{{ o.startDate|date('d/m/Y') }} → {{ o.endDate|date('d/m/Y') }}</td>
+                                <td>{{ o.produit ? o.produit.titre : 'Tous les produits' }}</td>
+                                {% for type in types|keys %}
+                                    <td class="text-center" style="width: 180px">
+                                        {% if row.cells[type] is defined %}
+                                            {% set cell = row.cells[type] %}
+                                            {% set pct = cell.objective.target > 0 ? (cell.realise / cell.objective.target * 100)|round : 0 %}
+                                            {% set couleur = pct >= 100 ? 'success' : (pct >= 50 ? 'warning' : 'danger') %}
+                                            <div class="fw-bold">{{ cell.realise }}/{{ cell.objective.target|number_format(0, ',', ' ') }}</div>
+                                            <div class="progress mt-1" role="progressbar" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100" style="height: 8px;">
+                                                <div class="progress-bar bg-{{ couleur }}" style="width: {{ pct > 100 ? 100 : pct }}%"></div>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
     <div class="row g-2">
         <div class="col-md-4">
             <div class="row text-center g-2 mb-2">

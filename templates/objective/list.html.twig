@@ -1,0 +1,49 @@
+{% extends 'base.html.twig' %}
+
+{% block title %} = {{title}}{% endblock %}
+
+{% block body %}
+    <h1>{{title}}</h1>
+    <a href="{{ path(routesubmit) }}" class="btn btn-success">Ajouter</a>
+
+    {% set types = constant('App\\Entity\\Objective::TYPES') %}
+
+    <div class="dataTable_wrapper">
+        <table class="table table-striped table-bordered table-hover" id="dataTables" style="width:100%">
+            <thead>
+            <tr>
+                <th width="100px">Début</th>
+                <th width="100px">Fin</th>
+                <th>Produit</th>
+                {% for label in types %}
+                    <th width="120px" class="text-center no-string">{{ label }}</th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    {% set base = row.objective %}
+                    <tr>
+                        <td data-order="{{ base.startDate|date('Y-m-d') }}">{{ base.startDate|date('d/m/Y') }}</td>
+                        <td data-order="{{ base.endDate|date('Y-m-d') }}">{{ base.endDate|date('d/m/Y') }}</td>
+                        <td>{{ base.produit ? base.produit.titre : '— Tous les produits' }}</td>
+                        {% for type in types|keys %}
+                            <td class="text-center">
+                                {% if row.cells[type] is defined %}
+                                    {% set o = row.cells[type] %}
+                                    <a href="{{ path(routeupdate, {id: o.id}) }}" title="Modifier cet objectif" class="fw-bold text-decoration-underline">
+                                        {% if type == 'montant_commandes' %}{{ o.target|number_format(0, ',', ' ') }} €{% else %}{{ o.target|number_format(0, ',', ' ') }}{% endif %}
+                                    </a>
+                                {% else %}
+                                    <a href="{{ path(routesubmit, {start: base.startDate|date('Y-m-d'), end: base.endDate|date('Y-m-d'), produit: base.produit ? base.produit.id : '', type: type}) }}" title="Créer cet objectif" class="text-muted">+</a>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% else %}
+                    <tr><td colspan="{{ 3 + types|length }}" class="text-muted">Aucun objectif enregistré.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

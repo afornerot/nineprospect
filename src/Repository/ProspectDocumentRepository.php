@@ -61,4 +61,30 @@ class ProspectDocumentRepository extends ServiceEntityRepository
             ->getQuery()
             ->execute();
     }
+
+    /**
+     * Nombre de documents Dolibarr d'un type (Devis, Commande) datés dans la
+     * période et associés au produit donné (ou sans filtre produit si null).
+     */
+    public function countParTypeEtPeriode(string $type, ?\DateTimeInterface $debut, ?\DateTimeInterface $fin, ?int $produitId): int
+    {
+        $qb = $this->createQueryBuilder('d')
+            ->select('COUNT(d.id)')
+            ->andWhere('d.type = :type')
+            ->setParameter('type', $type);
+
+        if (null !== $debut) {
+            $qb->andWhere('d.dateDoc >= :debut')->setParameter('debut', $debut);
+        }
+        if (null !== $fin) {
+            // Jour de fin inclus ; immuable pour ne pas modifier l'entité source.
+            $finExclue = \DateTimeImmutable::createFromInterface($fin)->modify('+1 day');
+            $qb->andWhere('d.dateDoc < :finExclue')->setParameter('finExclue', $finExclue);
+        }
+        if (null !== $produitId) {
+            $qb->andWhere('d.produit = :produit')->setParameter('produit', $produitId);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
 }
