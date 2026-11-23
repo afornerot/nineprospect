@@ -16,6 +16,7 @@
                         <th>Nom</th>
                         <th>Prénom</th>
                         <th>Rôles</th>
+                        <th class="no-sort">Commercial</th>
                         <th>Groupes</th>
                     </tr>
                     </thead>
@@ -32,6 +33,7 @@
                                         {{role}}<br>
                                     {% endfor %}
                                 </td>
+                                <td class="text-center">{% if user.commercial %}<span class="badge text-bg-success">Commercial</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
                                 <td>
                                     {% for groupe in user.groupes %}
                                         {{groupe.name}}<br>

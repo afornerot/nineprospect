@@ -109,7 +109,7 @@
                 <th width="150px">Contact principal</th>
                 <th width="150px">Téléphone</th>
                 <th width="80px">Vague</th>
-                <th>Pipeline</th>
+                <th class="no-string tri-gauche">Pipeline</th>
                 <th width="80px">Contacté</th>
                 <th width="180px">Produit</th>
                 <th width="140px">Prc Action</th>
@@ -155,7 +155,7 @@
                         <td>
                             {% for lien in liens %}<span class="badge text-bg-secondary me-1">{{ lien.sprint.numero }}</span>{% else %}<span class="text-muted">—</span>{% endfor %}
                         </td>
-                        <td>
+                        <td class="tri-gauche" data-order="{{ courant and courant.sprint.pipeline ? (courant.etapeEntameePosition * 10 + courant.statutEtapeEntamee) : -1 }}">
                             {% if courant and courant.sprint.pipeline %}
                                 {% for etape in courant.sprint.pipeline.etapes %}
                                     {% set valeur = courant.statutPour(etape) %}

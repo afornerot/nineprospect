@@ -18,6 +18,13 @@ class CronFixtures extends Fixture
                 'repeatexec' => 0,
                 'repeatinterval' => 60,
             ],
+            'app:dolibarr:refresh-documents' => [
+                'description' => 'Rafraîchit les documents Dolibarr (devis, commandes, factures) de tous les prospects liés',
+                'statut' => Cron::STATUT_OK,
+                'repeatcall' => 0,
+                'repeatexec' => 0,
+                'repeatinterval' => 86400,
+            ],
         ];
 
         foreach ($crons as $command => $item) {
@@ -33,7 +40,12 @@ class CronFixtures extends Fixture
             $cron->setRepeatcall($item['repeatcall']);
             $cron->setRepeatexec($item['repeatexec']);
             $cron->setRepeatinterval($item['repeatinterval']);
-            $cron->setNextexecdate(new \DateTime());
+            $cron->setNextexecdate($item['repeatinterval'] >= 86400
+                // Créneau quotidien fixe : premier passage à 6:00 du matin.
+                ? (new \DateTime('today 06:00') > new \DateTime()
+                    ? new \DateTime('today 06:00')
+                    : new \DateTime('tomorrow 06:00'))
+                : new \DateTime());
 
             $manager->persist($cron);
         }

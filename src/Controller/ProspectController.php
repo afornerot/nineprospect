@@ -25,6 +25,7 @@ use App\Repository\UserRepository;
 use App\Service\AdresseApi;
 use App\Service\AnnuaireEntreprises;
 use App\Service\DolibarrApi;
+use App\Service\DolibarrDocumentsSync;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -60,6 +61,7 @@ class ProspectController extends AbstractController
         private AdresseApi $adresseApi,
         private ActionTypeDefautRepository $types,
         private DolibarrApi $dolibarr,
+        private DolibarrDocumentsSync $documentsSync,
     ) {
     }
 
@@ -98,10 +100,15 @@ class ProspectController extends AbstractController
             $prevNext = $this->prospects->findPrevNextInSprint($id, $vagueCourante->getSprint()->getId());
         }
 
-        // « Retour à la liste » = dernière liste prospects consultée, avec ses
-        // filtres et le scroll sur la ligne courante. Les écrans de saisie
-        // ouverts depuis cette fiche reviennent ici via la session, sans
-        // transport d'URL.
+        // « Retour à la liste » = URL nue de la liste ; les écrans de saisie
+        // ouverts depuis cette fiche reviennent sur la fiche.
+        // Documents Dolibarr : rafraîchis à l'ouverture de la fiche (synchro
+        // en base), puis lus depuis nineprospect — l'association à un produit
+        // vit ici et survit aux allers-retours Dolibarr.
+        $erreurDocuments = null !== $prospect->getIdDolibarr()
+            ? $this->documentsSync->synchroniser($prospect)
+            : null;
+
         return $this->renderLayout('prospects/show.html.twig', $prospect->getNom() ?? 'Prospect', [
             'prospect' => $prospect,
             'routeupdate' => 'app_user_prospects_update',
@@ -112,11 +119,13 @@ class ProspectController extends AbstractController
             'tiers' => $this->dolibarr->findById((string) $prospect->getIdDolibarr()),
             'tiersUrl' => $this->dolibarr->cardUrl($prospect->getIdDolibarr()),
             'dolibarrActif' => $this->dolibarr->isConfigured(),
-            // Devis / commandes / factures du tiers lié, brouillons exclus.
-            // Reste vide quand le prospect n'est pas lié.
-            'documents' => null !== $prospect->getIdDolibarr()
-                ? $this->dolibarr->documentsForThirdparty((string) $prospect->getIdDolibarr())
-                : null,
+            // Devis / commandes / factures mémorisés en base (voir synchro
+            // ci-dessus), groupés par type.
+            'documents' => $this->em->getRepository(\App\Entity\ProspectDocument::class)->parProspect($prospect),
+            'documentsVisible' => null !== $prospect->getIdDolibarr(),
+            'erreurDocuments' => $erreurDocuments,
+            // Produits proposables à l'association d'un document.
+            'produits' => $this->produits->findAllOrdered(),
             // « Retour à la liste » : URL nue de la liste. La sélection
             // (filtres, tri, page) est replacée côté client depuis
             // localStorage (voir app.js), l'ancre repositionne sur la ligne.
@@ -512,6 +521,42 @@ class ProspectController extends AbstractController
             'formProduits' => $this->formProduits($prospect),
             'formAjoutProduit' => $this->formAjoutProduit($prospect),
         ]);
+    }
+
+    #[Route('/documents/{docId}/produit', name: 'app_user_prospects_document_produit', methods: ['POST'])]
+    public function documentProduit(int $docId, Request $request): JsonResponse
+    {
+        $doc = $this->em->find(\App\Entity\ProspectDocument::class, $docId);
+        if (!$doc) {
+            return new JsonResponse(['ok' => false, 'error' => 'Document introuvable.'], 404);
+        }
+
+        if (!$this->isCsrfTokenValid('doc-produit-'.$docId, (string) $request->request->get('_csrf_token'))) {
+            return new JsonResponse(['ok' => false, 'error' => 'Token CSRF invalide.'], 403);
+        }
+
+        $produitId = trim((string) $request->request->get('produit'));
+        if ('' !== $produitId) {
+            if (!in_array($doc->getType(), \App\Entity\ProspectDocument::TYPES_ASSOCIABLES, true)) {
+                return new JsonResponse([
+                    'ok' => false,
+                    'error' => 'Seuls les devis et commandes sont associables à un produit.',
+                ], 422);
+            }
+
+            $produit = $this->produits->find((int) $produitId);
+            if (!$produit) {
+                return new JsonResponse(['ok' => false, 'error' => 'Produit introuvable.'], 404);
+            }
+
+            $doc->setProduit($produit);
+        } else {
+            $doc->setProduit(null);
+        }
+
+        $this->em->flush();
+
+        return new JsonResponse(['ok' => true]);
     }
 
     #[Route('/delete/{id}', name: 'app_user_prospects_delete', methods: ['POST'])]

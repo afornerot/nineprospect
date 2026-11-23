@@ -416,3 +416,11 @@ tr.table-highlight {
     0%   { background-color: #fff3cd; }
     100% { background-color: transparent; }
 }
+
+/* Colonne Pipeline (liste prospects) : tri numérique (étape entamée) mais
+   rendu aligné à gauche — DataTables aligne à droite les colonnes de type
+   numérique (dt-type-numeric). La classe tri-gauche est plus spécifique. */
+#dataTables th.tri-gauche.dt-type-numeric,
+#dataTables td.tri-gauche.dt-type-numeric {
+    text-align: left;
+}

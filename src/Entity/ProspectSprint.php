@@ -117,6 +117,44 @@ class ProspectSprint
         return $this->valeurPour($etape)?->getStatut() ?? PipelineStatut::A_FAIRE;
     }
 
+    /**
+     * Étape la plus avancée entamée (statut != A_FAIRE) : position 0-based
+     * dans le pipeline et son statut. [-1, A_FAIRE] si rien n'est entamé ou
+     * sans pipeline. Sert de clé de tri à la colonne Pipeline de la liste
+     * prospects (position × 10 + statut).
+     *
+     * @return array{int, int}
+     */
+    public function etapeEntamee(): array
+    {
+        $pipeline = $this->getSprint()?->getPipeline();
+        if (null === $pipeline) {
+            return [-1, PipelineStatut::A_FAIRE];
+        }
+
+        $position = -1;
+        $statut = PipelineStatut::A_FAIRE;
+        foreach ($pipeline->getEtapes() as $index => $etape) {
+            $valeur = $this->statutPour($etape);
+            if (PipelineStatut::A_FAIRE !== $valeur) {
+                $position = $index;
+                $statut = $valeur;
+            }
+        }
+
+        return [$position, $statut];
+    }
+
+    public function etapeEntameePosition(): int
+    {
+        return $this->etapeEntamee()[0];
+    }
+
+    public function statutEtapeEntamee(): int
+    {
+        return $this->etapeEntamee()[1];
+    }
+
     public function datePour(PipelineEtape $etape): ?\DateTime
     {
         return $this->valeurPour($etape)?->getDate();

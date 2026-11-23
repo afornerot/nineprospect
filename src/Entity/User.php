@@ -53,6 +53,46 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $firstname = null;
 
     /**
+     * Commercial : l'utilisateur est un commercial Dolibarr — créateur
+     * possible des devis/commandes synchronisés dans nineprospect. Ne
+     * concerne pas tous les comptes (admin, technique…).
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $commercial = false;
+
+    /**
+     * Id du compte Dolibarr correspondant (colonne `id` de la fiche
+     * utilisateur Dolibarr) : sert à reconnaître les devis/commandes créés
+     * par ce commercial lors de la synchro des documents.
+     */
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $dolibarrUserId = null;
+
+    public function isCommercial(): bool
+    {
+        return $this->commercial;
+    }
+
+    public function setCommercial(bool $commercial): static
+    {
+        $this->commercial = $commercial;
+
+        return $this;
+    }
+
+    public function getDolibarrUserId(): ?string
+    {
+        return $this->dolibarrUserId;
+    }
+
+    public function setDolibarrUserId(?string $dolibarrUserId): static
+    {
+        $this->dolibarrUserId = null === $dolibarrUserId || '' === $dolibarrUserId ? null : $dolibarrUserId;
+
+        return $this;
+    }
+
+    /**
      * @var Collection<int, Groupe>
      */
     #[ORM\ManyToMany(targetEntity: Groupe::class, mappedBy: 'users')]

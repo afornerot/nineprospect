@@ -7,6 +7,7 @@ use App\Entity\User;
 use Bnine\FilesBundle\Form\Type\IconUploadType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
@@ -68,6 +69,22 @@ class UserType extends AbstractType
         ->add('email', EmailType::class, [
             'label' => 'Email',
         ]);
+
+        // Indicateur commercial : réservé à l'admin (pas sur la fiche profil).
+        if ('profil' != $options['mode']) {
+            $builder
+            ->add('commercial', CheckboxType::class, [
+                'label' => 'Commercial',
+                'required' => false,
+                'help' => 'L\'utilisateur est un commercial Dolibarr : créateur possible des devis et commandes synchronisés.',
+            ])
+            ->add('dolibarrUserId', TextType::class, [
+                'label' => 'Id utilisateur Dolibarr',
+                'required' => false,
+                'help' => 'L\'id (rowid) du compte Dolibarr de ce commercial. La synchro ne garde que les devis/commandes créés par les commerciaux identifiés.',
+                'attr' => ['placeholder' => 'ex. 18'],
+            ]);
+        }
 
         if ('profil' != $options['mode']) {
             $builder

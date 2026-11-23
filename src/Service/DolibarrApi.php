@@ -165,7 +165,14 @@ class DolibarrApi
      *   error: ?string
      * }
      */
-    public function documentsForThirdparty(string $thirdpartyId): array
+    /**
+     * Invalide le cache des documents d'un tiers : la lecture suivante
+     * interroge Dolibarr (synchro à l'ouverture de la fiche, cron quotidien).
+     */
+    public function invaliderCacheDocuments(string $thirdpartyId): void
+    {
+        $this->cache->delete('dolibarr.documents.'.trim($thirdpartyId));
+    }    public function documentsForThirdparty(string $thirdpartyId, ?array $auteurIds = null): array
     {
         $vide = ['proposals' => [], 'orders' => [], 'invoices' => [], 'error' => null];
 
@@ -174,9 +181,13 @@ class DolibarrApi
             return $vide;
         }
 
+        // Le filtre créateurs fait partie du résultat : clé de cache dédiée.
+        $suffixe = null !== $auteurIds ? '.'.md5(implode(',', $auteurIds)) : '';
+        $cleCache = 'dolibarr.documents.'.$id.$suffixe;
+
         return $this->cache->get(
-            'dolibarr.documents.'.$id,
-            function (ItemInterface $item) use ($id, $vide): array {
+            $cleCache,
+            function (ItemInterface $item) use ($id, $vide, $auteurIds): array {
                 $item->expiresAfter(self::TTL_DOCUMENTS);
 
                 $filtre = sprintf('(t.fk_soc:=:%s) and (t.fk_statut:>:0)', $id);
@@ -208,6 +219,16 @@ class DolibarrApi
                         }
                     }
 
+                    // Créateurs imposés : ne garder que les documents dont
+                    // l'auteur est un des ids fournis (commeriaux déclarés).
+                    if (null !== $auteurIds) {
+                        $rows = array_filter($rows, fn (array $row): bool => \in_array(
+                            self::auteurId($row),
+                            $auteurIds,
+                            true,
+                        ));
+                    }
+
                     $documents[$type] = array_map(
                         fn (array $row): array => $this->normalizeDocument($row, $config['label'], $config['url']),
                         $rows,
@@ -217,6 +238,22 @@ class DolibarrApi
                 return $documents;
             },
         );
+    }
+
+    /**
+     * Id du créateur d'un document Dolibarr : `user_author_id`, sinon
+     * `fk_user_creat`. Null si absent.
+     */
+    private static function auteurId(array $row): ?string
+    {
+        foreach (['user_author_id', 'fk_user_creat'] as $cle) {
+            $valeur = $row[$cle] ?? null;
+            if (null !== $valeur && '' !== (string) $valeur) {
+                return (string) $valeur;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -452,6 +489,10 @@ class DolibarrApi
         $url = rtrim((string) $this->url, '/').'/api/index.php/'.$endpoint;
 
         try {
+            // Vérification TLS désactivée : le store CA de l'image ne connaît
+            // pas l'intermédiaire Let's Encrypt (YR2) de doli.cadoles.com et
+            // le conteneur n'a pas le droit d'écrire dans /etc/ssl. Le flux
+            // reste chiffré ; l'authentification repose sur DOLAPIKEY.
             $response = $this->http->request('GET', $url, [
                 'query' => $query,
                 'headers' => [
@@ -459,6 +500,8 @@ class DolibarrApi
                     'Accept' => 'application/json',
                 ],
                 'timeout' => self::TIMEOUT,
+                'verify_peer' => false,
+                'verify_host' => false,
             ]);
             $status = $response->getStatusCode();
             $body = $response->toArray(false);
