@@ -5,8 +5,8 @@
 {% block body %}
     <h1 class="mb-1">{{ title }}</h1>
 
-    {# Toutes les URLs de retour viennent de la session : la fiche se contente
-       de les relayer à ses liens enfants, sans les transporter en query string. #}
+    {# « Retour à la liste » pointe sur la liste nue : la sélection (filtres,
+       tri, page) est replacée côté client depuis localStorage. #}
     <a href="{{ path(routeupdate, {id: prospect.id}) }}" class="btn btn-primary mb-3">Modifier</a>
     <button type="button"
             class="btn btn-outline-primary mb-3 ms-1 js-verify-prospect"

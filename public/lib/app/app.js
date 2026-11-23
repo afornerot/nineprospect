@@ -43,9 +43,63 @@ $(function () {
 
 
 
-// DataTables : init automatique pour toute table #dataTables.
-// Options par table via data-attributes : data-order-col (index), data-order-dir.
+// Liste prospects : la sélection de l'écran (filtres GET) est mémorisée en
+// localStorage, plus aucune URL de retour ne circule par la session.
+// - URL avec query (formulaire « Filtrer », pagination serveur) : sauvegarde ;
+// - URL nue (retour depuis une fiche, menu) : restaure la sélection ;
+// - « Réinitialiser » : efface la sélection avant de naviguer.
+//
+// Exécuté au chargement du script, AVANT tout handler `ready` : quand une
+// restauration est nécessaire, la redirection part immédiatement et l'init
+// DataTables est court-circuitée (flag __prospectsRestaure) — sinon la page
+// non filtrée s'affiche, la ligne est repaginée/scrollée, puis le filtre
+// arrive au second chargement.
+(function () {
+	const CHEMIN = '/user/prospects';
+	const CLE = 'prospects.selection';
+	const CLE_COURANT = 'prospects.courant';
+
+	// Fiche consultée : mémorisée pour repositionner la liste dessus, même
+	// en revenant par le menu (aucun fragment dans l'URL).
+	const fiche = window.location.pathname.match(/^\/user\/prospects\/show\/(\d+)$/);
+	if (fiche) {
+		try { localStorage.setItem(CLE_COURANT, fiche[1]); } catch (e) { /* stockage indisponible */ }
+		return;
+	}
+
+	if (window.location.pathname !== CHEMIN) return;
+
+	const query = window.location.search;
+	if (query && query !== '?') {
+		try { localStorage.setItem(CLE, query); } catch (e) { /* stockage indisponible */ }
+		return;
+	}
+
+	// Ancre : fragment explicite, sinon dernier prospect consulté.
+	let ancre = window.location.hash;
+	if (!ancre) {
+		let courant = null;
+		try { courant = localStorage.getItem(CLE_COURANT); } catch (e) { /* stockage indisponible */ }
+		if (courant) ancre = '#prospect-' + courant;
+	}
+
+	let sauvegarde = null;
+	try { sauvegarde = localStorage.getItem(CLE); } catch (e) { /* stockage indisponible */ }
+	if (sauvegarde) {
+		// Filtres à réappliquer : la page doit être re-rendue par le serveur.
+		window.__prospectsRestaure = true;
+		window.location.replace(CHEMIN + sauvegarde + ancre);
+	} else if (ancre) {
+		// Repositionnement seul : pas de rechargement, on pose le fragment et
+		// la pagination DataTables (bloc #prospect-{id}) fait le scroll.
+		history.replaceState(null, '', CHEMIN + ancre);
+	}
+})();
+
+// La page va être remplacée : aucun init ni scroll ne doit se déclencher dessus.
 $(document).ready(function () {
+	if (window.__prospectsRestaure) return;
+
 	const $table = $('#dataTables');
 
 	if (!$table.length || typeof $.fn.DataTable === 'undefined') return;
@@ -73,6 +127,7 @@ $(document).ready(function () {
 	$orderDir = $table.data('order-dir') ?? 'asc';
 
 	$table.DataTable({
+		stateSave: true,
 		columnDefs: [
 			{ targets: 'no-sort', orderable: false },
 			{ targets: 'no-string', type: 'num' },
@@ -117,6 +172,13 @@ $(document).ready(function () {
 			}, 100);
 		}
 	}
+});
+
+// « Réinitialiser » : vide la sélection mémorisée avant de recharger la liste.
+$(function () {
+	$(document).on('click', '#filtre-reset', function () {
+		try { localStorage.removeItem('prospects.selection'); } catch (e) { /* stockage indisponible */ }
+	});
 });
 
 // Switch « Contacté » sur la liste prospects : toggle via endpoint AJAX.

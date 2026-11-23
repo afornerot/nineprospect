@@ -31,12 +31,12 @@ class RetourNavigationTest extends WebTestCase
         $client->request('GET', $filtre);
         $this->assertResponseIsSuccessful();
 
-        // 2. Fiche : « Retour à la liste » reprend le filtre et le scroll.
+        // 2. Fiche : « Retour à la liste » pointe sur la liste nue (l'ancre
+        // repositionne la ligne ; la sélection est restaurée côté client).
         $client->request('GET', '/user/prospects/show/'.$prospect->getId());
         $this->assertResponseIsSuccessful();
         $liste = (string) $client->getCrawler()->filter('a:contains("Retour à la liste")')->attr('href');
-        $this->assertStringContainsString('produit=4', $liste);
-        $this->assertStringContainsString('#prospect-'.$prospect->getId(), $liste);
+        $this->assertSame('/user/prospects#prospect-'.$prospect->getId(), $liste);
 
         // 3. Ajout d'un contact depuis la fiche : le retour fige la fiche.
         $client->request('GET', '/user/contacts/submit?prospect='.$prospect->getId());
@@ -62,11 +62,11 @@ class RetourNavigationTest extends WebTestCase
         ]], [], ['HTTP_ORIGIN' => 'http://localhost']);
         $this->assertResponseRedirects('/user/prospects/show/'.$prospect->getId());
 
-        // 5. Le filtre d'origine survit aux allers-retours dans la fiche.
+        // 5. Le lien « Retour à la liste » reste nu après les allers-retours
+        // dans la fiche (la sélection vit côté client, en localStorage).
         $client->request('GET', '/user/prospects/show/'.$prospect->getId());
         $listeFinale = (string) $client->getCrawler()->filter('a:contains("Retour à la liste")')->attr('href');
-        $this->assertStringContainsString('produit=4', $listeFinale);
-        $this->assertStringContainsString('#prospect-'.$prospect->getId(), $listeFinale);
+        $this->assertSame('/user/prospects#prospect-'.$prospect->getId(), $listeFinale);
 
         $this->supprimerContact('ZZTEST PARCOURS');
     }
@@ -158,11 +158,11 @@ class RetourNavigationTest extends WebTestCase
             'Le formulaire revient sur la page réellement consultée juste avant.',
         );
 
-        // …tandis que « Retour à la liste » garde l’entrée indexée de sa
-        // section, même après avoir consulté les listes voisines.
+        // …tandis que « Retour à la liste » des prospects reste une URL nue :
+        // la sélection ne transite plus par le contexte de session.
         $client->request('GET', '/user/prospects/show/'.$prospect->getId());
-        $this->assertStringContainsString(
-            'produit=4',
+        $this->assertSame(
+            '/user/prospects#prospect-'.$prospect->getId(),
             (string) $client->getCrawler()->filter('a:contains("Retour à la liste")')->attr('href'),
         );
         $client->request('GET', '/user/actions/update/'.$this->uneAction()->getId());

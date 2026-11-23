@@ -32,6 +32,7 @@ use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -59,7 +60,6 @@ class ProspectController extends AbstractController
         private AdresseApi $adresseApi,
         private ActionTypeDefautRepository $types,
         private DolibarrApi $dolibarr,
-        protected ContexteRetour $contexteRetour,
     ) {
     }
 
@@ -89,7 +89,7 @@ class ProspectController extends AbstractController
         if (!$prospect) {
             $this->addFlash('error', 'Prospect introuvable.');
 
-            return $this->contexteRetour->redirection($request, 'app_user_prospects');
+            return $this->redirectToRoute('app_user_prospects');
         }
 
         $vagueCourante = $prospect->vagueCourante();
@@ -117,13 +117,10 @@ class ProspectController extends AbstractController
             'documents' => null !== $prospect->getIdDolibarr()
                 ? $this->dolibarr->documentsForThirdparty((string) $prospect->getIdDolibarr())
                 : null,
-            'listeUrl' => $this->contexteRetour->listeOu(
-                $request,
-                '/user/prospects',
-                'app_user_prospects',
-                [],
-                'prospect-'.$id,
-            ),
+            // « Retour à la liste » : URL nue de la liste. La sélection
+            // (filtres, tri, page) est replacée côté client depuis
+            // localStorage (voir app.js), l'ancre repositionne sur la ligne.
+            'listeUrl' => $this->generateUrl('app_user_prospects').'#prospect-'.$id,
         ]);
     }
 
@@ -218,7 +215,7 @@ class ProspectController extends AbstractController
 
         return new JsonResponse([
             'ok' => true,
-            'redirect' => $this->contexteRetour->url($request, 'app_user_prospects_show', ['id' => $id]),
+            'redirect' => $this->generateUrl('app_user_prospects_show', ['id' => $id]),
         ]);
     }
 
@@ -449,7 +446,7 @@ class ProspectController extends AbstractController
 
         $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'submit', 'etapes' => $etapes, 'prospect_id' => 0]);
         $this->initialiserFormulaire($form, $prospect, $etapes);
-        $retour = $this->contexteRetour->url($request, 'app_user_prospects');
+        $retour = $this->generateUrl('app_user_prospects');
         $form->get('retour')->setData($retour);
         $form->handleRequest($request);
         $this->appliquerContacteEtDate($form);
@@ -478,14 +475,14 @@ class ProspectController extends AbstractController
     {
         $prospect = $this->prospects->find($id);
         if (!$prospect) {
-            return $this->contexteRetour->redirection($request, 'app_user_prospects');
+            return $this->redirectToRoute('app_user_prospects');
         }
 
         $etapes = $this->etapesProduit($request, $prospect);
 
         $form = $this->createForm(ProspectType::class, $prospect, ['mode' => 'update', 'etapes' => $etapes, 'prospect_id' => $prospect->getId()]);
         $this->initialiserFormulaire($form, $prospect, $etapes);
-        $retour = $this->contexteRetour->url($request, 'app_user_prospects_show', ['id' => $id]);
+        $retour = $this->generateUrl('app_user_prospects_show', ['id' => $id]);
         $form->get('retour')->setData($retour);
         $form->handleRequest($request);
         if ('' === $form->get('logo')->getData()) {
@@ -498,7 +495,8 @@ class ProspectController extends AbstractController
         if ($form->isSubmitted() && $form->isValid() && $this->appliquerVaguesEtPipeline($prospect, $form, $etapes)) {
             $this->em->flush();
 
-            return $this->contexteRetour->redirectionVers($form->get('retour')->getData(), 'app_user_prospects_show', ['id' => $id]);
+            return $this->redirect(ContexteRetour::assainir($form->get('retour')->getData())
+                ?? $this->generateUrl('app_user_prospects_show', ['id' => $id]));
         }
 
         return $this->renderLayout('prospects/edit.html.twig', 'Modification = '.$prospect->getNom(), [
@@ -521,13 +519,25 @@ class ProspectController extends AbstractController
     {
         $prospect = $this->prospects->find($id);
         if (!$prospect) {
-            return $this->contexteRetour->redirection($request, 'app_user_prospects');
+            return $this->redirectToRoute('app_user_prospects');
         }
 
         return $this->deleteEntity($request, $prospect, $id, 'delete-prospect', 'prospects', $this->em, [
             'list' => 'app_user_prospects',
             'update' => 'app_user_prospects_update',
         ]);
+    }
+
+    /**
+     * Retour après suppression : liste prospects nue. La sélection de la
+     * liste est replacée côté client depuis localStorage (voir app.js),
+     * sans passer par le contexte de navigation en session.
+     */
+    private function redirectAfterDelete(Request $request, string $listRoute): RedirectResponse
+    {
+        unset($request, $listRoute);
+
+        return $this->redirectToRoute('app_user_prospects');
     }
 
     #[Route('/toggle-contacte/{id}', name: 'app_user_prospects_toggle_contacte', methods: ['POST'])]
@@ -1122,7 +1132,7 @@ class ProspectController extends AbstractController
     {
         $prospectProduit = $this->em->find(\App\Entity\ProspectProduit::class, $linkId);
         if (!$prospectProduit) {
-            return $this->contexteRetour->redirection($request, 'app_user_prospects_update', ['id' => $prospectId]);
+            return $this->redirectToRoute('app_user_prospects_update', ['id' => $prospectId]);
         }
 
         return $this->deleteEntity($request, $prospectProduit, $linkId, 'prospect-produit', 'produit', $this->em, [
