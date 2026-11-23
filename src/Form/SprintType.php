@@ -50,7 +50,7 @@ class SprintType extends AbstractType
                 'class' => Produit::class,
                 'choice_label' => 'titre',
                 'placeholder' => '—',
-                'required' => false,
+                'required' => true,
             ])
 
             ->add('libelle', TextType::class, [
