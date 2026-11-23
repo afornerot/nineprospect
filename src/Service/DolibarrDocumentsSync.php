@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\Prospect;
 use App\Entity\ProspectDocument;
+use App\Repository\ObjectiveRepository;
 use App\Repository\ProspectDocumentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -30,7 +31,30 @@ final class DolibarrDocumentsSync
         private readonly DolibarrApi $api,
         private readonly EntityManagerInterface $em,
         private readonly LoggerInterface $logger,
+        private readonly ObjectiveRepository $objectives,
     ) {
+    }
+
+    /**
+     * Plus ancienne date de début d'objectif : la synchro ne retient pas les
+     * documents Dolibarr antérieurs (calculé une fois par process, null si
+     * aucun objectif → pas de plancher).
+     */
+    private ?\DateTimeImmutable $plancher = null;
+
+    private function plancherDocuments(): ?\DateTimeImmutable
+    {
+        if (null === $this->plancher) {
+            $min = $this->objectives->createQueryBuilder('o')
+                ->select('MIN(o.startDate)')
+                ->getQuery()
+                ->getSingleScalarResult();
+            $this->plancher = null !== $min
+                ? \DateTimeImmutable::createFromInterface(new \DateTime((string) $min))
+                : new \DateTimeImmutable('0001-01-01');
+        }
+
+        return $this->plancher;
     }
 
     /**
@@ -77,6 +101,12 @@ final class DolibarrDocumentsSync
             foreach ($documents[$section] ?? [] as $doc) {
                 $idDolibarr = (string) ($doc['id'] ?? '');
                 if ('' === $idDolibarr) {
+                    continue;
+                }
+
+                // Antérieur au premier objectif : ignoré (et purgé comme
+                // « disparu » puisque non vu ci-dessous).
+                if (null !== $doc['date'] && $doc['date'] < $this->plancherDocuments()->format('Y-m-d')) {
                     continue;
                 }
 

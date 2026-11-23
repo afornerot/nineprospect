@@ -257,6 +257,69 @@ class DolibarrApi
     }
 
     /**
+     * Tous les devis et commandes Dolibarr créés par les ids commerciaux
+     * donnés depuis la date de début (hors brouillons), toutes sociétés
+     * confondues — pour l'écran de gestion : repérer les documents qui
+     * n'existent pas dans nineprospect.
+     *
+     * @param list<string> $auteurIds ids Dolibarr des commerciaux
+     *
+     * @return list<array{id: string, type: string, ref: string, date: ?string, statutLabel: string, statutCouleur: string, totalHt: ?float, url: ?string, auteur: ?string, socid: string}>
+     */
+    public function documentsCommerciauxDepuis(array $auteurIds, \DateTimeInterface $debut): array
+    {
+        if (!$this->isConfigured() || [] === $auteurIds) {
+            return [];
+        }
+
+        $documents = [];
+        foreach (['proposals', 'orders'] as $endpoint) {
+            $config = self::DOCUMENT_TYPES[$endpoint];
+
+            // Toute la liste, pas un échantillon : on pagine jusqu'à épuisement.
+            $rows = [];
+            for ($page = 0; $page < self::DOCUMENTS_MAX_PAGES; ++$page) {
+                $response = $this->request($endpoint, [
+                    'limit' => self::DOCUMENTS_PAGE_SIZE,
+                    'page' => $page,
+                    'sqlfilters' => '(t.fk_statut:>:0)',
+                    'sortfield' => 't.rowid',
+                    'sortorder' => 'DESC',
+                ]);
+
+                if (null !== $response['error']) {
+                    $this->logger->warning('Dolibarr : lecture '.$endpoint.' en échec (gestion)', ['erreur' => $response['error']]);
+
+                    break;
+                }
+
+                $rows = array_merge($rows, $response['rows']);
+                if (\count($response['rows']) < self::DOCUMENTS_PAGE_SIZE) {
+                    break;
+                }
+            }
+
+            foreach ($rows as $row) {
+                $auteur = self::auteurId($row);
+                if (null === $auteur || !\in_array($auteur, $auteurIds, true)) {
+                    continue;
+                }
+
+                $doc = $this->normalizeDocument($row, $config['label'], $config['url']);
+                $doc['auteur'] = $auteur;
+                $doc['socid'] = (string) ($row['socid'] ?? '');
+                if (null !== $doc['date'] && $doc['date'] >= $debut->format('Y-m-d')) {
+                    $documents[] = $doc;
+                }
+            }
+        }
+
+        usort($documents, fn (array $a, array $b): int => [$b['date'] ?? '', $a['ref']] <=> [$a['date'] ?? '', $b['ref']]);
+
+        return $documents;
+    }
+
+    /**
      * Aplatit un document Dolibarr (devis, commande, facture) pour le pavé
      * de la fiche prospect : référence, date, statut et montant HT.
      *
@@ -457,9 +520,10 @@ class DolibarrApi
     private function buildSqlFilters(string $query): ?string
     {
         $query = mb_substr(trim($query), 0, self::MAX_QUERY_LENGTH);
-        // Retire ce qui casserait la syntaxe `sqlfilters` (apostrophe, anti-slash)
-        // ou détournerait le LIKE (`%`, `_`).
-        $query = str_replace(["'", '\\', '%', '_'], ' ', $query);
+        // Ne garde que lettres, chiffres et espaces : tout le reste casse la
+        // syntaxe `sqlfilters` (apostrophe, anti-slash, parenthèses, `%`, `_`,
+        // séparateurs `:=:`, `like`…) ou détournerait le LIKE.
+        $query = (string) preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $query);
         $mots = array_values(array_filter(
             preg_split('/\s+/u', $query) ?: [],
             static fn (string $mot): bool => '' !== $mot,
