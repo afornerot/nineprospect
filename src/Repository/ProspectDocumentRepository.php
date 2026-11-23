@@ -89,6 +89,33 @@ class ProspectDocumentRepository extends ServiceEntityRepository
     }
 
     /**
+     * Somme HT des documents Dolibarr d'un type (Devis, Commande) datés dans
+     * la période et associés au produit donné (ou sans filtre produit si
+     * null). Mêmes critères que countParTypeEtPeriode().
+     */
+    public function sommeMontantParTypeEtPeriode(string $type, ?\DateTimeInterface $debut, ?\DateTimeInterface $fin, ?int $produitId): float
+    {
+        $qb = $this->createQueryBuilder('d')
+            ->select('COALESCE(SUM(d.totalHt), 0)')
+            ->andWhere('d.type = :type')
+            ->setParameter('type', $type);
+
+        if (null !== $debut) {
+            $qb->andWhere('d.dateDoc >= :debut')->setParameter('debut', $debut);
+        }
+        if (null !== $fin) {
+            // Jour de fin inclus ; immuable pour ne pas modifier l'entité source.
+            $finExclue = \DateTimeImmutable::createFromInterface($fin)->modify('+1 day');
+            $qb->andWhere('d.dateDoc < :finExclue')->setParameter('finExclue', $finExclue);
+        }
+        if (null !== $produitId) {
+            $qb->andWhere('d.produit = :produit')->setParameter('produit', $produitId);
+        }
+
+        return (float) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
      * Devis et commandes Dolibarr synchronisés depuis la date donnée, avec
      * leur prospect, pour l'écran de gestion Dolibarr.
      *

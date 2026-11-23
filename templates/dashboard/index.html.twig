@@ -46,7 +46,11 @@
                                             {% set cell = row.cells[type] %}
                                             {% set pct = cell.objective.target > 0 ? (cell.realise / cell.objective.target * 100)|round : 0 %}
                                             {% set couleur = pct >= 100 ? 'success' : (pct >= 50 ? 'warning' : 'danger') %}
-                                            <div class="fw-bold">{{ cell.realise }}/{{ cell.objective.target|number_format(0, ',', ' ') }}</div>
+                                            {% if type == 'montant_commandes' %}
+                                                <div class="fw-bold">{{ cell.realise|number_format(2, ',', ' ') }}/{{ cell.objective.target|number_format(2, ',', ' ') }} €</div>
+                                            {% else %}
+                                                <div class="fw-bold">{{ cell.realise }}/{{ cell.objective.target|number_format(0, ',', ' ') }}</div>
+                                            {% endif %}
                                             <div class="progress mt-1" role="progressbar" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100" style="height: 8px;">
                                                 <div class="progress-bar bg-{{ couleur }}" style="width: {{ pct > 100 ? 100 : pct }}%"></div>
                                             </div>

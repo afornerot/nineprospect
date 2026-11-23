@@ -86,9 +86,9 @@ class DashboardController extends AbstractController
 
     /**
      * Réalisé d'un objectif selon son type, sur sa période et son produit.
-     * Types sans source branchée (montant, jours) renvoient 0.
+     * Type jours sans source branchée : renvoie 0.
      */
-    private function realise(Objective $objective, ?int $auteurId): int
+    private function realise(Objective $objective, ?int $auteurId): int|float
     {
         $debut = $objective->getStartDate();
         $fin = $objective->getEndDate();
@@ -99,6 +99,7 @@ class DashboardController extends AbstractController
             Objective::TYPE_RDV => $this->pipelineValeurs->countEtapesRealiseesParPeriode('RDV', $debut, $fin, $produitId, $auteurId),
             Objective::TYPE_PROPOSITIONS => $this->prospectDocuments->countParTypeEtPeriode(ProspectDocument::TYPE_DEVIS, $debut, $fin, $produitId),
             Objective::TYPE_COMMANDES => $this->prospectDocuments->countParTypeEtPeriode(ProspectDocument::TYPE_COMMANDE, $debut, $fin, $produitId),
+            Objective::TYPE_MONTANT_COMMANDES => $this->prospectDocuments->sommeMontantParTypeEtPeriode(ProspectDocument::TYPE_COMMANDE, $debut, $fin, $produitId),
             default => 0,
         };
     }
