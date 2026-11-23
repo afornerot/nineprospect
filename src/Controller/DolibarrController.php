@@ -84,19 +84,22 @@ class DolibarrController extends AbstractController
 
         // Tiers Dolibarr absents de nineprospect : récupère leur nom via
         // l'API, un appel par tiers (en cache pendant la requête).
-        $tiersCache = [];
+        $tiersNoms = [];
+        $tiersUrls = [];
         foreach ($lignes as $ligne) {
-            if (null === $ligne['prospect'] && '' !== $ligne['doc']['socid'] && !isset($tiersCache[$ligne['doc']['socid']])) {
-                $tiers = $this->dolibarr->findById($ligne['doc']['socid']);
-                $tiersCache[$ligne['doc']['socid']] = \is_array($tiers) ? ($tiers['nom'] ?? null) : null;
+            $socid = $ligne['doc']['socid'];
+            if (null === $ligne['prospect'] && '' !== $socid && !isset($tiersNoms[$socid])) {
+                $tiers = $this->dolibarr->findById($socid);
+                $tiersNoms[$socid] = \is_array($tiers) ? ($tiers['nom'] ?? null) : null;
+                $tiersUrls[$socid] = $this->dolibarr->cardUrl($socid);
             }
         }
 
         return $this->renderLayout('dolibarr/list.html.twig', 'Gestion Dolibarr', [
             'debut' => $debut,
             'lignes' => $lignes,
-            'tiersNoms' => $tiersCache,
-            'tiersUrls' => array_map(fn (string $socid): ?string => $this->dolibarr->cardUrl($socid), array_keys($tiersCache)),
+            'tiersNoms' => $tiersNoms,
+            'tiersUrls' => $tiersUrls,
             'nbAbsents' => \count(array_filter($lignes, fn (array $ligne): bool => null === $ligne['prospect'])),
         ]);
     }
