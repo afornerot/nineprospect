@@ -116,21 +116,26 @@ class ProspectDocumentRepository extends ServiceEntityRepository
     }
 
     /**
-     * Devis et commandes Dolibarr synchronisés depuis la date donnée, avec
-     * leur prospect, pour l'écran de gestion Dolibarr.
+     * Devis et commandes Dolibarr synchronisés, avec leur prospect et leur
+     * produit, pour l'écran de gestion Dolibarr et le détail des objectifs
+     * du dashboard. Sans date : tous les documents des deux types.
      *
      * @return list<ProspectDocument>
      */
-    public function pourGestionDepuis(\DateTimeInterface $debut): array
+    public function pourGestionDepuis(?\DateTimeInterface $debut = null): array
     {
-        return $this->createQueryBuilder('d')
+        $qb = $this->createQueryBuilder('d')
             ->leftJoin('d.produit', 'p')->addSelect('p')
             ->innerJoin('d.prospect', 'pr')->addSelect('pr')
             ->andWhere('d.type IN (:types)')
-            ->setParameter('types', [ProspectDocument::TYPE_DEVIS, ProspectDocument::TYPE_COMMANDE])
-            ->andWhere('d.dateDoc >= :debut')
-            ->setParameter('debut', $debut)
-            ->orderBy('d.dateDoc', 'DESC')
+            ->setParameter('types', [ProspectDocument::TYPE_DEVIS, ProspectDocument::TYPE_COMMANDE]);
+
+        if (null !== $debut) {
+            $qb->andWhere('d.dateDoc >= :debut')
+                ->setParameter('debut', $debut);
+        }
+
+        return $qb->orderBy('d.dateDoc', 'DESC')
             ->addOrderBy('d.ref', 'ASC')
             ->getQuery()
             ->getResult();

@@ -7,6 +7,7 @@ use App\Repository\ActionRepository;
 use App\Repository\CibleRepository;
 use App\Repository\PipelineRepository;
 use App\Repository\ProduitRepository;
+use App\Repository\ProspectDocumentRepository;
 use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
 use App\Service\DashboardStats;
@@ -30,6 +31,7 @@ class DashboardController extends AbstractController
         private ProduitRepository $produits,
         private CibleRepository $cibles,
         private ObjectifsStats $objectifsStats,
+        private ProspectDocumentRepository $prospectDocuments,
     ) {
     }
 
@@ -59,6 +61,8 @@ class DashboardController extends AbstractController
             'utilisateurs' => $this->users->findAll(),
             'objectifsQualifies' => $rows,
             'objectifsTotaux' => $objectifs['totaux'],
+            // Détail des propositions/commandes comptabilisées dans les objectifs.
+            'documentsDolibarr' => $this->prospectDocuments->pourGestionDepuis(null),
         ]);
     }
 }
