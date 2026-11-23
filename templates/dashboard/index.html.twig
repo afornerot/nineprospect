@@ -36,20 +36,20 @@
                     </thead>
                     <tbody>
                         {% for row in objectifsQualifies %}
-                            {% set o = row.objective %}
+                            {% set o = row %}
                             <tr>
-                                <td>{{ o.startDate|date('d/m/Y') }} → {{ o.endDate|date('d/m/Y') }}</td>
-                                <td>{{ o.produit ? o.produit.titre : 'Tous les produits' }}</td>
+                                <td>{{ o.periodeDebut|date('d/m/Y') }} → {{ o.periodeFin|date('d/m/Y') }}</td>
+                                <td>{{ o.produit.titre }}</td>
                                 {% for type in types|keys %}
                                     <td class="text-center" style="width: 180px">
-                                        {% if row.cells[type] is defined %}
-                                            {% set cell = row.cells[type] %}
-                                            {% set pct = cell.objective.target > 0 ? (cell.realise / cell.objective.target * 100)|round : 0 %}
+                                        {% if o.cellules[type] is defined %}
+                                            {% set cell = o.cellules[type] %}
+                                            {% set pct = cell.target > 0 ? (cell.realise / cell.target * 100)|round : 0 %}
                                             {% set couleur = pct >= 100 ? 'success' : (pct >= 50 ? 'warning' : 'danger') %}
                                             {% if type == 'montant_commandes' %}
-                                                <div class="fw-bold">{{ cell.realise|number_format(2, ',', ' ') }}/{{ cell.objective.target|number_format(2, ',', ' ') }} €</div>
+                                                <div class="fw-bold">{{ cell.realise|number_format(2, ',', ' ') }}/{{ cell.target|number_format(2, ',', ' ') }} €</div>
                                             {% else %}
-                                                <div class="fw-bold">{{ cell.realise }}/{{ cell.objective.target|number_format(0, ',', ' ') }}</div>
+                                                <div class="fw-bold">{{ cell.realise }}/{{ cell.target|number_format(0, ',', ' ') }}</div>
                                             {% endif %}
                                             <div class="progress mt-1" role="progressbar" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100" style="height: 8px;">
                                                 <div class="progress-bar bg-{{ couleur }}" style="width: {{ pct > 100 ? 100 : pct }}%"></div>

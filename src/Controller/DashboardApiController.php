@@ -9,6 +9,7 @@ use App\Repository\ProduitRepository;
 use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
 use App\Service\DashboardStats;
+use App\Service\ObjectifsStats;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -38,6 +39,7 @@ class DashboardApiController extends AbstractController
         private ProduitRepository $produits,
         private CibleRepository $cibles,
         private UserRepository $users,
+        private ObjectifsStats $objectifsStats,
     ) {
     }
 
@@ -51,6 +53,7 @@ class DashboardApiController extends AbstractController
     public function index(Request $request): JsonResponse
     {
         $donnees = $this->stats->collect($request);
+        $objectifs = $this->objectifsStats->collect($donnees['utilisateurFiltre']);
 
         return new JsonResponse([
             'kpi' => $donnees['kpi'],
@@ -82,6 +85,11 @@ class DashboardApiController extends AbstractController
             'actionsRealisees' => [
                 'mois' => $donnees['moisRealisees'],
                 'series' => $donnees['seriesRealisees'],
+            ],
+            // Réalisé vs objectif : même tableau que l'écran (voir ObjectifsStats).
+            'objectifs' => [
+                'lignes' => $objectifs['lignes'],
+                'totaux' => $objectifs['totaux'],
             ],
         ]);
     }
