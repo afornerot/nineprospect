@@ -57,16 +57,25 @@ class PipelineAuditTest extends WebTestCase
         $this->assertSame((new \DateTime())->format('Y-m-d'), $valeur->getDate()?->format('Y-m-d'));
         $this->assertSame($username, $valeur->getModifiePar()?->getUsername());
 
-        // Re-clic : nouveau statut, l'auteur reste celui de la session.
+        // Re-clics : En cours → Réalisé → Refus, l'auteur reste celui de la session.
         $corps = $this->cycler($client, $prospectId, $etapeId, $csrf);
         $this->assertSame(PipelineStatut::REALISE, $corps['statut']);
         $valeur = $this->valeur($prospectId, $etapeId);
         $this->assertInstanceOf(PipelineValeur::class, $valeur);
         $this->assertSame($username, $valeur->getModifiePar()?->getUsername());
 
+        $corps = $this->cycler($client, $prospectId, $etapeId, $csrf);
+        $this->assertSame(PipelineStatut::REFUS, $corps['statut']);
+        $this->assertSame('Refus', $corps['label']);
+        $this->assertSame('danger', $corps['color'], 'Le statut Refus s\'affiche en rouge.');
+        $valeur = $this->valeur($prospectId, $etapeId);
+        $this->assertInstanceOf(PipelineValeur::class, $valeur);
+        $this->assertSame(PipelineStatut::REFUS, $valeur->getStatut());
+        $this->assertSame($username, $valeur->getModifiePar()?->getUsername());
+
         // Retour à À faire : la ligne disparaît, l'audit avec elle.
-        $this->lien($prospectId)->definirStatut($this->etape($etapeId), PipelineStatut::A_FAIRE);
-        $this->em()->flush();
+        $corps = $this->cycler($client, $prospectId, $etapeId, $csrf);
+        $this->assertSame(PipelineStatut::A_FAIRE, $corps['statut']);
         $this->assertNull($this->valeur($prospectId, $etapeId), 'Le retour à À faire supprime la valeur.');
     }
 

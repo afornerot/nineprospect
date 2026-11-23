@@ -1,8 +1,14 @@
--- Migration : statuts d'étape de pipeline 6 valeurs -> 3 états.
+-- Migration (historique) : statuts d'étape de pipeline 6 valeurs -> 3 états.
 --
 --   NON_DEMARRE (0), A_QUALIFIER (1)  -> A_FAIRE  (0)
 --   RELANCER    (2), EN_ATTENTE (3)  -> EN_COURS (1)
 --   OUI         (4), NON        (5)  -> REALISE  (2)
+--
+-- Depuis l'ajout du statut « Refus » (3), `NON` (5) correspond à REFUS et non
+-- plus à REALISE. Cette migration ayant déjà été appliquée, les valeurs 5 sont
+-- devenues 2 et ne sont plus distinguables d'un « Oui » : elles restent
+-- Réalisé. La nouvelle correspondance ne concerne donc que les données non
+-- migrées et les imports (`PipelineStatut::depuisAncienStatut()`).
 --
 -- Sans perte : aucune ligne n'est supprimée, `date` et `modifie_par_id` sont
 -- conservés tels quels.
@@ -11,8 +17,9 @@
 -- d'anciennes valeurs sources (0 à 5). Un UPDATE en place n'est donc pas
 -- idempotent (rejoué, il convertirait REALISE=2 en EN_COURS=1).
 --
--- À exécuter AVANT de déployer le nouveau code : sinon `suivant()` reçoit une
--- valeur hors cycle (3 à 5) et les badges affichent « Inconnu ».
+-- À exécuter AVANT de déployer le code qui introduisit ces trois états : sinon
+-- `suivant()` recevait une valeur hors cycle (3 à 5) et les badges affichaient
+-- « Inconnu ».
 
 -- Répartition avant migration.
 SELECT statut, COUNT(*) AS total FROM pipeline_valeur GROUP BY statut ORDER BY statut;

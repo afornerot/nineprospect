@@ -79,15 +79,20 @@ Le menu se trouve dans la barre latérale (section `PROSPECTION`), `templates/ba
 - `PipelineValeur` : valeur d'une étape pour **un lien prospect↔vague**
   (table `pipeline_valeur`, contrainte unique `(prospect_sprint_id, etape_id)` ;
   `statut` SMALLINT `App\Enum\PipelineStatut` + `date` nullable + `modifiePar`,
-  FK `user` `SET NULL`). **Trois statuts seulement** : `A_FAIRE` (0),
-  `EN_COURS` (1), `REALISE` (2). Les six anciennes valeurs ont été repliées
-  sans perte : `NON_DEMARRE`/`A_QUALIFIER` → À faire, `RELANCER`/`EN_ATTENTE` →
-  En cours, `OUI`/`NON` → Réalisé. **Stockage creux** :
+  FK `user` `SET NULL`). **Quatre statuts** : `A_FAIRE` (0), `EN_COURS` (1),
+  `REALISE` (2), `REFUS` (3). Correspondance des six anciennes valeurs :
+  `NON_DEMARRE`/`A_QUALIFIER` → À faire, `RELANCER`/`EN_ATTENTE` → En cours,
+  `OUI` → Réalisé, `NON` → Refus. Les lignes migrées avant l'ajout de `REFUS`
+  portent déjà `2` (elles ne sont pas distinguables d'un « Oui ») ; la
+  correspondance `NON` → Refus ne vaut donc que pour les données non migrées et
+  les imports. **Stockage creux** :
   la ligne n'est créée que si `statut != A_FAIRE` ou `date != null`, sinon elle est
   retirée ; l'absence de ligne se lit `A_FAIRE` (`ProspectSprint::statutPour()`).
   **Cycle de statut cliquable** sur la liste et la fiche (`Prospect::cycleEtape()`,
-  `PipelineStatut::suivant()`) : avance `À faire → En cours → Réalisé → À faire` ;
+  `PipelineStatut::suivant()`) : avance `À faire → En cours → Réalisé → Refus → À faire` ;
   pose la date du jour à chaque clic et l'efface quand le statut revient à `A_FAIRE`.
+  Couleurs d'affichage (`PipelineStatut::color()`) : À faire `secondary`, En cours
+  `warning`, Réalisé `success`, Refus `danger` (badge rouge).
   **Qui et quand** : `date` et `modifiePar` mémorisent le dernier changement de
   statut. L'auteur est posé par
   `App\EventListener\PipelineValeurModificationListener` (`prePersist` / `preUpdate`

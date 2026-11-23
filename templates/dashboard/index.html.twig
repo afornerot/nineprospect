@@ -273,7 +273,9 @@
 
             var pipelineLabels = {{ etapes|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
             var pipelineData = {{ donneesPipeline|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
-            var colors = ['#6c757d', '#0dcaf0', '#ffc107', '#adb5bd', '#198754', '#dc3545'];
+            // Couleurs alignées sur l'ordre de PipelineStatut::LABELS
+            // (À faire, En cours, Réalisé, Refus).
+            var colors = ['#6c757d', '#ffc107', '#198754', '#dc3545', '#adb5bd', '#0dcaf0'];
 
             new Chart(document.getElementById('pipelineChart'), {
                 type: 'bar',

@@ -200,10 +200,11 @@ class ProspectContacteToggleTest extends WebTestCase
             static::markTestSkipped('Token CSRF pipeline indisponible.');
         }
 
-        // Cycle : À faire → En cours → Réalisé → À faire.
+        // Cycle : À faire → En cours → Réalisé → Refus → À faire.
         $attendu = [
             \App\Enum\PipelineStatut::EN_COURS,
             \App\Enum\PipelineStatut::REALISE,
+            \App\Enum\PipelineStatut::REFUS,
             \App\Enum\PipelineStatut::A_FAIRE,
         ];
         foreach ($attendu as $prochain) {
@@ -238,8 +239,8 @@ class ProspectContacteToggleTest extends WebTestCase
             'Au retour à À faire, la date doit être vidée.'
         );
 
-        // Re-cycle : clic → Réalisé → la date est posée à aujourd'hui.
-        $courant->definirStatut($etape, \App\Enum\PipelineStatut::REALISE);
+        // Re-cycle : clic → En cours, puis Refus → la date est posée à aujourd'hui.
+        $courant->definirStatut($etape, \App\Enum\PipelineStatut::REFUS);
         $em->flush();
         $this->assertNotNull($courant->datePour($etape), 'Après un clic, la date doit être renseignée.');
         $this->assertSame(

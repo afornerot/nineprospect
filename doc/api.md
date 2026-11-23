@@ -36,7 +36,7 @@ Filtres facultatifs (mêmes paramètres que la page) : `utilisateur`,
 |-----|---------|
 | `kpi` | `prospects`, `contacts`, `actionsEnRetard`, `actionsAujourdhui`, `actionsAVenir`, `nonContacte`, `nonQualifie` |
 | `filtres` | Valeurs de filtre effectivement appliquées |
-| `pipeline.etapes` / `pipeline.series` | Une série par statut (`À faire`, `En cours`, `Réalisé`), alignée sur les étapes |
+| `pipeline.etapes` / `pipeline.series` | Une série par statut (`À faire`, `En cours`, `Réalisé`, `Refus`), alignée sur les étapes |
 | `contactes`, `qualifications`, `etapes`, `actionsRealisees` | `mois` (clés `YYYY-MM` triées) + `series` alignées |
 
 Les compteurs proviennent de `App\Service\DashboardStats`, partagé avec

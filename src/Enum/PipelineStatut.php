@@ -5,11 +5,12 @@ namespace App\Enum;
 /**
  * Statut d'une étape du pipeline (Visio / Démo / Devis / Signature).
  *
- * Trois états seulement : « À faire », « En cours », « Réalisé ». Les anciennes
+ * Quatre états : « À faire », « En cours », « Réalisé », « Refus ». Les anciennes
  * valeurs détaillées ont été repliées sans perte :
  *   NON_DEMARRE (0), A_QUALIFIER (1)          -> A_FAIRE (0)
  *   RELANCER (2), EN_ATTENTE (3)              -> EN_COURS (1)
- *   OUI (4), NON (5)                          -> REALISE (2)
+ *   OUI (4)                                   -> REALISE (2)
+ *   NON (5)                                   -> REFUS (3)
  *
  * Valeurs smallint pour rester sur la colonne existante `pipeline_valeur.statut`.
  */
@@ -18,14 +19,16 @@ final class PipelineStatut
     public const A_FAIRE = 0;
     public const EN_COURS = 1;
     public const REALISE = 2;
+    public const REFUS = 3;
 
     /**
-     * Cycle des statuts au clic : A_FAIRE → EN_COURS → REALISE → A_FAIRE.
+     * Cycle des statuts au clic : A_FAIRE → EN_COURS → REALISE → REFUS → A_FAIRE.
      */
     public const CYCLE = [
         self::A_FAIRE,
         self::EN_COURS,
         self::REALISE,
+        self::REFUS,
     ];
 
     /**
@@ -49,6 +52,7 @@ final class PipelineStatut
         'À faire' => self::A_FAIRE,
         'En cours' => self::EN_COURS,
         'Réalisé' => self::REALISE,
+        'Refus' => self::REFUS,
     ];
 
     /**
@@ -71,20 +75,22 @@ final class PipelineStatut
         return match ($valeur) {
             self::REALISE => 'success',
             self::EN_COURS => 'warning',
+            self::REFUS => 'danger',
             self::A_FAIRE => 'secondary',
             default => 'light',
         };
     }
 
     /**
-     * Convertit l'ancienne valeur détaillée (0 à 5) vers les trois états, pour
-     * les données non encore migrées et les imports historiques.
+     * Convertit l'ancienne valeur détaillée (0 à 5) vers les états actuels,
+     * pour les données non encore migrées et les imports historiques.
      */
     public static function depuisAncienStatut(int $ancien): int
     {
         return match ($ancien) {
             2, 3 => self::EN_COURS,
-            4, 5 => self::REALISE,
+            4 => self::REALISE,
+            5 => self::REFUS,
             default => self::A_FAIRE,
         };
     }
@@ -109,7 +115,8 @@ final class PipelineStatut
 
         return match ($nettoye) {
             '' => self::A_FAIRE,
-            'oui', 'o', 'ok', 'fait', 'faite', 'realise', 'realisee', 'signe', 'gagne', 'non' => self::REALISE,
+            'oui', 'o', 'ok', 'fait', 'faite', 'realise', 'realisee', 'signe', 'gagne' => self::REALISE,
+            'non', 'ko', 'refus', 'refuse', 'refusee', 'perdu', 'perdue' => self::REFUS,
             'en cours', 'cours', 'encours', 'relancer', 'relance', 'a relancer', 'suivre',
             'en attente', 'attente', 'pending' => self::EN_COURS,
             'a faire', 'faire', 'todo', 'non demarre', 'a qualifier', 'qualifier', 'a qualifie' => self::A_FAIRE,
