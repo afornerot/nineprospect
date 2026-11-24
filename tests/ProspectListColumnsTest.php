@@ -43,6 +43,17 @@ class ProspectListColumnsTest extends WebTestCase
         $this->assertStringContainsString('<th width="150px">Téléphone</th>', $html);
         $this->assertStringNotContainsString('Cibles</th>', $html, 'La colonne « Cibles » est retirée de la liste.');
 
+        // Lignes rendues server-side par l'endpoint DataTables.
+        $client->request('GET', '/user/prospects/data?search[value]='.urlencode('ZZCOL').'&length=1000');
+        $this->assertResponseIsSuccessful();
+        $json = json_decode((string) $client->getResponse()->getContent(), true);
+        $lignes = [];
+        foreach ($json['data'] as $ligne) {
+            $id = $ligne['DT_RowId'];
+            $lignes[$id] = implode('', $ligne);
+        }
+        $html = implode('', $lignes);
+
         // Téléphone du contact principal ; email du prospect et du contact en mailto.
         $this->assertLigne($html, (int) $avecContact->getId(), [
             'mailto:prospect@example.test',
@@ -89,7 +100,7 @@ class ProspectListColumnsTest extends WebTestCase
      */
     private function assertLigne(string $html, int $prospectId, array $attendus): void
     {
-        $debut = strpos($html, '<tr id="prospect-'.$prospectId.'"');
+        $debut = strpos($html, 'prospect-'.$prospectId);
         $this->assertNotFalse($debut, 'Ligne attendue pour le prospect '.$prospectId.'.');
 
         $ligne = substr($html, (int) $debut, 1500);

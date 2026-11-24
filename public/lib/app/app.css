@@ -424,3 +424,32 @@ tr.table-highlight {
 #dataTables td.tri-gauche.dt-type-numeric {
     text-align: left;
 }
+
+/* Qualification « Refus » : rouge foncé, distinct du rouge Bootstrap
+   (« danger ») utilisé par « Hors produit ». */
+.badge.text-bg-refus {
+    color: #fff !important;
+    background-color: #58151c !important;
+}
+
+/* Liste prospects : le tableau reste invisible jusqu'à l'init DataTables
+   (visibility, pas display : la page garde sa hauteur, scrollIntoView
+   fonctionne). Évite le flash des N lignes brutes puis le re-rendu paginé. */
+.js-datatable-pending {
+    visibility: hidden;
+}
+
+/* Liste prospects : la colonne Pipeline est bornée à 340px. En
+   table-layout:auto, DataTables et le navigateur recalculent les largeurs
+   (le width du <col> n'est qu'une suggestion) : on impose la taille sur les
+   cellules elles-mêmes, ce qui la rend effective dans tous les cas. */
+#dataTables th:nth-child(3),
+#dataTables td:nth-child(3) {
+    min-width: 300px;
+    max-width: 300px;
+}
+#dataTables th:nth-child(6),
+#dataTables td:nth-child(6) {
+    min-width: 340px;
+    max-width: 340px;
+}

@@ -74,10 +74,11 @@ class QualifieExtension extends AbstractExtension
     private function priorite(QualificationProduit $qualifie): int
     {
         return match ($qualifie) {
-            QualificationProduit::OUI => 4,
-            QualificationProduit::NON => 3,
-            QualificationProduit::INJOIGNABLE => 2,
-            QualificationProduit::HORS_PRODUIT => 1,
+            QualificationProduit::OUI => 5,
+            QualificationProduit::NON => 4,
+            QualificationProduit::INJOIGNABLE => 3,
+            QualificationProduit::HORS_PRODUIT => 2,
+            QualificationProduit::REFUS => 1,
         };
     }
 }

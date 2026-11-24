@@ -69,30 +69,37 @@ $(function () {
 
 	if (window.location.pathname !== CHEMIN) return;
 
+	// Cible de repositionnement : fragment explicite, sinon dernier prospect
+	// consulté. Le fragment est retiré de l'URL immédiatement (ce script
+	// s'exécute avant le rendu du corps) : le navigateur ne fait plus son saut
+	// natif vers l'ancre — suivi du re-paginage DataTables qui ramenait en
+	// haut — d'où le « descend puis remonte ». Un seul scroll, après pagination.
+	let cible = null;
+	const mHash = window.location.hash.match(/^#prospect-(\d+)$/);
+	if (mHash) {
+		cible = parseInt(mHash[1], 10);
+		history.replaceState(null, '', CHEMIN + window.location.search);
+	} else {
+		let courant = null;
+		try { courant = localStorage.getItem(CLE_COURANT); } catch (e) { /* stockage indisponible */ }
+		if (courant) cible = parseInt(courant, 10);
+	}
+	window.__prospectsCible = cible;
+
 	const query = window.location.search;
 	if (query && query !== '?') {
 		try { localStorage.setItem(CLE, query); } catch (e) { /* stockage indisponible */ }
 		return;
 	}
 
-	// Ancre : fragment explicite, sinon dernier prospect consulté.
-	let ancre = window.location.hash;
-	if (!ancre) {
-		let courant = null;
-		try { courant = localStorage.getItem(CLE_COURANT); } catch (e) { /* stockage indisponible */ }
-		if (courant) ancre = '#prospect-' + courant;
-	}
-
 	let sauvegarde = null;
 	try { sauvegarde = localStorage.getItem(CLE); } catch (e) { /* stockage indisponible */ }
 	if (sauvegarde) {
 		// Filtres à réappliquer : la page doit être re-rendue par le serveur.
+		// Le fragment est conservé : il sera retiré au chargement suivant,
+		// avant le rendu, donc sans saut natif.
 		window.__prospectsRestaure = true;
-		window.location.replace(CHEMIN + sauvegarde + ancre);
-	} else if (ancre) {
-		// Repositionnement seul : pas de rechargement, on pose le fragment et
-		// la pagination DataTables (bloc #prospect-{id}) fait le scroll.
-		history.replaceState(null, '', CHEMIN + ancre);
+		window.location.replace(CHEMIN + sauvegarde + (mHash ? '#prospect-' + cible : ''));
 	}
 })();
 
@@ -104,73 +111,95 @@ $(document).ready(function () {
 
 	if (!$table.length || typeof $.fn.DataTable === 'undefined') return;
 
-	// Nettoyage des lignes de message (« aucun enregistrement », colspan) :
-	// leur nombre de cellules diffère de celui des colonnes et DataTables
-	// remonte l'erreur « Requested unknown parameter » sur tableau vide.
-	const nbColonnes = $table.find('thead th').length;
-	$table.find('tbody tr').each(function () {
-		const $cells = $(this).children('td, th');
-		let invalide = nbColonnes > 0 && $cells.length !== nbColonnes;
-
-		$cells.each(function () {
-			if (parseInt($(this).attr('colspan') || '1', 10) > 1) {
-				invalide = true;
-			}
-		});
-
-		if (invalide) {
-			$(this).remove();
-		}
-	});
-
 	$orderCol = $table.data('order-col') ?? 0;
 	$orderDir = $table.data('order-dir') ?? 'asc';
 
+	// Liste rendue côté serveur : filtres, tri, pagination et recherche
+	// traités par app_user_prospects_data ; chaque cellule arrive en HTML.
+	const colonnes = [];
+	$table.find('thead th').each(function () {
+		colonnes.push({
+			data: String(colonnes.length),
+			orderable: !this.classList.contains('no-sort'),
+			width: this.style.maxWidth || this.getAttribute('width') || undefined,
+		});
+	});
+
 	$table.DataTable({
+		serverSide: true,
+		processing: false,
 		stateSave: true,
-		columnDefs: [
-			{ targets: 'no-sort', orderable: false },
-			{ targets: 'no-string', type: 'num' },
-		],
+		ajax: {
+			url: '/user/prospects/data',
+			data: function (d) {
+				// Filtres de la liste, portés par l'URL (le serveur les
+				// revalide) : la recherche globale DataTables part déjà.
+				const params = new URLSearchParams(window.location.search);
+				['campagne', 'sprint', 'utilisateur', 'contacte', 'produit', 'cible', 'qualifie', 'statut'].forEach(function (cle) {
+					const valeur = params.get(cle);
+					if (valeur) d[cle] = valeur;
+				});
+				// Repositionnement demandé une seule fois (première requête) :
+				// le serveur renvoie l'index du prospect dans la liste triée.
+				if (window.__prospectsCible && !window.__prospectsPositionEnvoyee) {
+					d.positionner = window.__prospectsCible;
+					window.__prospectsPositionEnvoyee = true;
+				}
+			},
+			dataSrc: function (json) {
+				window.__prospectsCibleIndex = (null === json.cibleIndex || undefined === json.cibleIndex) ? null : json.cibleIndex;
+				return json.data;
+			},
+		},
+		columns: colonnes,
+		autoWidth: false,
 		responsive: true,
 		iDisplayLength: 100,
 		order: [[$orderCol, $orderDir]],
 	});
 
-	// Si l'URL porte un fragment #prospect-{id} (retour depuis la fiche après
-	// modification), on pagine DataTables vers la page qui contient la ligne
-	// correspondante — DataTables ne charge par défaut que la page courante
-	// dans le DOM, donc le scroll natif du navigateur ne trouverait pas la
-	// ligne si elle est sur une autre page.
-	const hashMatch = (window.location.hash || '').match(/^#prospect-(\d+)$/);
-	if (hashMatch) {
-		const prospectId = parseInt(hashMatch[1], 10);
-		// L'API DataTables est créée par $table.DataTable() ci-dessus. On
-		// récupère l'instance via $.fn.dataTable.Api (évite de réinstancier).
-		const api = $.fn.dataTable.Api($table);
-		// Cherche la ligne par son id dans le jeu de données complet.
-		const rowIdx = api.rows().indexes().filter(function (idx) {
-			const node = api.row(idx).node();
-			return node && node.id === 'prospect-' + prospectId;
-		});
-		if (rowIdx.length > 0) {
-			const idx = rowIdx[0];
-			const pageLen = api.page.len();
-			const targetPage = Math.floor(idx / pageLen);
-			// Si la page cible n'est pas la page courante, on pagine.
-			if (api.page() !== targetPage) {
-				api.page(targetPage).draw(false);
+	// Révélation du tableau une fois l'état final posé (pagination + scroll) :
+	// l'utilisateur ne voit jamais les lignes brutes ni le saut de pagination.
+	const reveler = function () {
+		$('#dataTables').closest('.js-datatable-pending').removeClass('js-datatable-pending');
+	};
+	// Filet de sécurité : si l'init ou le repositionnement échoue, le tableau
+	// ne doit pas rester invisible.
+	setTimeout(reveler, 2000);
+
+	const prospectId = window.__prospectsCible;
+	if (prospectId) {
+		const api = $table.DataTable();
+		let repositionne = false;
+		api.on('draw', function () {
+			if (repositionne) return;
+			const index = window.__prospectsCibleIndex;
+			if (null === index) {
+				// Le prospect ciblé n'existe pas ou est hors filtre : la
+				// première réponse (qui portait « positionner ») est arrivée.
+				if (window.__prospectsPositionEnvoyee) reveler();
+				return;
 			}
-			// Scroll après le re-render (setTimeout pour laisser DataTables finir).
-			setTimeout(function () {
+			repositionne = true;
+			const pageCible = Math.floor(index / api.page.len());
+			const positionner = function () {
 				const $row = $('#prospect-' + prospectId);
 				if ($row.length && $row.is(':visible')) {
 					$row[0].scrollIntoView({ behavior: 'auto', block: 'center' });
 					$row.addClass('table-highlight');
 					setTimeout(function () { $row.removeClass('table-highlight'); }, 2000);
 				}
-			}, 100);
-		}
+				reveler();
+			};
+			if (api.page() !== pageCible) {
+				api.one('draw', positionner);
+				api.page(pageCible).draw('page');
+			} else {
+				setTimeout(positionner, 100);
+			}
+		});
+	} else {
+		reveler();
 	}
 });
 
@@ -180,6 +209,33 @@ $(function () {
 		try { localStorage.removeItem('prospects.selection'); } catch (e) { /* stockage indisponible */ }
 	});
 });
+
+// Une action sur le tableau (cycle produit, ajout produit, cycle pipeline,
+// switch « Contacté », clic action) invalide le repositionnement : on oublie
+// le prospect courant et le fragment #prospect-{id} de l'URL, sinon le
+// prochain chargement de la liste re-pagine et re-scrolle vers lui.
+function oublierProspectCourant() {
+	try { localStorage.removeItem('prospects.courant'); } catch (e) { /* stockage indisponible */ }
+	if (window.location.hash) {
+		history.replaceState(null, '', window.location.pathname + window.location.search);
+	}
+}
+
+// Clic sur le badge « action » de la liste : navigation vers la fiche action.
+$(document).on('click', '.js-oublier-courant', function () {
+	oublierProspectCourant();
+});
+
+// Le contenu d'une cellule vient d'être modifié inline : en mode client le
+// cache de tri de DataTables doit être invalidé. En server-side (liste), le
+// tri est recalculé par le serveur à chaque draw — la mise à jour inline
+// suffit jusqu'au prochain re-render, rien à invalider.
+function invaliderCellule($cible) {
+	if (!$.fn.DataTable || !$.fn.DataTable.isDataTable('#dataTables')) return;
+	const api = $('#dataTables').DataTable();
+	if (!api || !api.settings().length || api.settings()[0].oFeatures.bServerSide) return;
+	api.cell($cible.closest('td')).invalidate('dom').draw(false);
+}
 
 // Switch « Contacté » sur la liste prospects : toggle via endpoint AJAX.
 // Cycle : null → true → false → null (le switch n'affiche que true/false ;
@@ -196,6 +252,7 @@ $(document).ready(function () {
 		const url = '/user/prospects/toggle-contacte/' + actionId;
 		const body = new URLSearchParams();
 		body.set('_csrf_token', csrf);
+		oublierProspectCourant();
 
 		fetch(url, {
 			method: 'POST',
@@ -265,6 +322,7 @@ $(document).ready(function () {
 		const url = '/user/prospects/toggle-produit/' + prospectId + '/' + produitId;
 		const body = new URLSearchParams();
 		body.set('_csrf_token', csrf);
+		oublierProspectCourant();
 
 		fetch(url, {
 			method: 'POST',
@@ -286,7 +344,13 @@ $(document).ready(function () {
 			const newClass = 'badge text-bg-' + r.data.color + ' js-cycle-produit';
 			$btn.attr('class', newClass);
 			$btn.attr('title', r.data.label);
-			location.reload();
+			// Liste : mise à jour inline (pas de rechargement du tableau).
+			// Fiche : reload pour rafraîchir la ligne d'audit de qualification.
+			if ($('#dataTables').length) {
+				invaliderCellule($btn);
+			} else {
+				location.reload();
+			}
 		}).catch(function () {
 			alert('Erreur réseau. Veuillez réessayer.');
 		}).finally(function () {
@@ -309,6 +373,7 @@ $(document).ready(function () {
 		const url = '/user/prospects/add-produit/' + prospectId + '/' + produitId;
 		const body = new URLSearchParams();
 		body.set('_csrf_token', csrf);
+		oublierProspectCourant();
 
 		fetch(url, {
 			method: 'POST',
@@ -327,7 +392,24 @@ $(document).ready(function () {
 				alert(msg);
 				return;
 			}
-			location.reload();
+			// Nouveau badge produit inline (qualification « Non » par défaut),
+			// avec le CSRF rendu côté serveur pour ses futurs cycles. L'entrée
+			// du menu est retirée ; le dropdown disparaît s'il devient vide.
+			const $item = $link.closest('li');
+			const $menu = $item.closest('ul');
+			const $wrapper = $link.closest('.d-flex');
+			const $badge = $('<button type="button" class="badge text-bg-secondary js-cycle-produit">')
+				.attr('data-prospect', prospectId)
+				.attr('data-produit', produitId)
+				.attr('data-csrf', $link.data('csrf-produit'))
+				.attr('title', 'Non')
+				.text($link.text().trim());
+			$badge.insertBefore($wrapper.find('.dropdown'));
+			$item.remove();
+			if ($menu.children('li').length === 0) {
+				$wrapper.find('.dropdown').remove();
+			}
+			invaliderCellule($wrapper);
 		}).catch(function () {
 			alert('Erreur réseau. Veuillez réessayer.');
 		});
@@ -352,6 +434,7 @@ $(document).ready(function () {
 		body.set('_csrf_token', csrf);
 		body.set('prospect', prospectId);
 		body.set('etape', etapeId);
+		oublierProspectCourant();
 
 		fetch(url, {
 			method: 'POST',

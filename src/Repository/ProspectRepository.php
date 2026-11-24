@@ -7,6 +7,7 @@ use App\Entity\ProspectSprint;
 use App\Enum\PipelineStatut;
 use App\Enum\QualificationProduit;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use SortDirection;
 
@@ -21,8 +22,9 @@ class ProspectRepository extends ServiceEntityRepository
     }
 
     /**
-     * Filtres de la liste : campagne, vague, qualification, cible,
-     * statut d'action, affectation et recherche plein texte.
+     * Sélection filtrée (sans hydratation des collections). Les filtres sont
+     * portés par ces jointures minimales : campagne, vague, contacts (pour la
+     * recherche plein texte), utilisateurs, produits et cibles.
      *
      * @param array{
      *     campagne?: int|null,
@@ -35,27 +37,18 @@ class ProspectRepository extends ServiceEntityRepository
      *     userId?: int|null,
      *     recherche?: string|null
      * } $filtres
-     *
-     * @return array<int, Prospect>
      */
-    public function findByFilters(array $filtres = []): array
+    private function qbFiltres(array $filtres): QueryBuilder
     {
         $qb = $this->createQueryBuilder('p')
             ->leftJoin('p.campagne', 'c')
             ->leftJoin('p.sprints', 'ps')
             ->leftJoin('ps.sprint', 's')
-            ->leftJoin('s.pipeline', 'pl')
-            ->leftJoin('ps.valeurs', 'v')
-            ->leftJoin('v.etape', 've')
             ->leftJoin('p.contacts', 'ct')
             ->leftJoin('p.users', 'u')
-            ->leftJoin('p.actions', 'a')
             ->leftJoin('p.prospectProduits', 'pc')
             ->leftJoin('pc.produit', 'ci')
-            ->leftJoin('p.cibles', 'cat')
-            ->leftJoin('p.contactePar', 'cp')
-            ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'ct', 'u', 'a', 'pc', 'ci', 'cat', 'cp')
-            ->orderBy('p.nom', SortDirection::Ascending);
+            ->leftJoin('p.cibles', 'cat');
 
         if (isset($filtres['campagne'])) {
             $qb->andWhere('c.id = :campagne')->setParameter('campagne', $filtres['campagne']);
@@ -124,7 +117,157 @@ class ProspectRepository extends ServiceEntityRepository
                 ->setParameter('recherche', '%'.$recherche.'%');
         }
 
-        return $qb->getQuery()->getResult();
+        return $qb;
+    }
+
+    public function compterTotal(): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function compterFiltres(array $filtres): int
+    {
+        return (int) $this->qbFiltres($filtres)
+            ->select('COUNT(DISTINCT p.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Identifiants des prospects filtrés, triés selon une colonne de la liste
+     * (indice DataTables : 1 nom, 2 contact principal, 3 téléphone, 4 vague,
+     * 5 pipeline ; 0 = colonne action, trié par identifiant).
+     * Les clés non exprimables en DQL (contact affiché, étape entamée) sont
+     * calculées en PHP sur des requêtes légères : aucune hydratation d'entité.
+     *
+     * @return list<int>
+     */
+    public function idsTries(array $filtres, int $colonne, string $direction): array
+    {
+        $ids = $this->qbFiltres($filtres)->select('DISTINCT p.id')->getQuery()->getSingleColumnResult();
+        if ([] === $ids) {
+            return [];
+        }
+
+        $conn = $this->getEntityManager()->getConnection();
+        $idsSql = implode(',', array_map(intval(...), $ids));
+
+        // Clé 2/3 : contact affiché (le principal marqué, sinon le premier) et
+        // son téléphone, avec repli sur le téléphone du prospect.
+        $contacts = [];
+        foreach ($conn->executeQuery(
+            'SELECT c.prospect_id, c.nom_complet, c.telephone, c.est_principal
+             FROM contact c WHERE c.prospect_id IN ('.$idsSql.')
+             ORDER BY c.nom_complet'
+        )->fetchAllAssociative() as $ligne) {
+            $pid = (int) $ligne['prospect_id'];
+            if (!isset($contacts[$pid]) || (bool) $ligne['est_principal']) {
+                $contacts[$pid] = $ligne;
+            }
+        }
+
+        // Clés 4/5 : vagues (numéro) et pipeline de la vague courante (la plus
+        // haute) — étape la plus avancée entamée ×10 + statut, -1 si aucune.
+        $vagues = [];
+        $pipelines = [];
+        foreach ($conn->executeQuery(
+            'SELECT ps.prospect_id, s.numero, ve.ordre, pv.statut
+             FROM prospect_sprint ps
+             JOIN sprint s ON s.id = ps.sprint_id
+             LEFT JOIN pipeline_etape ve ON ve.pipeline_id = s.pipeline_id
+             LEFT JOIN pipeline_valeur pv ON pv.prospect_sprint_id = ps.id AND pv.etape_id = ve.id
+             WHERE ps.prospect_id IN ('.$idsSql.')'
+        )->fetchAllAssociative() as $ligne) {
+            $pid = (int) $ligne['prospect_id'];
+            $numero = null === $ligne['numero'] ? null : (int) $ligne['numero'];
+            if (null !== $numero) {
+                $vagues[$pid] ??= $numero;
+                $vagues[$pid] = min($vagues[$pid], $numero);
+            }
+            if (null === $ligne['ordre']) {
+                continue;
+            }
+            if (!isset($pipelines[$pid]) || $numero > $pipelines[$pid]['numero']) {
+                $pipelines[$pid] = ['numero' => $numero, 'cle' => -1];
+            }
+            if (null !== $numero && $numero === $pipelines[$pid]['numero']) {
+                $statut = null === $ligne['statut'] ? 0 : (int) $ligne['statut'];
+                if (0 !== $statut) {
+                    $pipelines[$pid]['cle'] = max($pipelines[$pid]['cle'], 10 * (int) $ligne['ordre'] + $statut);
+                }
+            }
+        }
+
+        $noms = [];
+        foreach ($this->getEntityManager()->createQuery(
+            'SELECT p.id, p.nom FROM App\Entity\Prospect p WHERE p.id IN (:ids)'
+        )->setParameter('ids', $ids)->getResult() as $ligne) {
+            $noms[(int) $ligne['id']] = (string) $ligne['nom'];
+        }
+
+        $lignes = [];
+        foreach (array_map(intval(...), $ids) as $id) {
+            $lignes[] = [
+                $id,
+                $noms[$id] ?? '',
+                (string) ($contacts[$id]['nom_complet'] ?? ''),
+                (string) ($contacts[$id]['telephone'] ?? ''),
+                $vagues[$id] ?? PHP_INT_MAX,
+                $pipelines[$id]['cle'] ?? -1,
+            ];
+        }
+
+        usort($lignes, static function (array $a, array $b) use ($colonne, $direction): int {
+            // L'identifiant en dernier élément départage les clés égales (tri stable).
+            $cmp = [$a[$colonne], $a[0]] <=> [$b[$colonne], $b[0]];
+
+            return 'desc' === $direction ? -$cmp : $cmp;
+        });
+
+        return array_column($lignes, 0);
+    }
+
+    /**
+     * Hydratation complète (campagne, vagues, pipelines, contacts, produits,
+     * cibles, actions, contacté par) de la page affichée uniquement. Le tri
+     * attendu est celui d'`idsTries` ; il est réappliqué en PHP sur le résultat.
+     *
+     * @param list<int> $ids ordonnés
+     *
+     * @return list<Prospect>
+     */
+    public function trouverParIds(array $ids): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.campagne', 'c')
+            ->leftJoin('p.sprints', 'ps')
+            ->leftJoin('ps.sprint', 's')
+            ->leftJoin('s.pipeline', 'pl')
+            ->leftJoin('ps.valeurs', 'v')
+            ->leftJoin('v.etape', 've')
+            ->leftJoin('p.contacts', 'ct')
+            ->leftJoin('p.users', 'u')
+            ->leftJoin('p.actions', 'a')
+            ->leftJoin('p.prospectProduits', 'pc')
+            ->leftJoin('pc.produit', 'ci')
+            ->leftJoin('p.cibles', 'cat')
+            ->leftJoin('p.contactePar', 'cp')
+            ->addSelect('c', 'ps', 's', 'pl', 'v', 've', 'ct', 'u', 'a', 'pc', 'ci', 'cat', 'cp')
+            ->andWhere('p.id IN (:ids)')
+            ->setParameter('ids', $ids);
+
+        $prospects = $qb->getQuery()->getResult();
+        $ordre = array_flip($ids);
+        usort($prospects, static fn (Prospect $a, Prospect $b): int => $ordre[$a->getId()] <=> $ordre[$b->getId()]);
+
+        return $prospects;
     }
 
     /**

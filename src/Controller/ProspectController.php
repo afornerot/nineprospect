@@ -74,13 +74,82 @@ class ProspectController extends AbstractController
             'routesubmit' => 'app_user_prospects_submit',
             'routeupdate' => 'app_user_prospects_update',
             'routeshow' => 'app_user_prospects_show',
-            'prospects' => $this->prospects->findByFilters($filtres),
             'filtres' => $filtres,
             'campagnes' => $this->campagnes->findAllOrdered(),
             'sprints' => $this->sprints->findAllOrdered(),
             'utilisateurs' => $this->users->findAll(),
             'produits' => $this->produits->findAllOrdered(),
             'cibles' => $this->cibles->findAllOrdered(),
+        ]);
+    }
+
+    /**
+     * Endpoint DataTables server-side de la liste : filtres + tri + pagination
+     * (bornés côté serveur), rendu HTML des lignes parsé en cellules JSON.
+     * Le tri repose sur des clés calculées (nom, contact, téléphone, vague,
+     * pipeline) voir ProspectRepository::idsTries().
+     */
+    #[Route('/data', name: 'app_user_prospects_data')]
+    public function data(Request $request): JsonResponse
+    {
+        $filtres = $this->lireFiltres($request);
+
+        // Recherche globale du contrôle DataTables : même sémantique que « q ».
+        $rechercheGlobale = trim((string) ($request->query->all('search')['value'] ?? ''));
+        if ('' !== $rechercheGlobale) {
+            $filtres['recherche'] = $rechercheGlobale;
+        }
+
+        $ordre = $request->query->all('order')[0] ?? [];
+        $colonne = max(0, min(5, (int) ($ordre['column'] ?? 1)));
+        $direction = 'desc' === strtolower((string) ($ordre['dir'] ?? 'asc')) ? 'desc' : 'asc';
+        $start = max(0, (int) $request->query->get('start', 0));
+        // « length » = taille de page ; -1 (« Tous ») borné à 1000.
+        $longueur = min(1000, max(1, (int) $request->query->get('length', 100)));
+
+        $ids = $this->prospects->idsTries($filtres, $colonne, $direction);
+        $prospects = $this->prospects->trouverParIds(array_slice($ids, $start, $longueur));
+
+        $html = $this->renderView('prospects/_lignes.html.twig', [
+            'prospects' => $prospects,
+            'routeshow' => 'app_user_prospects_show',
+            'routeupdate' => 'app_user_prospects_update',
+            'produits' => $this->produits->findAllOrdered(),
+        ]);
+
+        // Découpe du HTML rendu : un objet par ligne {DT_RowId, 0..n-1 td},
+        // clé numérique = index de colonne (lu par DataTables côté client).
+        $lignes = [];
+        if (preg_match_all('/<tr id="prospect-(\d+)">(.*?)<\/tr>/s', $html, $correspondances, PREG_SET_ORDER)) {
+            foreach ($correspondances as $correspondance) {
+                preg_match_all('/<td[^>]*>(.*?)<\/td>/s', $correspondance[2], $cellules);
+                $ligne = ['DT_RowId' => 'prospect-'.$correspondance[1]];
+                foreach ($cellules[1] as $index => $cellule) {
+                    $ligne[$index] = $cellule;
+                }
+                $lignes[] = $ligne;
+            }
+        }
+
+        // Repositionnement : index du prospect ciblé (fragment #prospect-N,
+        // transmis par le JS via « positionner » — sans collision avec le
+        // filtre « cible ») dans la liste TRIÉE ET FILTRÉE, null si absent
+        // du filtrage courant.
+        $positionner = $this->paramEntier($request, 'positionner');
+        $indexCible = null;
+        if (null !== $positionner) {
+            $position = array_search($positionner, $ids, true);
+            if (false !== $position) {
+                $indexCible = (int) $position;
+            }
+        }
+
+        return $this->json([
+            'draw' => (int) $request->query->get('draw', 0),
+            'recordsTotal' => $this->prospects->compterTotal(),
+            'recordsFiltered' => count($ids),
+            'data' => $lignes,
+            'cibleIndex' => $indexCible,
         ]);
     }
 

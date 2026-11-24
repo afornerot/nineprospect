@@ -37,24 +37,21 @@ class ProspectListSuiviTest extends WebTestCase
 
         // La colonne « Prc Action » affiche l'action en retard (badge de
         // statut), même quand une action future existe — lien vers l'update.
-        $client->request('GET', '/user/prospects?q='.$q);
-        $this->assertResponseIsSuccessful();
-        $row = $client->getCrawler()->filter('tr#prospect-'.$prospect->getId());
-        $this->assertSame(1, $row->count(), 'Le prospect doit être présent dans la liste.');
-        $this->assertStringContainsString('En retard', $row->html());
-        $this->assertStringContainsString('/user/actions/update/'.$enRetard->getId(), $row->html());
-        $this->assertStringNotContainsString('/user/actions/update/'.$avenir->getId(), $row->html());
+        $lignes = $this->lignes($client, 'search[value]='.$q);
+        $this->assertArrayHasKey('prospect-'.$prospect->getId(), $lignes, 'Le prospect doit être présent dans la liste.');
+        $row = $lignes['prospect-'.$prospect->getId()];
+        $this->assertStringContainsString('En retard', $row);
+        $this->assertStringContainsString('/user/actions/update/'.$enRetard->getId(), $row);
+        $this->assertStringNotContainsString('/user/actions/update/'.$avenir->getId(), $row);
 
         // Le filtre « En retard » remonte le prospect (au moins une action
         // en retard non réalisée)…
-        $client->request('GET', '/user/prospects?q='.$q.'&statut=retard');
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorExists('tr#prospect-'.$prospect->getId());
+        $lignes = $this->lignes($client, 'search[value]='.$q.'&statut=retard');
+        $this->assertArrayHasKey('prospect-'.$prospect->getId(), $lignes);
 
         // … et le filtre « Réalisée » ne le remonte pas (aucune action faite).
-        $client->request('GET', '/user/prospects?q='.$q.'&statut=faites');
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorNotExists('tr#prospect-'.$prospect->getId());
+        $lignes = $this->lignes($client, 'search[value]='.$q.'&statut=faites');
+        $this->assertArrayNotHasKey('prospect-'.$prospect->getId(), $lignes);
 
         $this->em()->clear();
         foreach ([$enRetard, $avenir] as $a) {
@@ -82,25 +79,22 @@ class ProspectListSuiviTest extends WebTestCase
         $this->em()->clear();
 
         $q = urlencode((string) $prospect->getNom());
-        $client->request('GET', '/user/prospects?q='.$q.'&statut=retard');
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorExists('tr#prospect-'.$prospect->getId());
+        $lignes = $this->lignes($client, 'search[value]='.$q.'&statut=retard');
+        $this->assertArrayHasKey('prospect-'.$prospect->getId(), $lignes);
 
         // On ajoute une action à venir : l'action passée reste visible et
         // le prospect reste filtré « En retard ».
         $avenir = $this->creerPlanifiee($prospect, $demain);
         $this->em()->clear();
 
-        $client->request('GET', '/user/prospects?q='.$q);
-        $this->assertResponseIsSuccessful();
-        $row = $client->getCrawler()->filter('tr#prospect-'.$prospect->getId());
-        $this->assertSame(1, $row->count());
-        $this->assertStringContainsString('En retard', $row->html());
-        $this->assertStringContainsString('/'.$enRetard->getId(), $row->html());
+        $lignes = $this->lignes($client, 'search[value]='.$q);
+        $this->assertArrayHasKey('prospect-'.$prospect->getId(), $lignes);
+        $row = $lignes['prospect-'.$prospect->getId()];
+        $this->assertStringContainsString('En retard', $row);
+        $this->assertStringContainsString('/'.$enRetard->getId(), $row);
 
-        $client->request('GET', '/user/prospects?q='.$q.'&statut=retard');
-        $this->assertResponseIsSuccessful();
-        $this->assertSelectorExists('tr#prospect-'.$prospect->getId());
+        $lignes = $this->lignes($client, 'search[value]='.$q.'&statut=retard');
+        $this->assertArrayHasKey('prospect-'.$prospect->getId(), $lignes);
 
         $this->em()->clear();
         foreach ([$enRetard, $avenir] as $a) {
@@ -190,5 +184,28 @@ class ProspectListSuiviTest extends WebTestCase
         }
 
         return $em;
+    }
+
+    /**
+     * Lignes rendues par l'endpoint DataTables (le rendu est server-side) :
+     * DT_RowId => HTML concaténé des cellules.
+     *
+     * @return array<string,string>
+     */
+    private function lignes(KernelBrowser $client, string $query): array
+    {
+        $client->request('GET', '/user/prospects/data?'.$query);
+        $this->assertResponseIsSuccessful();
+        $json = json_decode((string) $client->getResponse()->getContent(), true);
+        $this->assertIsArray($json['data'] ?? null);
+
+        $lignes = [];
+        foreach ($json['data'] as $ligne) {
+            $id = $ligne['DT_RowId'];
+            unset($ligne['DT_RowId']);
+            $lignes[$id] = implode('', $ligne);
+        }
+
+        return $lignes;
     }
 }

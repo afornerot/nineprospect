@@ -62,7 +62,14 @@ class QualificationAuditTest extends WebTestCase
         $this->assertSame(QualificationProduit::INJOIGNABLE, $lien->getQualifie());
         $this->assertSame($user->getUsername(), $lien->getQualifieModifiePar()?->getUsername());
 
-        // Injoignable → Non : plus de décision, date et auteur sont vidés.
+        // Injoignable → Refus : le nouvel état s'insère en fin de cycle.
+        $this->basculer($client, $prospect, $produit, $csrf, 1);
+        $this->assertResponseIsSuccessful();
+        $lien = $this->recharger($lien);
+        $this->assertSame(QualificationProduit::REFUS, $lien->getQualifie());
+        $this->assertSame($user->getUsername(), $lien->getQualifieModifiePar()?->getUsername());
+
+        // Refus → Non : plus de décision, date et auteur sont vidés.
         $this->basculer($client, $prospect, $produit, $csrf, 1);
         $this->assertResponseIsSuccessful();
         $lien = $this->recharger($lien);

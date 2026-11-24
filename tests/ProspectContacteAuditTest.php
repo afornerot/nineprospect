@@ -75,10 +75,12 @@ class ProspectContacteAuditTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $this->assertStringContainsString('Contacté par '.$username, (string) $client->getResponse()->getContent());
 
-        // La liste reprend l'auteur dans le title du switch.
-        $client->request('GET', '/user/prospects');
+        // La liste reprend l'auteur dans le title du switch (lignes servies
+        // par l'endpoint DataTables, pas dans le HTML de la page).
+        $client->request('GET', '/user/prospects/data?search[value]='.urlencode('ZZTEST Contact').'&length=1000');
         $this->assertResponseIsSuccessful();
-        $this->assertStringContainsString('title="Contacté par '.$username.'"', (string) $client->getResponse()->getContent());
+        $lignes = json_decode((string) $client->getResponse()->getContent(), true)['data'];
+        $this->assertStringContainsString('title="Contacté par '.$username.'"', implode('', array_column($lignes, '6')));
 
         // Export PDF : rendu sans erreur avec le nouveau champ.
         $client->request('GET', '/user/reporting/prospect/'.$prospectId.'/pdf');
@@ -200,13 +202,25 @@ class ProspectContacteAuditTest extends WebTestCase
 
     private function csrfToggle(KernelBrowser $client, int $prospectId): string
     {
-        $client->request('GET', '/user/prospects');
-        $wrapper = $client->getCrawler()->filter('.js-toggle-contacte-wrapper[data-action-id="'.$prospectId.'"]');
-        $this->assertSame(1, $wrapper->count(), 'Le switch « Contacté » doit être présent dans la liste.');
-        $token = (string) $wrapper->attr('data-csrf');
-        $this->assertNotSame('', $token);
+        $client->request('GET', '/user/prospects/data?search[value]=ZZTEST Contact&length=1000');
+        $this->assertResponseIsSuccessful();
+        $json = json_decode((string) $client->getResponse()->getContent(), true);
+        $wrapper = null;
+        foreach ($json['data'] as $ligne) {
+            if ('prospect-'.$prospectId !== $ligne['DT_RowId']) {
+                continue;
+            }
+            unset($ligne['DT_RowId']);
+            $html = implode('', $ligne);
+            if (preg_match('/js-toggle-contacte-wrapper[^>]*data-action-id="'.$prospectId.'"[^>]*data-csrf="([^"]+)"/', $html, $m)
+                || preg_match('/js-toggle-contacte-wrapper[^>]*data-csrf="([^"]+)"[^>]*data-action-id="'.$prospectId.'"/', $html, $m)) {
+                $wrapper = $m[1];
+            }
+            break;
+        }
+        $this->assertNotNull($wrapper, 'Le switch « Contacté » doit être présent dans la liste.');
 
-        return $token;
+        return $wrapper;
     }
 
     private function supprimer(int $prospectId): void

@@ -72,6 +72,7 @@
                 <option value="non" {% if filtres.qualifie == 'non' %}selected{% endif %}>Non</option>
                 <option value="horsproduit" {% if filtres.qualifie == 'horsproduit' %}selected{% endif %}>Hors produit</option>
                 <option value="injoignable" {% if filtres.qualifie == 'injoignable' %}selected{% endif %}>Injoignable</option>
+                <option value="refus" {% if filtres.qualifie == 'refus' %}selected{% endif %}>Refus</option>
             </select>
         </div>
         <div class="flex-grow-1" style="min-width: 140px;">
@@ -100,126 +101,24 @@
         <i class="fas fa-file-import me-1"></i>Importer
     </a>
 
-    <div class="dataTable_wrapper">
+    <div class="dataTable_wrapper js-datatable-pending">
         <table class="table table-striped table-bordered table-hover" id="dataTables" style="width:100%" data-order-col="1" data-order-dir="asc">
             <thead>
             <tr>
                 <th width="90px" class="no-sort">Action</th>
                 <th>Prospect</th>
-                <th width="150px">Contact principal</th>
+                <th width="300px">Contact principal</th>
                 <th width="150px">Téléphone</th>
                 <th width="80px">Vague</th>
-                <th class="no-string tri-gauche">Pipeline</th>
+                <th style="max-width:340px" class="tri-gauche">Pipeline</th>
                 <th width="80px">Contacté</th>
                 <th width="180px">Produit</th>
                 <th width="140px">Prc Action</th>
             </tr>
             </thead>
             <tbody>
-                {% for prospect in prospects %}
-                    {% set contact = prospect.contactPrincipal %}
-                    {% set liens = prospect.sprints|sort((a, b) => a.sprint.numero <=> b.sprint.numero) %}
-                    {% set courant = liens|last %}
-                    <tr id="prospect-{{ prospect.id }}">
-                        <td>
-                            <a href="{{ path(routeshow, {id: prospect.id}) }}" title="Fiche"><i class="fas fa-eye fa-2x"></i></a>
-                            <a href="{{ path(routeupdate, {id: prospect.id}) }}" title="Modifier"><i class="fas fa-file fa-2x"></i></a>
-                        </td>
-                        <td>
-                            <a href="{{ path(routeshow, {id: prospect.id}) }}">{{ prospect.nom }}</a>
-                            {% if prospect.email %}
-                                <br><small class="text-muted"><a href="mailto:{{ prospect.email }}">{{ prospect.email }}</a></small>
-                            {% endif %}
-                            {% if prospect.ville or prospect.codePostal or prospect.departement %}
-                                <br><small class="text-muted">{{- prospect.ville -}}
-                                    {%- if prospect.codePostal %} ({{ prospect.codePostal }}){% endif -%}
-                                    {%- if prospect.departement %} — {{ prospect.departement }}{% endif -%}
-                                </small>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if contact %}
-                                {{ contact.nomComplet }}<br><small class="text-muted">{% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% else %}—{% endif %}</small>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% set telephone = contact and contact.telephone ? contact.telephone : prospect.telephone %}
-                            {% if telephone %}
-                                <a href="tel:{{ telephone|replace({' ': ''}) }}">{{ telephone }}</a>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% for lien in liens %}<span class="badge text-bg-secondary me-1">{{ lien.sprint.numero }}</span>{% else %}<span class="text-muted">—</span>{% endfor %}
-                        </td>
-                        <td class="tri-gauche" data-order="{{ courant and courant.sprint.pipeline ? (courant.etapeEntameePosition * 10 + courant.statutEtapeEntamee) : -1 }}">
-                            {% if courant and courant.sprint.pipeline %}
-                                {% for etape in courant.sprint.pipeline.etapes %}
-                                    {% set valeur = courant.statutPour(etape) %}
-                                    <button type="button" class="badge text-bg-{{ pipeline_color(valeur) }} js-cycle-etape" data-prospect="{{ prospect.id }}" data-etape="{{ etape.id }}" data-csrf="{{ csrf_token('cycle-etape-prospect-' ~ prospect.id) }}" title="{{ pipeline_label(valeur) }}" data-static-label="{{ etape.nom }}">{{ etape.nom }}</button>
-                                {% endfor %}
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="form-check form-switch js-toggle-contacte-wrapper" data-action-id="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-contacte-prospect' ~ prospect.id) }}" data-contacte="{{ prospect.contacte is same as(true) ? '1' : '0' }}">
-                                <input type="checkbox" class="form-check-input js-toggle-contacte" role="switch" {% if prospect.contacte %}checked{% endif %} aria-label="Contacté" title="Contacté{% if prospect.contactePar %} par {{ prospect.contactePar.username }}{% endif %}">
-                            </div>
-                        </td>
-                        <td>
-                            <div class="d-flex flex-wrap gap-1 align-items-center">
-                                {% for pc in prospect.prospectProduits %}
-                                    <button type="button" class="badge text-bg-{{ qualifie_color(pc.qualifie) }} js-cycle-produit" data-prospect="{{ prospect.id }}" data-produit="{{ pc.produit.id }}" data-csrf="{{ csrf_token('toggle-produit-prospect-' ~ prospect.id ~ '-' ~ pc.produit.id) }}" title="{{ qualifie_label(pc.qualifie) }}">
-                                        {{ pc.produit.titre }}
-                                    </button>
-                                {% endfor %}
-                                {% set produitsDisponibles = [] %}
-                                {% for produit in produits %}
-                                    {% set dejaLiee = false %}
-                                    {% for pc in prospect.prospectProduits %}
-                                        {% if pc.produit.id == produit.id %}
-                                            {% set dejaLiee = true %}
-                                        {% endif %}
-                                    {% endfor %}
-                                    {% if not dejaLiee %}
-                                        {% set produitsDisponibles = produitsDisponibles|merge([produit]) %}
-                                    {% endif %}
-                                {% endfor %}
-                                {% if produitsDisponibles|length > 0 %}
-                                <div class="dropdown">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary js-add-produit dropdown-toggle" data-bs-toggle="dropdown" data-prospect="{{ prospect.id }}" aria-expanded="false" title="Ajouter un produit">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        {% for produit in produitsDisponibles %}
-                                            <li>
-                                                <a class="dropdown-item js-link-produit" href="#" data-prospect="{{ prospect.id }}" data-produit="{{ produit.id }}" data-csrf="{{ csrf_token('add-produit-prospect-' ~ prospect.id ~ '-' ~ produit.id) }}">
-                                                    {{ produit.titre }}
-                                                </a>
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </td>
-                        <td class="text-center">
-                            {% set actionSuivi = prospect.derniereAction %}
-                            {% if actionSuivi %}
-                                <a href="{{ path('app_user_actions_update', {id: actionSuivi.id}) }}" title="{{ actionSuivi.typeAction ?: '—' }}">
-                                    <span class="badge text-bg-{{ actionSuivi.statutColor }} d-block">{{ actionSuivi.statutLabel }}</span>
-                                    <small class="text-muted">{{ actionSuivi.dateAffichee ? actionSuivi.dateAffichee|date('d/m/Y') : '—' }}{% if not actionSuivi.dateRealisee and actionSuivi.heurePrevue %} {{ actionSuivi.heurePrevue }}{% endif %}</small>
-                                </a>
-                            {% else %}
-                                <a href="{{ path('app_user_actions_submit', {prospect: prospect.id}) }}" class="btn btn-sm btn-outline-primary" title="Créer une action"><i class="fas fa-plus"></i></a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
+                {# Lignes rendues côté serveur par app_user_prospects_data
+                   (DataTables server-side) : voir prospects/_lignes.html.twig. #}
             </tbody>
         </table>
     </div>

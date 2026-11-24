@@ -21,8 +21,11 @@ enum QualificationProduit: string
     /** Le prospect n'a pas pu être joint sur ce produit. */
     case INJOIGNABLE = 'injoignable';
 
+    /** Le prospect a refusé ce produit. */
+    case REFUS = 'refus';
+
     /**
-     * Cycle des statuts au clic : Non → Oui → Hors produit → Injoignable → Non.
+     * Cycle des statuts au clic : Non → Oui → Hors produit → Injoignable → Refus → Non.
      * L'ordre historique (Non → Oui → Hors produit) est conservé ; le nouvel
      * état s'insère en fin de boucle.
      */
@@ -31,6 +34,7 @@ enum QualificationProduit: string
         self::OUI,
         self::HORS_PRODUIT,
         self::INJOIGNABLE,
+        self::REFUS,
     ];
 
     /**
@@ -52,6 +56,7 @@ enum QualificationProduit: string
             self::OUI => 'Oui',
             self::HORS_PRODUIT => 'Hors produit',
             self::INJOIGNABLE => 'Injoignable',
+            self::REFUS => 'Refus',
             self::NON => 'Non',
         };
     }
@@ -62,6 +67,7 @@ enum QualificationProduit: string
             self::OUI => 'success',
             self::HORS_PRODUIT => 'danger',
             self::INJOIGNABLE => 'warning',
+            self::REFUS => 'refus',
             self::NON => 'secondary',
         };
     }
@@ -96,6 +102,7 @@ enum QualificationProduit: string
             'oui' => self::OUI,
             'horsproduit' => self::HORS_PRODUIT,
             'injoignable' => self::INJOIGNABLE,
+            'refus' => self::REFUS,
             default => null,
         };
     }
