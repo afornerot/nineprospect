@@ -107,10 +107,9 @@ $(function () {
 $(document).ready(function () {
 	if (window.__prospectsRestaure) return;
 
-	const $table = $('#dataTables');
+	const $table = $('#dataTables[data-datatable="prospects"]');
 
 	if (!$table.length || typeof $.fn.DataTable === 'undefined') return;
-
 	$orderCol = $table.data('order-col') ?? 0;
 	$orderDir = $table.data('order-dir') ?? 'asc';
 
