@@ -108,8 +108,50 @@ $(document).ready(function () {
 	if (window.__prospectsRestaure) return;
 
 	const $table = $('#dataTables[data-datatable="prospects"]');
+	const $tableGenerique = $('#dataTables').not($table);
 
-	if (!$table.length || typeof $.fn.DataTable === 'undefined') return;
+	if (typeof $.fn.DataTable === 'undefined') return;
+
+	// Autres listes (contacts, actions, campagnes…) : init générique
+	// client-side, sans l'endpoint prospects.
+	if (!$table.length) {
+		if (!$tableGenerique.length) return;
+
+		// Nettoyage des lignes de message (« aucun enregistrement », colspan) :
+		// leur nombre de cellules diffère de celui des colonnes et DataTables
+		// remonte l'erreur « Requested unknown parameter » sur tableau vide.
+		const nbColonnes = $tableGenerique.find('thead th').length;
+		$tableGenerique.find('tbody tr').each(function () {
+			const $cells = $(this).children('td, th');
+			let invalide = nbColonnes > 0 && $cells.length !== nbColonnes;
+
+			$cells.each(function () {
+				if (parseInt($(this).attr('colspan') || '1', 10) > 1) {
+					invalide = true;
+				}
+			});
+
+			if (invalide) {
+				$(this).remove();
+			}
+		});
+
+		const colGen = $tableGenerique.data('order-col') ?? 0;
+		const dirGen = $tableGenerique.data('order-dir') ?? 'asc';
+		$tableGenerique.DataTable({
+			stateSave: true,
+			columnDefs: [
+				{ targets: 'no-sort', orderable: false },
+				{ targets: 'no-string', type: 'num' },
+			],
+			responsive: true,
+			iDisplayLength: 100,
+			order: [[colGen, dirGen]],
+		});
+		return;
+	}
+
+	if (!$table.length) return;
 	$orderCol = $table.data('order-col') ?? 0;
 	$orderDir = $table.data('order-dir') ?? 'asc';
 
