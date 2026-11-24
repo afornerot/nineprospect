@@ -3,7 +3,6 @@
 namespace App\Repository;
 
 use App\Entity\PipelineValeur;
-use App\Enum\PipelineStatut;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
