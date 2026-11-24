@@ -306,9 +306,10 @@ class ProspectRepository extends ServiceEntityRepository
         }
 
         if (null !== $produitId) {
-            $qb->innerJoin('cp_ps.prospectProduits', 'cp_pc')
-                ->innerJoin('cp_pc.produit', 'cp_c')
-                ->andWhere('cp_c.id = :cp_produit')
+            // Étapes portées par les vagues du produit : un prospect affecté
+            // à une vague peut ne pas avoir de lien prospect_produit avec ce
+            // produit — le filtrer par affectation écartait ses étapes.
+            $qb->andWhere('s.produit = :cp_produit')
                 ->setParameter('cp_produit', $produitId);
         }
 
