@@ -28,6 +28,13 @@ class Produit
     private bool $active = true;
 
     /**
+     * Id de la tâche associée dans schedule (planning ETP) ; renseigné
+     * seulement si l'intégration schedule est active.
+     */
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $scheduleTaskId = null;
+
+    /**
      * @var Collection<int, ProspectProduit>
      */
     #[ORM\OneToMany(targetEntity: ProspectProduit::class, mappedBy: 'produit', cascade: ['remove'], orphanRemoval: true)]
@@ -99,6 +106,18 @@ class Produit
     public function setActive(bool $active): static
     {
         $this->active = $active;
+
+        return $this;
+    }
+
+    public function getScheduleTaskId(): ?string
+    {
+        return $this->scheduleTaskId;
+    }
+
+    public function setScheduleTaskId(?string $scheduleTaskId): static
+    {
+        $this->scheduleTaskId = $scheduleTaskId;
 
         return $this;
     }
