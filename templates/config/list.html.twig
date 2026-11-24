@@ -34,8 +34,6 @@
                             {% if config.type == 'logo' %}
                                 {% set logoDisplay = config.value ?: config.defaultValue %}
                                 <img src="{{ bninefile(logoDisplay) ?: asset(config.defaultValue) }}" alt="{{ config.code }}" style="max-height: 50px; max-width: 150px; object-fit: contain;">
-                            {% elseif config.type == 'ouinon' %}
-                                {{ config.value == 'oui' ? 'Oui' : 'Non' }}
                             {% else %}
                                 {{ config.value }}
                             {% endif %}
@@ -43,8 +41,6 @@
                         <td>
                             {% if config.type == 'logo' %}
                                 <img src="{{ bninefile(config.defaultValue) ?: asset(config.defaultValue) }}" alt="{{ config.code }}" style="max-height: 50px; max-width: 150px; object-fit: contain;">
-                            {% elseif config.type == 'ouinon' %}
-                                {{ config.defaultValue == 'oui' ? 'Oui' : 'Non' }}
                             {% else %}
                                 {{ config.defaultValue }}
                             {% endif %}

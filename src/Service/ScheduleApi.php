@@ -2,7 +2,6 @@
 
 namespace App\Service;
 
-use App\Service\ConfigParameterBag;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -16,10 +15,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * corps du POST.
  *
  * Toutes les méthodes publiques sont tolérantes aux pannes : elles renvoient
- * une structure vide + `error` plutôt que de lever. Désactivée si la config
- * applicative `appActivateSchedule` (page /admin/config) n'est pas à « oui »,
- * ou si `SCHEDULE_URL` / `SCHEDULE_SECRET` sont vides → `isConfigured()` false
- * et aucune requête émise.
+ * une structure vide + `error` plutôt que de lever. `SCHEDULE_URL` ou
+ * `SCHEDULE_SECRET` vide -> `isConfigured()` false et aucune requête émise.
  */
 class ScheduleApi
 {
@@ -28,7 +25,6 @@ class ScheduleApi
     public function __construct(
         private readonly HttpClientInterface $http,
         private readonly LoggerInterface $logger,
-        private readonly ConfigParameterBag $config,
         #[Autowire('%scheduleUrl%')]
         private readonly ?string $scheduleUrl,
         #[Autowire('%scheduleSecret%')]
@@ -38,9 +34,7 @@ class ScheduleApi
 
     public function isConfigured(): bool
     {
-        return 'oui' === ($this->config->has('appActivateSchedule') ? $this->config->get('appActivateSchedule') : null)
-            && '' !== ($this->scheduleUrl ?? '')
-            && '' !== ($this->scheduleSecret ?? '');
+        return '' !== ($this->scheduleUrl ?? '') && '' !== ($this->scheduleSecret ?? '');
     }
 
     /**
