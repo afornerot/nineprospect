@@ -10,6 +10,7 @@ class Config
 {
     public const TYPE_STRING = 'string';
     public const TYPE_LOGO = 'logo';
+    public const TYPE_OUINON = 'ouinon';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

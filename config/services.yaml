@@ -33,6 +33,11 @@ parameters:
   dolibarrUrl: "%env(default::DOLIBARR_URL)%"
   dolibarrApiKey: "%env(default::DOLIBARR_API_KEY)%"
 
+  # Intégration schedule (planning ETP du nine-project) : URL de base et
+  # clé secrète partagée. Clé vide → l'intégration est désactivée.
+  scheduleUrl: "%env(default::SCHEDULE_URL)%"
+  scheduleSecret: "%env(default::SCHEDULE_SECRET)%"
+
 services:
   _defaults:
     autowire: true

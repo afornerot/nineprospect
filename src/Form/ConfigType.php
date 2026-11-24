@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\Config;
 use Bnine\FilesBundle\Form\Type\IconUploadType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -34,6 +35,13 @@ class ConfigType extends AbstractType
                 'icon_entity_id' => 0,
                 'crop' => false,
                 'preview_max_height' => 80,
+            ]);
+        } elseif (Config::TYPE_OUINON === $type) {
+            $builder->add('rawValue', ChoiceType::class, [
+                'label' => 'Valeur',
+                'mapped' => false,
+                'choices' => ['Oui' => 'oui', 'Non' => 'non'],
+                'data' => $config instanceof Config ? ($config->getRawValue() ?? 'non') : 'non',
             ]);
         } else {
             $builder->add('rawValue', TextType::class, [
