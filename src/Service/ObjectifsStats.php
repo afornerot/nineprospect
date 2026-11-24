@@ -22,7 +22,8 @@ use App\Service\DolibarrApi;
  * - rdv : étapes « RDV » des vagues du produit passées à Réalisé (Oui) ;
  * - propositions / commandes : documents Dolibarr synchronisés du type ;
  * - montant_commandes : somme HT des commandes Dolibarr (en €) ;
- * - jours : sans source branchée, renvoie 0.
+ * - jours : jours planifiés sur la tâche schedule du produit
+ *   (`Produit::$scheduleTaskId`), 0 sans intégration schedule active.
  *
  * Le filtre utilisateur s'applique au réalisé (pas aux cibles).
  */
@@ -34,8 +35,12 @@ class ObjectifsStats
         private PipelineValeurRepository $pipelineValeurs,
         private ProspectDocumentRepository $prospectDocuments,
         private DolibarrApi $dolibarr,
+        private ScheduleApi $schedule,
     ) {
     }
+
+    /** Cache des appels schedule jours, par tâche × période. */
+    private array $jours = [];
 
     /**
      * Lignes du tableau et totaux par type.
@@ -124,6 +129,19 @@ class ObjectifsStats
         $debut = $objective->getStartDate();
         $fin = $objective->getEndDate();
         $produitId = $objective->getProduit()?->getId();
+
+        // Jours : source schedule (jours planifiés sur la tâche du produit),
+        // 0 sans intégration active ni id de tâche ; memoïsé par tâche × période.
+        if (Objective::TYPE_JOURS === $objective->getType()) {
+            $taskId = $objective->getProduit()?->getScheduleTaskId();
+            if (null === $taskId || '' === $taskId || !$this->schedule->isConfigured()) {
+                return 0;
+            }
+            $cle = $taskId.'|'.$debut->format('Ym').'-'.$fin->format('Ym');
+            $this->jours[$cle] ??= $this->schedule->getTaskJours($taskId, (int) $debut->format('Ym'), (int) $fin->format('Ym'));
+
+            return $this->jours[$cle]['total'] ?? 0;
+        }
 
         // Propositions / commandes / montant : sources Dolibarr, donc 0 sans
         // intégration active (aucun document synchronisé ni requête émise).

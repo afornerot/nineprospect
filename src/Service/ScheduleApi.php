@@ -70,4 +70,43 @@ class ScheduleApi
 
         return is_array($contenu) ? $contenu : ['error' => 'Réponse schedule inattendue'];
     }
+
+    /**
+     * Jours planifiés sur une tâche schedule (`Produit::$scheduleTaskId`),
+     * tous membres confondus, sur une période (mois `YYYYMM` inclusifs).
+     *
+     * @return array{total: float}|array{error: string} total en jours ;
+     *         `['error' => …]` si l'appel échoue ou l'intégration est vide
+     */
+    public function getTaskJours(string $taskId, int $startMonth, int $endMonth): array
+    {
+        if (!$this->isConfigured()) {
+            return ['error' => 'Schedule non configuré'];
+        }
+
+        try {
+            $response = $this->http->request('POST', rtrim($this->scheduleUrl, '/').'/rest/taskETPs', [
+                'headers' => ['Accept' => 'application/json'],
+                'timeout' => self::TIMEOUT,
+                'body' => [
+                    'key' => $this->scheduleSecret,
+                    'taskId' => (string) $taskId,
+                    'startMonth' => (string) $startMonth,
+                    'endMonth' => (string) $endMonth,
+                ],
+            ]);
+
+            $contenu = $response->toArray();
+        } catch (\Throwable $e) {
+            $this->logger->warning('Schedule injoignable : {message}', ['message' => $e->getMessage()]);
+
+            return ['error' => 'Schedule injoignable : '.$e->getMessage()];
+        }
+
+        if (!is_array($contenu) || !isset($contenu['total']) || !is_numeric($contenu['total'])) {
+            return ['error' => 'Réponse schedule inattendue'];
+        }
+
+        return ['total' => (float) $contenu['total']];
+    }
 }
