@@ -15,12 +15,13 @@ class PipelineValeurRepository extends ServiceEntityRepository
 
     /**
      * Nombre d'étapes nommées sur la période, dans les vagues associées au
-     * produit donné (ou tous). `$statut` null : tous statuts confondus.
+     * produit donné (ou tous). `$statut` : statut ou liste de statuts
+     * PipelineStatut ; null = tous statuts confondus.
      *
      * @param string $etapeNom nom de l'étape visée, ex. 'RDV'
-     * @param int|null $statut filtre de statut PipelineStatut, null = tous
+     * @param int|list<int>|null $statut filtre de statut, null = tous
      */
-    public function countEtapesParPeriode(string $etapeNom, ?\DateTimeInterface $debut, ?\DateTimeInterface $fin, ?int $produitId, ?int $auteurId, ?int $statut = null): int
+    public function countEtapesParPeriode(string $etapeNom, ?\DateTimeInterface $debut, ?\DateTimeInterface $fin, ?int $produitId, ?int $auteurId, int|array|null $statut = null): int
     {
         $qb = $this->createQueryBuilder('v')
             ->select('COUNT(v.id)')
@@ -46,7 +47,8 @@ class PipelineValeurRepository extends ServiceEntityRepository
         }
 
         if (null !== $statut) {
-            $qb->andWhere('v.statut = :statut')->setParameter('statut', $statut);
+            $qb->andWhere('v.statut IN (:statut)')
+                ->setParameter('statut', (array) $statut);
         }
 
         return (int) $qb->getQuery()->getSingleScalarResult();

@@ -65,14 +65,15 @@ class ObjectifsStats
             ];
             // Prospects contactés : toute étape « Contact » datée sur les vagues
             // du produit, sur la période de la ligne (hors cible : simple comptage).
-            // « contacté » signifie que le pas a été fait, pas qu'il est clos.
+            // « contacté » : le pas a été fait — En cours, Réalisé ou Refus.
+            // Les « À faire » (statut 0 ou sans statut) ne comptent pas.
             $rows[$cle]['contactes'] = $this->pipelineValeurs->countEtapesParPeriode(
                 'Contact',
                 $objective->getStartDate(),
                 $objective->getEndDate(),
                 $objective->getProduit()?->getId(),
                 $auteurId,
-                null,
+                [PipelineStatut::EN_COURS, PipelineStatut::REALISE, PipelineStatut::REFUS],
             );
         }
 
