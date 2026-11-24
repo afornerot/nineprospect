@@ -9,6 +9,7 @@ use App\Repository\ObjectiveRepository;
 use App\Repository\PipelineValeurRepository;
 use App\Repository\ProspectDocumentRepository;
 use App\Repository\ProspectProduitRepository;
+use App\Service\DolibarrApi;
 
 /**
  * Réalisé vs objectif du tableau de bord : une ligne par période + produit,
@@ -32,6 +33,7 @@ class ObjectifsStats
         private ProspectProduitRepository $prospectProduits,
         private PipelineValeurRepository $pipelineValeurs,
         private ProspectDocumentRepository $prospectDocuments,
+        private DolibarrApi $dolibarr,
     ) {
     }
 
@@ -122,6 +124,12 @@ class ObjectifsStats
         $debut = $objective->getStartDate();
         $fin = $objective->getEndDate();
         $produitId = $objective->getProduit()?->getId();
+
+        // Propositions / commandes / montant : sources Dolibarr, donc 0 sans
+        // intégration active (aucun document synchronisé ni requête émise).
+        if (!$this->dolibarr->isConfigured()) {
+            return 0;
+        }
 
         return match ($objective->getType()) {
             Objective::TYPE_PROSPECTS_QUALIFIES => $this->prospectProduits->countQualifiesOuiParPeriode($debut, $fin, $produitId, $auteurId),

@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Service\DolibarrApi;
 use App\Service\DolibarrDocumentsSync;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -22,6 +23,7 @@ class RefreshDocumentsDolibarrCommand extends Command
 {
     public function __construct(
         private readonly DolibarrDocumentsSync $sync,
+        private readonly DolibarrApi $dolibarr,
     ) {
         parent::__construct();
     }
@@ -29,6 +31,12 @@ class RefreshDocumentsDolibarrCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
+
+        if (!$this->dolibarr->isConfigured()) {
+            $io->note('Intégration Dolibarr désactivée (DOLIBARR_URL absent) : aucune synchronisation.');
+
+            return Command::SUCCESS;
+        }
 
         $resultat = $this->sync->synchroniserTous();
 

@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Groupe;
 use App\Entity\User;
+use App\Service\DolibarrApi;
 use Bnine\FilesBundle\Form\Type\IconUploadType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -23,6 +24,11 @@ use Symfony\Component\Validator\Constraints\Regex;
  */
 class UserType extends AbstractType
 {
+    public function __construct(
+        private readonly DolibarrApi $dolibarr,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $user = $builder->getData();
@@ -77,13 +83,17 @@ class UserType extends AbstractType
                 'label' => 'Commercial',
                 'required' => false,
                 'help' => 'L\'utilisateur est un commercial Dolibarr : créateur possible des devis et commandes synchronisés.',
-            ])
-            ->add('dolibarrUserId', TextType::class, [
-                'label' => 'Id utilisateur Dolibarr',
-                'required' => false,
-                'help' => 'L\'id (rowid) du compte Dolibarr de ce commercial. La synchro ne garde que les devis/commandes créés par les commerciaux identifiés.',
-                'attr' => ['placeholder' => 'ex. 18'],
             ]);
+
+            // Id Dolibarr : pertinent seulement si l'intégration est active.
+            if ($this->dolibarr->isConfigured()) {
+                $builder->add('dolibarrUserId', TextType::class, [
+                    'label' => 'Id utilisateur Dolibarr',
+                    'required' => false,
+                    'help' => 'L\'id (rowid) du compte Dolibarr de ce commercial. La synchro ne garde que les devis/commandes créés par les commerciaux identifiés.',
+                    'attr' => ['placeholder' => 'ex. 18'],
+                ]);
+            }
         }
 
         if ('profil' != $options['mode']) {

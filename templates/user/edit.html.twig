@@ -33,6 +33,8 @@
                         {{ form_row(form.email) }}
                         {%if form.commercial is defined%}
                             {{ form_row(form.commercial) }}
+                        {% endif %}
+                        {%if form.dolibarrUserId is defined%}
                             {{ form_row(form.dolibarrUserId) }}
                         {% endif %}
                     </div>

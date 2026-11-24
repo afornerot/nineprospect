@@ -38,6 +38,11 @@ class DolibarrController extends AbstractController
     #[Route('/admin/dolibarr', name: 'app_admin_dolibarr')]
     public function list(Request $request): Response
     {
+        if (!$this->dolibarr->isConfigured()) {
+            $this->addFlash('warning', 'Intégration Dolibarr désactivée (DOLIBARR_URL absent).');
+
+            return $this->redirectToRoute('app_user_dashboard');
+        }
         $debut = $this->objectives->createQueryBuilder('o')
             ->select('MIN(o.startDate)')
             ->getQuery()

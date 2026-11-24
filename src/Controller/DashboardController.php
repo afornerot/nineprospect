@@ -11,6 +11,7 @@ use App\Repository\ProspectDocumentRepository;
 use App\Repository\SprintRepository;
 use App\Repository\UserRepository;
 use App\Service\DashboardStats;
+use App\Service\DolibarrApi;
 use App\Service\ObjectifsStats;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -32,6 +33,7 @@ class DashboardController extends AbstractController
         private CibleRepository $cibles,
         private ObjectifsStats $objectifsStats,
         private ProspectDocumentRepository $prospectDocuments,
+        private DolibarrApi $dolibarr,
     ) {
     }
 
@@ -63,6 +65,8 @@ class DashboardController extends AbstractController
             'objectifsTotaux' => $objectifs['totaux'],
             // Détail des propositions/commandes comptabilisées dans les objectifs.
             'documentsDolibarr' => $this->prospectDocuments->pourGestionDepuis(null),
+            // Modal « Détail » masqué sans intégration Dolibarr active.
+            'dolibarrActif' => $this->dolibarr->isConfigured(),
         ]);
     }
 }

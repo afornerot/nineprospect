@@ -22,7 +22,7 @@
     {% if objectifsQualifies|length > 0 %}
         {% set types = constant('App\\Entity\\Objective::TYPES') %}
         <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-bullseye me-1"></i> Objectifs</span><button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#js-docs-objectifs-modal"><i class="fas fa-list me-1"></i> Détail</button></div>
+            <div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-bullseye me-1"></i> Objectifs</span>{% if dolibarrActif %}<button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#js-docs-objectifs-modal"><i class="fas fa-list me-1"></i> Détail</button>{% endif %}</div>
             <div class="card-body p-0">
                 <table class="table table-striped mb-0">
                     <thead>
@@ -96,6 +96,7 @@
             </div>
         </div>
 
+        {% if dolibarrActif %}
         <div class="modal fade" id="js-docs-objectifs-modal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-xl modal-dialog-scrollable">
                 <div class="modal-content">
@@ -153,6 +154,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     {% endif %}
 
     <div class="row g-2">
@@ -400,7 +402,8 @@
             // plugin responsive. Le bloc colspan (« aucun document ») est
             // retiré au préalable, sinon DataTables lève
             // « Requested unknown parameter ».
-            document.getElementById('js-docs-objectifs-modal').addEventListener('shown.bs.modal', function() {
+            const docsModal = document.getElementById('js-docs-objectifs-modal');
+            if (docsModal) docsModal.addEventListener('shown.bs.modal', function() {
                 const table = document.getElementById('js-docs-objectifs-table');
                 if (!table || typeof $.fn.DataTable === 'undefined' || $.fn.DataTable.isDataTable(table)) return;
 
