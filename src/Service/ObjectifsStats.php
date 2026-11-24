@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Entity\Objective;
+use App\Enum\PipelineStatut;
 use App\Entity\ProspectDocument;
 use App\Repository\ObjectiveRepository;
 use App\Repository\PipelineValeurRepository;
@@ -62,14 +63,16 @@ class ObjectifsStats
                 'objective' => $objective,
                 'realise' => $this->realise($objective, $auteurId),
             ];
-            // Prospects contactés : étapes « Contact » réalisées sur les vagues
+            // Prospects contactés : toute étape « Contact » datée sur les vagues
             // du produit, sur la période de la ligne (hors cible : simple comptage).
-            $rows[$cle]['contactes'] = $this->pipelineValeurs->countEtapesRealiseesParPeriode(
+            // « contacté » signifie que le pas a été fait, pas qu'il est clos.
+            $rows[$cle]['contactes'] = $this->pipelineValeurs->countEtapesParPeriode(
                 'Contact',
                 $objective->getStartDate(),
                 $objective->getEndDate(),
                 $objective->getProduit()?->getId(),
                 $auteurId,
+                null,
             );
         }
 
@@ -121,7 +124,7 @@ class ObjectifsStats
 
         return match ($objective->getType()) {
             Objective::TYPE_PROSPECTS_QUALIFIES => $this->prospectProduits->countQualifiesOuiParPeriode($debut, $fin, $produitId, $auteurId),
-            Objective::TYPE_RDV => $this->pipelineValeurs->countEtapesRealiseesParPeriode('RDV', $debut, $fin, $produitId, $auteurId),
+            Objective::TYPE_RDV => $this->pipelineValeurs->countEtapesParPeriode('RDV', $debut, $fin, $produitId, $auteurId, PipelineStatut::REALISE),
             Objective::TYPE_PROPOSITIONS => $this->prospectDocuments->countParTypeEtPeriode(ProspectDocument::TYPE_DEVIS, $debut, $fin, $produitId),
             Objective::TYPE_COMMANDES => $this->prospectDocuments->countParTypeEtPeriode(ProspectDocument::TYPE_COMMANDE, $debut, $fin, $produitId),
             Objective::TYPE_MONTANT_COMMANDES => $this->prospectDocuments->sommeMontantParTypeEtPeriode(ProspectDocument::TYPE_COMMANDE, $debut, $fin, $produitId),

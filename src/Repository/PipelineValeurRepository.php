@@ -15,12 +15,13 @@ class PipelineValeurRepository extends ServiceEntityRepository
     }
 
     /**
-     * Nombre d'étapes réalisées (statut Oui → Réalisé) sur la période, dans
-     * les vagues associées au produit donné (ou tous).
+     * Nombre d'étapes nommées sur la période, dans les vagues associées au
+     * produit donné (ou tous). `$statut` null : tous statuts confondus.
      *
      * @param string $etapeNom nom de l'étape visée, ex. 'RDV'
+     * @param int|null $statut filtre de statut PipelineStatut, null = tous
      */
-    public function countEtapesRealiseesParPeriode(string $etapeNom, ?\DateTimeInterface $debut, ?\DateTimeInterface $fin, ?int $produitId, ?int $auteurId): int
+    public function countEtapesParPeriode(string $etapeNom, ?\DateTimeInterface $debut, ?\DateTimeInterface $fin, ?int $produitId, ?int $auteurId, ?int $statut = null): int
     {
         $qb = $this->createQueryBuilder('v')
             ->select('COUNT(v.id)')
@@ -28,9 +29,7 @@ class PipelineValeurRepository extends ServiceEntityRepository
             ->innerJoin('v.prospectSprint', 'ps')
             ->innerJoin('ps.sprint', 's')
             ->andWhere('LOWER(e.nom) = :etape')
-            ->setParameter('etape', mb_strtolower($etapeNom))
-            ->andWhere('v.statut = :realise')
-            ->setParameter('realise', PipelineStatut::REALISE);
+            ->setParameter('etape', mb_strtolower($etapeNom));
 
         if (null !== $debut) {
             $qb->andWhere('v.date >= :debut')->setParameter('debut', $debut);
@@ -45,6 +44,10 @@ class PipelineValeurRepository extends ServiceEntityRepository
         }
         if (null !== $auteurId) {
             $qb->andWhere('v.modifiePar = :auteur')->setParameter('auteur', $auteurId);
+        }
+
+        if (null !== $statut) {
+            $qb->andWhere('v.statut = :statut')->setParameter('statut', $statut);
         }
 
         return (int) $qb->getQuery()->getSingleScalarResult();
