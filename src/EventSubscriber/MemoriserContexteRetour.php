@@ -4,9 +4,11 @@ namespace App\EventSubscriber;
 
 use App\Http\ContexteRetour;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
@@ -108,15 +110,25 @@ final class MemoriserContexteRetour implements EventSubscriberInterface
     }
 
     /**
-     * Une redirection n'est pas une page consultée ; une erreur non plus.
+     * Une redirection n'est pas une page consultée ; une erreur non plus ;
+     * un fichier binaire (avatar, vignette, export) non plus - sinon son URL
+     * deviendrait la destination de retour après suppression.
      */
     private function estPage(Response $response): bool
     {
-        if ($response instanceof RedirectResponse) {
+        if ($response instanceof RedirectResponse
+            || $response instanceof BinaryFileResponse
+            || $response instanceof StreamedResponse) {
             return false;
         }
 
-        return Response::HTTP_OK === $response->getStatusCode();
+        if (Response::HTTP_OK !== $response->getStatusCode()) {
+            return false;
+        }
+
+        $contentType = $response->headers->get('Content-Type');
+
+        return null === $contentType || str_starts_with($contentType, 'text/html');
     }
 
     /** Nom de la méthode de contrôleur (ex. `list`, `show`, `update`). */
