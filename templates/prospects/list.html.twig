@@ -3,6 +3,10 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block body %}
+    <style>
+        /* Filtres de la liste uniquement : labels moins hauts. */
+        form [for^="filtre-"] { margin-bottom: .1rem; }
+    </style>
     <h1>{{ title }}</h1>
 
     <form method="get" class="d-flex flex-wrap gap-2 align-items-end mb-3 w-100">
