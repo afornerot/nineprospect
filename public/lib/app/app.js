@@ -345,6 +345,51 @@ $(document).ready(function () {
 	});
 });
 
+// Switch « Client » sur la fiche prospect : toggle via endpoint AJAX,
+// met à jour le badge du titre (#js-customer-badge).
+$(document).ready(function () {
+	$(document).on('change', '.js-toggle-customer', function () {
+		const $checkbox = $(this);
+		const $wrapper = $checkbox.closest('.js-toggle-customer-wrapper');
+		const actionId = $wrapper.data('action-id');
+		const csrf = $wrapper.data('csrf');
+		if (!actionId || !csrf) return;
+
+		$checkbox.prop('disabled', true);
+		const url = '/user/prospects/toggle-customer/' + actionId;
+		const body = new URLSearchParams();
+		body.set('_csrf_token', csrf);
+		oublierProspectCourant();
+
+		fetch(url, {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+				'X-Requested-With': 'XMLHttpRequest',
+				'Origin': window.location.origin,
+			},
+			body: body.toString(),
+		}).then(function (resp) {
+			return resp.json().then(function (data) { return { ok: resp.ok, status: resp.status, data: data }; });
+		}).then(function (r) {
+			if (!r.ok || !r.data.ok) {
+				$checkbox.prop('checked', !$checkbox.prop('checked'));
+				const msg = (r.data && r.data.error) ? r.data.error : ('Erreur ' + r.status);
+				alert(msg);
+			} else {
+				$checkbox.prop('checked', r.data.customer === true);
+				$('#js-customer-badge').toggleClass('d-none', r.data.customer !== true);
+			}
+		}).catch(function () {
+			$checkbox.prop('checked', !$checkbox.prop('checked'));
+			alert('Erreur réseau. Veuillez réessayer.');
+		}).finally(function () {
+			$checkbox.prop('disabled', false);
+		});
+	});
+});
+
 // Cycle de la qualification produit sur les badges cliquables dans la liste prospects.
 // non → oui → hors_produit → injoignable → non.
 $(document).ready(function () {

@@ -4,7 +4,7 @@
 
 {% block body %}
     <h1 class="mb-1">{{ title }}
-        {% if prospect.customer %}<span class="badge fs-6 text-bg-success align-middle">Client</span>{% endif %}
+        <span id="js-customer-badge" class="badge fs-6 text-bg-success align-middle {% if not prospect.customer %}d-none{% endif %}">Client</span>
     </h1>
 
     {# « Retour à la liste » pointe sur la liste nue : la sélection (filtres,
@@ -155,6 +155,13 @@
                         <dt class="col-sm-4">Contacté par</dt>
                         <dd class="col-sm-8">
                             <span class="js-contacte-par text-muted">{{- prospect.contactePar ? prospect.contactePar.username : '—' -}}</span>
+                        </dd>
+
+                        <dt class="col-sm-4">Client</dt>
+                        <dd class="col-sm-8">
+                            <div class="form-check form-switch js-toggle-customer-wrapper m-0" data-action-id="{{ prospect.id }}" data-csrf="{{ csrf_token('toggle-customer-prospect' ~ prospect.id) }}">
+                                <input type="checkbox" class="form-check-input js-toggle-customer" role="switch" {% if prospect.customer %}checked{% endif %} aria-label='Client' title='Client'>
+                            </div>
                         </dd>
 
                         <dt class="col-sm-4">Affecté à</dt>

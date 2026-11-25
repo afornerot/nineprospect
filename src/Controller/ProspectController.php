@@ -814,6 +814,28 @@ class ProspectController extends AbstractController
         ]);
     }
 
+    #[Route('/toggle-customer/{id}', name: 'app_user_prospects_toggle_customer', methods: ['POST'])]
+    public function toggleCustomer(int $id, Request $request): JsonResponse
+    {
+        $prospect = $this->prospects->find($id);
+        if (!$prospect) {
+            return new JsonResponse(['ok' => false, 'error' => 'Prospect introuvable.'], 404);
+        }
+
+        if (!$this->isCsrfTokenValid('toggle-customer-prospect'.$id, (string) $request->request->get('_csrf_token'))) {
+            return new JsonResponse(['ok' => false, 'error' => 'Token CSRF invalide.'], 403);
+        }
+
+        // Bascule booléenne simple, comme le flag « Contacté ».
+        $prospect->setCustomer(!$prospect->getCustomer());
+        $this->em->flush();
+
+        return new JsonResponse([
+            'ok' => true,
+            'customer' => $prospect->getCustomer(),
+        ]);
+    }
+
     private function qualifieLabel(QualificationProduit $valeur): string
     {
         return $valeur->label();
