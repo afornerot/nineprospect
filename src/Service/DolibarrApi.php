@@ -407,6 +407,7 @@ class DolibarrApi
             'nom' => $nom ?? $alias ?? '',
             'alias' => $alias,
             'email' => $this->str($row['email'] ?? null),
+            'telephone' => $this->str($row['phone'] ?? null),
             'codeClient' => $this->str($row['code_client'] ?? null),
             'codeFournisseur' => $this->str($row['code_fournisseur'] ?? null),
             'siren' => $this->str($row['idprof1'] ?? $row['siren'] ?? null),

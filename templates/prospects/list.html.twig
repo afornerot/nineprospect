@@ -96,6 +96,11 @@
     <a href="{{ path('app_user_prospects_from_annuaire') }}" class="btn btn-outline-success mb-3 ms-1">
         <i class="fas fa-magnifying-glass me-1"></i>Créer depuis l'Annuaire
     </a>
+    {% if dolibarrActif %}
+        <a href="{{ path('app_user_prospects_from_dolibarr') }}" class="btn btn-outline-success mb-3 ms-1">
+            <i class="fas fa-magnifying-glass me-1"></i>Créer depuis Dolibarr
+        </a>
+    {% endif %}
     <a href="{{ path('app_user_produits_import') }}" class="btn btn-outline-primary mb-3 ms-1">
         <i class="fas fa-file-import me-1"></i>Importer
     </a>

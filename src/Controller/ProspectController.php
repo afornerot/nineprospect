@@ -77,6 +77,7 @@ class ProspectController extends AbstractController
             'utilisateurs' => $this->users->findAll(),
             'produits' => $this->produits->findAllOrdered(),
             'cibles' => $this->cibles->findAllOrdered(),
+            'dolibarrActif' => $this->dolibarr->isConfigured(),
         ]);
     }
 
@@ -383,6 +384,19 @@ class ProspectController extends AbstractController
             return new JsonResponse(['ok' => false, 'error' => 'Tiers Dolibarr introuvable.'], 422);
         }
 
+        // Un tiers Dolibarr ne peut être lié qu'à un seul prospect.
+        $dejaLien = $this->prospects->findOneBy(['idDolibarr' => (string) $tiers['id']]);
+        if (null !== $dejaLien && $dejaLien->getId() !== $prospect->getId()) {
+            $existingId = $dejaLien->getId();
+
+            return new JsonResponse([
+                'ok' => false,
+                'error' => sprintf('Ce tiers Dolibarr est déjà lié au prospect id %d.', $existingId ?? 0),
+                'existingId' => $existingId,
+                'existingRedirect' => $existingId ? $this->generateUrl('app_user_prospects_show', ['id' => $existingId]) : null,
+            ], 409);
+        }
+
         $prospect->setIdDolibarr((string) $tiers['id']);
         $this->em->flush();
 
@@ -473,6 +487,122 @@ class ProspectController extends AbstractController
         $prospect->setNom((string) ($this->annuaire->normalize($row)['nom'] ?? ''));
         $prospect->setCleEntreprise('annuaire:'.$siren.':'.uniqid());
         $this->applyAnnuaire($prospect, $row);
+        $this->em->persist($prospect);
+        $this->em->flush();
+
+        return new JsonResponse([
+            'ok' => true,
+            'redirect' => $this->generateUrl('app_user_prospects_update', ['id' => $prospect->getId()]),
+        ]);
+    }
+
+    /**
+     * Page « Créer un prospect depuis Dolibarr ». Recherche de tiers
+     * Dolibarr ; le prospect créé est pré-rempli avec les données du tiers
+     * et déjà lié (`idDolibarr`). Un tiers déjà lié à un prospect est
+     * désactivé dans les résultats : un tiers ne peut correspondre qu'à un
+     * seul prospect.
+     */
+    #[Route('/from-dolibarr', name: 'app_user_prospects_from_dolibarr', methods: ['GET'])]
+    public function fromDolibarr(Request $request): Response
+    {
+        $q = trim((string) $request->query->get('q', ''));
+        $rows = [];
+        $apiError = null;
+        if ('' !== $q) {
+            $response = $this->dolibarr->search($q);
+            $apiError = $response['error'];
+            foreach ($response['results'] as $raw) {
+                $rows[] = $this->dolibarr->normalize($raw);
+            }
+        }
+
+        // Tiers déjà liés : le bouton de création est désactivé pour eux.
+        $lies = [];
+        if ([] !== $rows) {
+            foreach ($this->prospects->createQueryBuilder('p')
+                ->select('p.id, p.idDolibarr')
+                ->where('p.idDolibarr IS NOT NULL')
+                ->getQuery()
+                ->getArrayResult() as $lien) {
+                $lies[(string) $lien['idDolibarr']] = (int) $lien['id'];
+            }
+            foreach ($rows as &$row) {
+                $row['existingId'] = $lies[$row['id']] ?? null;
+            }
+            unset($row);
+        }
+
+        $csrf = $this->container->get('security.csrf.token_manager')
+            ->getToken('from-dolibarr-create')->getValue();
+
+        return $this->renderLayout('prospects/from_dolibarr.html.twig', 'Créer un prospect depuis Dolibarr', [
+            'query' => $q,
+            'rows' => $rows,
+            'apiError' => $apiError,
+            'actif' => $this->dolibarr->isConfigured(),
+            'csrf' => $csrf,
+            'createUrl' => $this->generateUrl('app_user_prospects_from_dolibarr_create'),
+            'routeList' => 'app_user_prospects',
+        ]);
+    }
+
+    /**
+     * Crée un nouveau prospect à partir d'un tiers Dolibarr (page dédiée
+     * /user/prospects/from-dolibarr). Body JSON : {thirdpartyId, csrf_token}.
+     *
+     * Refuse si le tiers est déjà lié à un prospect (unicité tiers ↔ prospect).
+     * Réponse JSON : {ok, redirect} vers la fiche update du nouveau prospect.
+     */
+    #[Route('/from-dolibarr/create', name: 'app_user_prospects_from_dolibarr_create', methods: ['POST'])]
+    public function fromDolibarrCreate(Request $request): JsonResponse
+    {
+        $body = json_decode((string) $request->getContent(), true);
+        if (!\is_array($body)) {
+            return new JsonResponse(['ok' => false, 'error' => 'Body JSON invalide.'], 400);
+        }
+
+        if (!$this->isCsrfTokenValid('from-dolibarr-create', (string) ($body['csrf_token'] ?? ''))) {
+            return new JsonResponse(['ok' => false, 'error' => 'Token CSRF invalide.'], 403);
+        }
+
+        $thirdpartyId = trim((string) ($body['thirdpartyId'] ?? ''));
+        if ('' === $thirdpartyId) {
+            return new JsonResponse(['ok' => false, 'error' => 'Tiers Dolibarr manquant.'], 422);
+        }
+
+        // Le tiers est revalidé côté serveur : jamais d'écriture d'un ID
+        // client non vérifié dans Dolibarr.
+        $tiers = $this->dolibarr->findById($thirdpartyId);
+        if (null === $tiers) {
+            return new JsonResponse(['ok' => false, 'error' => 'Tiers Dolibarr introuvable.'], 422);
+        }
+
+        // Unicité : deux prospects ne peuvent pas partager un même tiers.
+        $existant = $this->prospects->findOneBy(['idDolibarr' => (string) $tiers['id']]);
+        if (null !== $existant) {
+            $existingId = $existant->getId();
+
+            return new JsonResponse([
+                'ok' => false,
+                'error' => sprintf('Ce tiers Dolibarr est déjà lié au prospect id %d.', $existingId ?? 0),
+                'existingId' => $existingId,
+                'existingRedirect' => $existingId ? $this->generateUrl('app_user_prospects_show', ['id' => $existingId]) : null,
+            ], 409);
+        }
+
+        $prospect = new Prospect();
+        // findById renvoie déjà le tiers normalisé.
+        $prospect->setNom((string) ($tiers['nom'] ?? ''));
+        $prospect->setCleEntreprise('dolibarr:'.$tiers['id'].':'.uniqid());
+        $prospect->setIdDolibarr((string) $tiers['id']);
+        $prospect->setSiren($tiers['siren']);
+        $prospect->setSiret($tiers['siret']);
+        $prospect->setAdresse($tiers['adresse']);
+        $prospect->setCodePostal($tiers['codePostal']);
+        $prospect->setVille($tiers['ville']);
+        $prospect->setEmail($tiers['email']);
+        $prospect->setTelephone($tiers['telephone']);
         $this->em->persist($prospect);
         $this->em->flush();
 
