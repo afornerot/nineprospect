@@ -13,7 +13,6 @@ use App\Enum\QualificationProduit;
 use App\Form\ProspectType;
 use App\Http\ContexteRetour;
 use App\Repository\ActionTypeDefautRepository;
-use App\Repository\CampagneRepository;
 use App\Repository\CibleRepository;
 use App\Repository\ProduitRepository;
 use App\Repository\DepartementRepository;
@@ -46,7 +45,6 @@ class ProspectController extends AbstractController
 
     public function __construct(
         private ProspectRepository $prospects,
-        private CampagneRepository $campagnes,
         private SprintRepository $sprints,
         private PipelineRepository $pipelines,
         private DepartementRepository $departements,
@@ -75,7 +73,6 @@ class ProspectController extends AbstractController
             'routeupdate' => 'app_user_prospects_update',
             'routeshow' => 'app_user_prospects_show',
             'filtres' => $filtres,
-            'campagnes' => $this->campagnes->findAllOrdered(),
             'sprints' => $this->sprints->findAllOrdered(),
             'utilisateurs' => $this->users->findAll(),
             'produits' => $this->produits->findAllOrdered(),

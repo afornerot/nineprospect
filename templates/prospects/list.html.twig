@@ -9,21 +9,8 @@
     </style>
     <h1>{{ title }}</h1>
 
-    <form method="get" class="d-flex flex-wrap gap-2 align-items-end mb-3 w-100">
-        <div class="flex-grow-1" style="min-width: 160px;">
-            <label class="form-label" for="filtre-q">Recherche</label>
-            <input type="text" class="form-control form-control-sm" id="filtre-q" name="q" value="{{ filtres.recherche }}" placeholder="Nom, ville, email...">
-        </div>
-        <div class="flex-grow-1" style="min-width: 160px;">
-            <label class="form-label" for="filtre-campagne">Campagne</label>
-            <select class="form-select form-select-sm" id="filtre-campagne" name="campagne">
-                <option value="">Toutes</option>
-                {% for campagne in campagnes %}
-                    <option value="{{ campagne.id }}" {% if filtres.campagne == campagne.id %}selected{% endif %}>{{ campagne.libelle }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="flex-grow-1" style="min-width: 140px;">
+    <form method="get" class="d-flex gap-2 align-items-end mb-3 w-100 overflow-x-auto">
+        <div class="flex-grow-1" style="min-width: 115px;">
             <label class="form-label" for="filtre-sprint">Vague</label>
             <select class="form-select form-select-sm" id="filtre-sprint" name="sprint">
                 <option value="">Toutes</option>
@@ -33,7 +20,7 @@
             </select>
         </div>
 
-        <div class="flex-grow-1" style="min-width: 150px;">
+        <div class="flex-grow-1" style="min-width: 125px;">
             <label class="form-label" for="filtre-utilisateur">Affecté à</label>
             <select class="form-select form-select-sm" id="filtre-utilisateur" name="utilisateur">
                 <option value="">Tous</option>
@@ -42,7 +29,7 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="flex-grow-1" style="min-width: 130px;">
+        <div class="flex-grow-1" style="min-width: 105px;">
             <label class="form-label" for="filtre-contacte">Contacté</label>
             <select class="form-select form-select-sm" id="filtre-contacte" name="contacte">
                 <option value="">Tous</option>
@@ -50,7 +37,7 @@
                 <option value="non" {% if filtres.contacte == 'non' %}selected{% endif %}>Non</option>
             </select>
         </div>
-        <div class="flex-grow-1" style="min-width: 130px;">
+        <div class="flex-grow-1" style="min-width: 105px;">
             <label class="form-label" for="filtre-customer">Client</label>
             <select class="form-select form-select-sm" id="filtre-customer" name="customer">
                 <option value="">Tous</option>
@@ -58,7 +45,7 @@
                 <option value="non" {% if filtres.customer == 'non' %}selected{% endif %}>Non</option>
             </select>
         </div>
-        <div class="flex-grow-1" style="min-width: 160px;">
+        <div class="flex-grow-1" style="min-width: 125px;">
             <label class="form-label" for="filtre-produit">Produit</label>
             <select class="form-select form-select-sm" id="filtre-produit" name="produit">
                 <option value="">Toutes</option>
@@ -67,7 +54,7 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="flex-grow-1" style="min-width: 160px;">
+        <div class="flex-grow-1" style="min-width: 115px;">
             <label class="form-label" for="filtre-cible">Cible</label>
             <select class="form-select form-select-sm" id="filtre-cible" name="cible">
                 <option value="">Toutes</option>
@@ -76,7 +63,7 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="flex-grow-1" style="min-width: 140px;">
+        <div class="flex-grow-1" style="min-width: 125px;">
             <label class="form-label" for="filtre-qualifie">Qualifié</label>
             <select class="form-select form-select-sm" id="filtre-qualifie" name="qualifie">
                 <option value="">Tous</option>
@@ -87,7 +74,7 @@
                 <option value="refus" {% if filtres.qualifie == 'refus' %}selected{% endif %}>Refus</option>
             </select>
         </div>
-        <div class="flex-grow-1" style="min-width: 140px;">
+        <div class="flex-grow-1" style="min-width: 120px;">
             <label class="form-label" for="filtre-statut">Statut action</label>
             <select class="form-select form-select-sm" id="filtre-statut" name="statut">
                 <option value="">Tous</option>
