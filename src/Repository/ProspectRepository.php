@@ -30,6 +30,7 @@ class ProspectRepository extends ServiceEntityRepository
      *     campagne?: int|null,
      *     sprint?: int|null,
      *     contacte?: string|null,
+     *     customer?: string|null,
      *     produit?: int|null,
      *     cible?: int|null,
      *     qualifie?: string|null,
@@ -71,6 +72,12 @@ class ProspectRepository extends ServiceEntityRepository
                 $qb->andWhere('p.contacte IS NULL OR p.contacte = :contacte')
                     ->setParameter('contacte', false);
             }
+        }
+
+        if (isset($filtres['customer'])) {
+            // « non » = flag à false uniquement (pas de troisième état : la
+            // colonne est NOT NULL avec défaut 0).
+            $qb->andWhere('p.customer = :customer')->setParameter('customer', 'oui' === $filtres['customer']);
         }
 
         if (isset($filtres['produit'])) {

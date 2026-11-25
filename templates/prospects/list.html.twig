@@ -46,6 +46,14 @@
                 <option value="non" {% if filtres.contacte == 'non' %}selected{% endif %}>Non</option>
             </select>
         </div>
+        <div class="flex-grow-1" style="min-width: 130px;">
+            <label class="form-label" for="filtre-customer">Client</label>
+            <select class="form-select" id="filtre-customer" name="customer">
+                <option value="">Tous</option>
+                <option value="oui" {% if filtres.customer == 'oui' %}selected{% endif %}>Oui</option>
+                <option value="non" {% if filtres.customer == 'non' %}selected{% endif %}>Non</option>
+            </select>
+        </div>
         <div class="flex-grow-1" style="min-width: 160px;">
             <label class="form-label" for="filtre-produit">Produit</label>
             <select class="form-select" id="filtre-produit" name="produit">

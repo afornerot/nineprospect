@@ -1018,6 +1018,7 @@ class ProspectController extends AbstractController
      *     sprint: int|null,
      *     userId: int|null,
      *     contacte: string|null,
+     *     customer: string|null,
      *     produit: int|null,
      *     qualifie: string|null,
      *     statut: string|null,
@@ -1029,6 +1030,11 @@ class ProspectController extends AbstractController
         $contacte = trim((string) $request->query->get('contacte', ''));
         if (!\in_array($contacte, ['', 'oui', 'non'], true)) {
             $contacte = '';
+        }
+
+        $customer = trim((string) $request->query->get('customer', ''));
+        if (!\in_array($customer, ['', 'oui', 'non'], true)) {
+            $customer = '';
         }
 
         $qualifie = trim((string) $request->query->get('qualifie', ''));
@@ -1046,6 +1052,7 @@ class ProspectController extends AbstractController
             'sprint' => $this->paramEntier($request, 'sprint'),
             'userId' => $this->paramEntier($request, 'utilisateur'),
             'contacte' => '' === $contacte ? null : $contacte,
+            'customer' => '' === $customer ? null : $customer,
             'produit' => $this->paramEntier($request, 'produit'),
             'cible' => $this->paramEntier($request, 'cible'),
             'qualifie' => '' === $qualifie ? null : $qualifie,
