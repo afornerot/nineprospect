@@ -6,11 +6,7 @@
     <h1>{{title}}</h1>
 
     <p class="text-muted">
-        Devis et commandes créés dans Dolibarr par les commerciaux depuis le {{ debut|date('d/m/Y') }}
-        (plus ancienne date d'objectif), rapprochés de nineprospect.
-        {% if nbAbsents > 0 %}
-            <span class="badge text-bg-danger">{{ nbAbsents }} absent(s) de nineprospect</span>
-        {% endif %}
+        Devis et commandes Dolibarr synchronisés dans nineprospect, avec le produit associé ou à associer.
     </p>
 
     <div class="dataTable_wrapper">
@@ -22,15 +18,12 @@
                 <th>Date</th>
                 <th>Statut</th>
                 <th class="text-end">Montant HT</th>
-                <th>Créateur</th>
-                <th>Dans nineprospect</th>
                 <th>Prospect</th>
                 <th>Produit associé</th>
             </tr>
             </thead>
             <tbody>
-                {% for ligne in lignes %}
-                    {% set doc = ligne.doc %}
+                {% for doc in lignes %}
                     <tr>
                         <td><span class="badge text-bg-{{ doc.type == 'Devis' ? 'primary' : 'success' }}">{{ doc.type }}</span></td>
                         <td>
@@ -40,44 +33,28 @@
                                 {{ doc.ref }}
                             {% endif %}
                         </td>
-                        <td data-order="{{ doc.date ?? '' }}">{{ doc.date ? doc.date|date('d/m/Y') : '—' }}</td>
-                        <td><span class="badge text-bg-{{ ligne.statutCouleur }}">{{ ligne.statutLabel }}</span></td>
+                        <td data-order="{{ doc.dateDoc ? doc.dateDoc|date('Y-m-d') : '' }}">{{ doc.dateDoc ? doc.dateDoc|date('d/m/Y') : '—' }}</td>
+                        <td><span class="badge text-bg-{{ doc.statutCouleur }}">{{ doc.statutLabel }}</span></td>
                         <td class="text-end text-nowrap" data-order="{{ doc.totalHt ?? 0 }}">{{ doc.totalHt is not null ? doc.totalHt|number_format(2, ',', ' ') ~ ' €' : '—' }}</td>
-                        <td>{{ ligne.createur }}</td>
-                        <td class="text-center">
-                            {% if ligne.prospect %}
-                                <span class="badge text-bg-success">Oui</span>
-                            {% else %}
-                                <span class="badge text-bg-danger">Absent</span>
-                            {% endif %}
-                        </td>
                         <td>
-                            {% if ligne.prospect %}
-                                <a href="{{ path('app_user_prospects_show', {id: ligne.prospect.id}) }}">{{ ligne.prospect.nom }}</a>
-                            {% else %}
-                                {% set socid = ligne.doc.socid %}
-                                {% if tiersNoms[socid] is defined and tiersNoms[socid] %}
-                                    <span class="text-warning">{{ tiersNoms[socid] }}</span>
-                                    {% if tiersUrls[socid] %} <a href="{{ tiersUrls[socid] }}" target="_blank" rel="noopener" class="ms-1" title="Voir dans Dolibarr"><i class="fas fa-up-right-from-square fa-xs"></i></a>{% endif %}
-                                {% else %}
-                                    <span class="text-muted">Tiers Dolibarr {{ socid ?: '?' }}</span>
-                                {% endif %}
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            {% if ligne.produit %}
-                                <span class="badge text-bg-info">{{ ligne.produit.titre }}</span>
-                            {% elseif ligne.prospect %}
-                                <span class="badge text-bg-warning">Non associé</span>
+                            {% if doc.prospect %}
+                                <a href="{{ path('app_user_prospects_show', {id: doc.prospect.id}) }}">{{ doc.prospect.nom }}</a>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
+                        <td class="text-center">
+                            {% if doc.produit %}
+                                <span class="badge text-bg-info">{{ doc.produit.titre }}</span>
+                            {% else %}
+                                <span class="badge text-bg-warning">Non associé</span>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="9" class="text-muted">Aucun devis ni commande des commerciaux depuis le {{ debut|date('d/m/Y') }}.</td></tr>
+                    <tr><td colspan="7" class="text-muted">Aucun devis ni commande synchronisé.</td></tr>
                 {% endfor %}
-            </tbody>
+                </tbody>
         </table>
     </div>
 {% endblock %}

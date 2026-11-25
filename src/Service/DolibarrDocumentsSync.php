@@ -76,10 +76,8 @@ final class DolibarrDocumentsSync
             return null;
         }
 
-        $auteurs = $this->auteursDolibarr();
-
         $this->api->invaliderCacheDocuments($tiersId);
-        $documents = $this->api->documentsForThirdparty($tiersId, [] === $auteurs ? null : $auteurs);
+        $documents = $this->api->documentsForThirdparty($tiersId);
 
         $existants = $this->em->createQueryBuilder()
             ->select('d')
@@ -113,10 +111,16 @@ final class DolibarrDocumentsSync
                 $cle = $type.':'.$idDolibarr;
                 $vus[$cle] = true;
 
-                $ligne = $cles[$cle] ?? (new ProspectDocument())
-                    ->setProspect($prospect)
-                    ->setType($type)
-                    ->setDolibarrId($idDolibarr);
+                $ligne = $cles[$cle]
+                    // Reliquat d'une ancienne liaison du tiers à un autre
+                    // prospect : réaffecté ici plutôt que recréé (la
+                    // contrainte d'unicité type + id Dolibarr l'interdit,
+                    // et l'association produit éventuelle est conservée).
+                    ?? $repository->trouverHorsProspect($type, $idDolibarr, $prospect)
+                    ?? (new ProspectDocument())
+                        ->setProspect($prospect)
+                        ->setType($type)
+                        ->setDolibarrId($idDolibarr);
                 $ligne
                     ->setRef((string) ($doc['ref'] ?? ''))
                     ->setDateDoc(null !== $doc['date'] ? new \DateTime((string) $doc['date']) : null)
@@ -151,27 +155,6 @@ final class DolibarrDocumentsSync
 
         return null;
     }
-    /**
-     * Ids Dolibarr des commerciaux déclarés. Aucun déclaré → tableau vide,
-     * interprété par l'appelant comme « pas de filtre ».
-     *
-     * @return list<string>
-     */
-    private function auteursDolibarr(): array
-    {
-        $commerciaux = $this->em->getRepository(\App\Entity\User::class)
-            ->findBy(['commercial' => true]);
-
-        $ids = [];
-        foreach ($commerciaux as $commercial) {
-            if (null !== $commercial->getDolibarrUserId()) {
-                $ids[] = $commercial->getDolibarrUserId();
-            }
-        }
-
-        return $ids;
-    }
-
     /**
      * Synchronise tous les prospects liés à Dolibarr (cron quotidien).
      *

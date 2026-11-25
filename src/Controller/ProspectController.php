@@ -368,6 +368,12 @@ class ProspectController extends AbstractController
 
         if ('' === $thirdpartyId) {
             $prospect->setIdDolibarr(null);
+            // Les documents mémorisés ne correspondent plus à une source
+            // vivante : retirés immédiatement (sinon ils bloquent la
+            // re-synchronisation du tiers vers un autre prospect via la
+            // contrainte d'unicité type + id Dolibarr).
+            $this->em->getRepository(\App\Entity\ProspectDocument::class)
+                ->supprimerParProspect($prospect);
             $this->em->flush();
 
             return new JsonResponse(['ok' => true, 'thirdpartyId' => null]);

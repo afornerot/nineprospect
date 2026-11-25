@@ -49,6 +49,25 @@ class ProspectDocumentRepository extends ServiceEntityRepository
     }
 
     /**
+     * Document mémorisé portant cette clé (type + id Dolibarr) mais
+     * rattaché à un autre prospect : reliquat d'une ancienne liaison du
+     * tiers. Null s'il n'y en a pas.
+     */
+    public function trouverHorsProspect(string $type, string $dolibarrId, Prospect $prospect): ?ProspectDocument
+    {
+        return $this->createQueryBuilder('d')
+            ->where('d.type = :type')
+            ->andWhere('d.dolibarrId = :dolibarrId')
+            ->andWhere('d.prospect != :prospect')
+            ->setParameter('type', $type)
+            ->setParameter('dolibarrId', $dolibarrId)
+            ->setParameter('prospect', $prospect->getId())
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * Supprime tous les documents d'un prospect (déliaison Dolibarr, tiers
      * disparu). Retourne le nombre de lignes retirées.
      */
