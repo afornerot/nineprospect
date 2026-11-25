@@ -122,6 +122,7 @@ final class DolibarrDocumentsSync
                         ->setType($type)
                         ->setDolibarrId($idDolibarr);
                 $ligne
+                    ->setProspect($prospect)
                     ->setRef((string) ($doc['ref'] ?? ''))
                     ->setDateDoc(null !== $doc['date'] ? new \DateTime((string) $doc['date']) : null)
                     ->setTypeLabel($doc['typeLabel'] ?? null)
