@@ -212,6 +212,11 @@ class ProspectType extends AbstractType
                 'required' => false,
             ])
 
+            ->add('customer', CheckboxType::class, [
+                'label' => 'Client',
+                'required' => false,
+            ])
+
             ->add('datePremierContact', DateType::class, [
                 'label' => 'Date du premier contact',
                 'widget' => 'single_text',

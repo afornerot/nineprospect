@@ -87,6 +87,10 @@ class Prospect
     #[ORM\Column(nullable: true)]
     private ?bool $contacte = null;
 
+    /** Client acquis (oui/non). */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $customer = false;
+
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTime $datePremierContact = null;
 
@@ -421,6 +425,18 @@ class Prospect
     public function getContacte(): ?bool
     {
         return $this->contacte;
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->customer;
+    }
+
+    public function setCustomer(bool $customer): static
+    {
+        $this->customer = $customer;
+
+        return $this;
     }
 
     /**

@@ -12,6 +12,7 @@
                         </td>
                         <td>
                             <a href="{{ path(routeshow, {id: prospect.id}) }}">{{ prospect.nom }}</a>
+                            {% if prospect.customer %}<span class="badge text-bg-success">Client</span>{% endif %}
                             {% if prospect.email %}
                                 <br><small class="text-muted"><a href="mailto:{{ prospect.email }}">{{ prospect.email }}</a></small>
                             {% endif %}
